@@ -1,1 +1,591 @@
-# Back-End-LLM
+# Speech-to-Text Backend API
+
+Backend API para transcripción de audio y generación de respuestas con modelos LLM, construido con FastAPI, Supabase y Celery.
+
+## 🏗️ Arquitectura
+
+### Diagrama de Alto Nivel (Monolito Modular)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend (React/Vue)                    │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ HTTP/HTTPS
+┌─────────────────────▼───────────────────────────────────────┐
+│                    FastAPI Backend                         │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐         │
+│  │ Audio Router│ │ Chat Router │ │ Health      │         │
+│  │             │ │             │ │ Router      │         │
+│  └─────────────┘ └─────────────┘ └─────────────┘         │
+│           │               │               │               │
+│  ┌───────▼──────┐ ┌──────▼──────┐ ┌─────▼─────┐         │
+│  │ Audio Service│ │ LLM Service │ │ Auth      │         │
+│  │              │ │             │ │ Service   │         │
+│  └──────────────┘ └─────────────┘ └───────────┘         │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Celery Workers                          │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐         │
+│  │ Transcribe  │ │ LLM         │ │ Cleanup     │         │
+│  │ Audio Task  │ │ Response    │ │ Tasks       │         │
+│  │             │ │ Task        │ │             │         │
+│  └─────────────┘ └─────────────┘ └─────────────┘         │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│                    Supabase                                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐         │
+│  │ PostgreSQL  │ │ Storage     │ │ Auth        │         │
+│  │ Database    │ │ (Audio      │ │ (JWT)       │         │
+│  │             │ │  Files)     │ │             │         │
+│  └─────────────┘ └─────────────┘ └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Stack Tecnológico
+
+- **Backend Framework**: FastAPI (Python 3.10+)
+- **Database**: PostgreSQL (Supabase)
+- **ORM**: SQLModel (SQLAlchemy + Pydantic)
+- **File Storage**: Supabase Storage
+- **Authentication**: JWT + Supabase Auth
+- **Task Queue**: Celery + Redis
+- **LLM Providers**: OpenAI, Anthropic
+- **Documentation**: OpenAPI/Swagger
+
+## 📁 Estructura del Proyecto
+
+```
+Back-End-LLM/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                 # FastAPI app
+│   ├── config.py               # Configuración
+│   ├── database.py             # DB y Supabase
+│   ├── models.py               # SQLModel models
+│   ├── schemas.py              # Pydantic schemas
+│   ├── auth.py                 # JWT auth
+│   ├── tasks.py                # Celery tasks
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── audio.py            # Audio endpoints
+│   │   ├── chat.py             # Chat endpoints
+│   │   └── health.py           # Health checks
+│   └── services/
+│       ├── __init__.py
+│       ├── audio_service.py    # Audio management
+│       └── llm_service.py      # LLM providers
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py             # Pytest fixtures
+│   └── test_health.py          # Health tests
+├── scripts/
+│   ├── start_server.py         # Server startup
+│   ├── start_celery.py         # Celery worker
+│   └── setup_supabase.py       # Supabase setup
+├── alembic/                    # Database migrations
+├── pyproject.toml              # Dependencies
+├── env.example                 # Environment template
+└── README.md                   # This file
+```
+
+## 🚀 Instalación y Configuración
+
+### 1. Prerrequisitos
+
+- Python 3.10+
+- Poetry (gestión de dependencias)
+- Redis (para Celery)
+- Supabase project
+
+### 2. Clonar y Configurar
+
+```bash
+# Clonar el repositorio
+git clone <repository-url>
+cd Back-End-LLM
+
+# Instalar dependencias
+poetry install
+
+# Activar entorno virtual
+poetry shell
+
+# Copiar variables de entorno
+cp env.example .env
+```
+
+### 3. Configurar Variables de Entorno
+
+Edita el archivo `.env` con tus credenciales:
+
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/speech_to_text_db
+
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_KEY=your-supabase-service-key
+
+# JWT
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Celery
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# LLM Providers
+OPENAI_API_KEY=your-openai-api-key
+ANTHROPIC_API_KEY=your-anthropic-api-key
+
+# File Upload
+MAX_FILE_SIZE=10485760  # 10MB
+ALLOWED_AUDIO_TYPES=audio/wav,audio/mp3,audio/m4a,audio/ogg
+
+# App Settings
+DEBUG=True
+ENVIRONMENT=development
+```
+
+### 4. Configurar Supabase
+
+```bash
+# Ejecutar script de configuración
+python scripts/setup_supabase.py
+```
+
+Sigue las instrucciones para:
+1. Crear bucket de storage `audio-files`
+2. Configurar políticas RLS en la base de datos
+
+### 5. Configurar Base de Datos
+
+```bash
+# Crear tablas
+alembic upgrade head
+
+# O ejecutar directamente
+python -c "from app.database import create_db_and_tables; create_db_and_tables()"
+```
+
+## 🏃‍♂️ Ejecución Local
+
+### 1. Iniciar Redis
+
+```bash
+# macOS (con Homebrew)
+brew install redis
+brew services start redis
+
+# Linux
+sudo systemctl start redis
+
+# Docker
+docker run -d -p 6379:6379 redis:alpine
+```
+
+### 2. Iniciar Servidor FastAPI
+
+```bash
+# Opción 1: Script
+python scripts/start_server.py
+
+# Opción 2: Uvicorn directo
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Opción 3: Poetry
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3. Iniciar Celery Worker
+
+```bash
+# Terminal separada
+python scripts/start_celery.py
+
+# O con Celery CLI
+celery -A app.tasks worker --loglevel=info --concurrency=2
+```
+
+### 4. Verificar Funcionamiento
+
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/api/v1/health
+- **Root**: http://localhost:8000/
+
+## 📋 Endpoints API
+
+### Health Checks
+
+```bash
+# Health check básico
+GET /api/v1/health/
+
+# Liveness check
+GET /api/v1/health/liveness
+
+# Readiness check
+GET /api/v1/health/readiness
+```
+
+### Audio Management
+
+```bash
+# Subir archivo de audio
+POST /api/v1/audio/upload
+Content-Type: multipart/form-data
+Authorization: Bearer <jwt-token>
+
+# Listar archivos de audio
+GET /api/v1/audio/
+Authorization: Bearer <jwt-token>
+
+# Obtener transcripción
+GET /api/v1/audio/{audio_id}/transcription
+Authorization: Bearer <jwt-token>
+
+# Iniciar transcripción
+POST /api/v1/audio/{audio_id}/transcribe
+Authorization: Bearer <jwt-token>
+
+# Obtener transcripción por ID
+GET /api/v1/audio/transcription/{transcription_id}
+Authorization: Bearer <jwt-token>
+
+# Eliminar archivo de audio
+DELETE /api/v1/audio/{audio_id}
+Authorization: Bearer <jwt-token>
+```
+
+### Chat y LLM
+
+```bash
+# Generar respuesta LLM
+POST /api/v1/chat/completion
+Authorization: Bearer <jwt-token>
+{
+  "transcription_id": 1,
+  "message": "¿Qué dice el audio?"
+}
+
+# Generar respuesta LLM asíncrona
+POST /api/v1/chat/completion/async
+Authorization: Bearer <jwt-token>
+
+# Crear sesión de chat
+POST /api/v1/chat/sessions
+Authorization: Bearer <jwt-token>
+{
+  "title": "Mi sesión"
+}
+
+# Listar sesiones de chat
+GET /api/v1/chat/sessions
+Authorization: Bearer <jwt-token>
+
+# Agregar mensaje a sesión
+POST /api/v1/chat/sessions/{session_id}/messages
+Authorization: Bearer <jwt-token>
+{
+  "content": "Hola",
+  "role": "user"
+}
+```
+
+## 🧪 Testing
+
+### Ejecutar Tests
+
+```bash
+# Todos los tests
+poetry run pytest
+
+# Tests específicos
+poetry run pytest tests/test_health.py
+
+# Con coverage
+poetry run pytest --cov=app
+
+# Tests con verbose
+poetry run pytest -v
+```
+
+### Ejemplos de Tests
+
+```python
+# Test de health check
+def test_health_check(client: TestClient):
+    response = client.get("/api/v1/health/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+```
+
+## 🔧 Desarrollo
+
+### Estructura de Base de Datos
+
+```sql
+-- Tabla de usuarios
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    supabase_id VARCHAR UNIQUE NOT NULL,
+    email VARCHAR UNIQUE NOT NULL,
+    full_name VARCHAR,
+    is_active BOOLEAN DEFAULT TRUE,
+    is_admin BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabla de archivos de audio
+CREATE TABLE audios (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    filename VARCHAR NOT NULL,
+    original_filename VARCHAR NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type VARCHAR NOT NULL,
+    storage_path VARCHAR NOT NULL,
+    status VARCHAR DEFAULT 'uploaded',
+    language VARCHAR,
+    duration FLOAT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabla de transcripciones
+CREATE TABLE transcriptions (
+    id SERIAL PRIMARY KEY,
+    audio_id INTEGER REFERENCES audios(id) UNIQUE,
+    status VARCHAR DEFAULT 'pending',
+    text TEXT,
+    confidence FLOAT,
+    language VARCHAR,
+    processing_time FLOAT,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabla de sesiones de chat
+CREATE TABLE chat_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    title VARCHAR,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tabla de mensajes
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    chat_session_id INTEGER REFERENCES chat_sessions(id),
+    role VARCHAR NOT NULL,
+    content TEXT NOT NULL,
+    tokens_used INTEGER,
+    model_used VARCHAR,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Migraciones
+
+```bash
+# Crear nueva migración
+alembic revision --autogenerate -m "Add new table"
+
+# Aplicar migraciones
+alembic upgrade head
+
+# Revertir migración
+alembic downgrade -1
+
+# Ver estado de migraciones
+alembic current
+alembic history
+```
+
+### Debugging
+
+```bash
+# Logs del servidor
+tail -f logs/app.log
+
+# Logs de Celery
+celery -A app.tasks worker --loglevel=debug
+
+# Debug con pdb
+python -m pdb scripts/start_server.py
+```
+
+## 🚀 Despliegue
+
+### Docker
+
+```dockerfile
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY pyproject.toml poetry.lock ./
+RUN pip install poetry && poetry install --no-dev
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["poetry", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/speech_to_text_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build: .
+    command: celery -A app.tasks worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/speech_to_text_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: speech_to_text_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+```
+
+### Variables de Entorno de Producción
+
+```bash
+# Producción
+DEBUG=False
+ENVIRONMENT=production
+DATABASE_URL=postgresql://user:password@host:5432/db
+REDIS_URL=redis://host:6379
+
+# Seguridad
+SECRET_KEY=your-super-secret-key-here
+CORS_ORIGINS=https://yourdomain.com
+```
+
+## 📊 Monitoreo
+
+### Health Checks
+
+```bash
+# Health check básico
+curl http://localhost:8000/api/v1/health/
+
+# Readiness check
+curl http://localhost:8000/api/v1/health/readiness
+
+# Liveness check
+curl http://localhost:8000/api/v1/health/liveness
+```
+
+### Logs
+
+```bash
+# Logs de la aplicación
+tail -f logs/app.log
+
+# Logs de Celery
+tail -f logs/celery.log
+
+# Logs de Redis
+tail -f logs/redis.log
+```
+
+### Métricas
+
+- **Tiempo de respuesta**: Prometheus + Grafana
+- **Uso de memoria**: cAdvisor
+- **Logs centralizados**: ELK Stack
+
+## 🔒 Seguridad
+
+### Autenticación
+
+- JWT tokens con Supabase Auth
+- Refresh tokens automáticos
+- Rate limiting por usuario
+
+### Autorización
+
+- Row Level Security (RLS) en PostgreSQL
+- Políticas por usuario en Supabase
+- Validación de permisos en endpoints
+
+### Validación de Archivos
+
+- Validación de MIME types
+- Límite de tamaño de archivo
+- Escaneo de malware (opcional)
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push al branch (`git push origin feature/AmazingFeature`)
+5. Abrir Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 🆘 Soporte
+
+- **Issues**: GitHub Issues
+- **Documentación**: `/docs` endpoint
+- **Email**: support@example.com
+
+## 🗺️ Roadmap
+
+- [ ] Integración con Whisper API
+- [ ] Soporte para más formatos de audio
+- [ ] Streaming de transcripción en tiempo real
+- [ ] Dashboard de administración
+- [ ] Webhooks para notificaciones
+- [ ] Cache con Redis
+- [ ] Métricas avanzadas
+- [ ] Tests de integración
+- [ ] CI/CD pipeline
+- [ ] Kubernetes deployment
