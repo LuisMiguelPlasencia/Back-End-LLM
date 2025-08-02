@@ -16,20 +16,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan events"""
-    # Startup
-    logger.info("Starting Speech-to-Text Backend API")
-    create_db_and_tables()
-    logger.info("Database tables created")
-    
-    yield
-    
-    # Shutdown
-    logger.info("Shutting down Speech-to-Text Backend API")
-
-
 # Create FastAPI app
 app = FastAPI(
     title="Speech-to-Text Backend API",
@@ -37,7 +23,6 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
 )
 
 # Add CORS middleware

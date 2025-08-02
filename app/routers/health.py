@@ -9,15 +9,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/health", tags=["health"])
 
-
-@router.get("/", response_model=HealthResponse)
-async def health_check():
-    """Basic health check endpoint"""
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.utcnow()
-    )
-
+'''
 
 @router.get("/readiness", response_model=HealthResponse)
 async def readiness_check(session: Session = Depends(get_session)):
@@ -36,7 +28,7 @@ async def readiness_check(session: Session = Depends(get_session)):
             status="not_ready",
             timestamp=datetime.utcnow()
         )
-
+'''
 
 @router.get("/liveness", response_model=HealthResponse)
 async def liveness_check():

@@ -33,15 +33,6 @@ format: ## Format code
 run: ## Run the development server
 	poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-run-worker: ## Run Celery worker
-	poetry run celery -A app.tasks worker --loglevel=info --concurrency=2
-
-run-redis: ## Start Redis server
-	docker run -d -p 6379:6379 --name redis-cache redis:alpine
-
-stop-redis: ## Stop Redis server
-	docker stop redis-cache && docker rm redis-cache
-
 db-migrate: ## Run database migrations
 	poetry run alembic upgrade head
 

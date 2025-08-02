@@ -6,6 +6,7 @@ from pydantic import Field
 class Settings(BaseSettings):
     # Database
     database_url: str = Field(..., env="DATABASE_URL")
+    print(database_url)
     database_pwd: str = Field(default="", env="DATABASE_PWD")
     
 
