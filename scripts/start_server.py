@@ -16,7 +16,7 @@ from app.config import settings
 
 def main():
     """Start the FastAPI server"""
-    print("🚀 Starting Speech-to-Text Backend API...")
+    print("🚀 Starting Text Processing Backend API...")
     print(f"📁 Environment: {settings.environment}")
     print(f"🐛 Debug mode: {settings.debug}")
     

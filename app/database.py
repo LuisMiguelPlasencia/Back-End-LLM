@@ -1,5 +1,4 @@
 from sqlmodel import SQLModel, create_engine, Session
-from supabase import create_client, Client
 from app.config import settings
 import logging
 
@@ -13,9 +12,6 @@ engine = create_engine(
     pool_recycle=300,
 )
 
-# Supabase client
-supabase: Client = create_client(settings.supabase_url, settings.supabase_key)
-
 
 def create_db_and_tables():
     """Create database tables"""
@@ -25,9 +21,4 @@ def create_db_and_tables():
 def get_session():
     """Get database session"""
     with Session(engine) as session:
-        yield session
-
-
-def get_supabase():
-    """Get Supabase client"""
-    return supabase 
+        yield session 

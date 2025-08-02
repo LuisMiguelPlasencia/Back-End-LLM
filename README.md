@@ -235,15 +235,21 @@ GET /api/v1/health/liveness
 GET /api/v1/health/readiness
 ```
 
-### Audio Management
+### Text Management
 
 ```bash
-# Subir archivo de audio
+# Subir texto transcrito
 POST /api/v1/audio/upload
-Content-Type: multipart/form-data
+Content-Type: application/x-www-form-urlencoded
 Authorization: Bearer <jwt-token>
+{
+  "title": "Mi transcripción",
+  "original_text": "Texto transcrito del audio...",
+  "language": "es",
+  "source": "upload"
+}
 
-# Listar archivos de audio
+# Listar entradas de texto
 GET /api/v1/audio/
 Authorization: Bearer <jwt-token>
 
@@ -251,7 +257,7 @@ Authorization: Bearer <jwt-token>
 GET /api/v1/audio/{audio_id}/transcription
 Authorization: Bearer <jwt-token>
 
-# Iniciar transcripción
+# Crear transcripción
 POST /api/v1/audio/{audio_id}/transcribe
 Authorization: Bearer <jwt-token>
 
@@ -259,7 +265,7 @@ Authorization: Bearer <jwt-token>
 GET /api/v1/audio/transcription/{transcription_id}
 Authorization: Bearer <jwt-token>
 
-# Eliminar archivo de audio
+# Eliminar entrada de texto
 DELETE /api/v1/audio/{audio_id}
 Authorization: Bearer <jwt-token>
 ```

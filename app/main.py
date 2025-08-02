@@ -6,7 +6,7 @@ import logging
 
 from app.config import settings
 from app.database import create_db_and_tables
-from app.routers import audio, chat, health
+from app.routers import text, health
 
 # Configure logging
 logging.basicConfig(
@@ -66,8 +66,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(health.router, prefix="/api/v1")
-app.include_router(audio.router, prefix="/api/v1")
-app.include_router(chat.router, prefix="/api/v1")
+app.include_router(text.router, prefix="/api/v1")
 
 
 @app.get("/")
