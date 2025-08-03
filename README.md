@@ -14,24 +14,16 @@ Backend API para transcripción de audio y generación de respuestas con modelos
 ┌─────────────────────▼───────────────────────────────────────┐
 │                    FastAPI Backend                         │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐         │
-│  │ Audio Router│ │ Chat Router │ │ Health      │         │
+│  │ Text  Router│ │ Chat Router │ │ Health      │         │
 │  │             │ │             │ │ Router      │         │
 │  └─────────────┘ └─────────────┘ └─────────────┘         │
 │           │               │               │               │
 │  ┌───────▼──────┐ ┌──────▼──────┐ ┌─────▼─────┐         │
-│  │ Audio Service│ │ LLM Service │ │ Auth      │         │
+│  │ Text  Service│ │ LLM Service │ │ Auth      │         │
 │  │              │ │             │ │ Service   │         │
 │  └──────────────┘ └─────────────┘ └───────────┘         │
 └─────────────────────┬───────────────────────────────────────┘
                       │
-┌─────────────────────▼───────────────────────────────────────┐
-│                    Celery Workers                          │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐         │
-│  │ Transcribe  │ │ LLM         │ │ Cleanup     │         │
-│  │ Audio Task  │ │ Response    │ │ Tasks       │         │
-│  │             │ │ Task        │ │             │         │
-│  └─────────────┘ └─────────────┘ └─────────────┘         │
-└─────────────────────┬───────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
 │                    Supabase                                 │
@@ -50,7 +42,6 @@ Backend API para transcripción de audio y generación de respuestas con modelos
 - **ORM**: SQLModel (SQLAlchemy + Pydantic)
 - **File Storage**: Supabase Storage
 - **Authentication**: JWT + Supabase Auth
-- **Task Queue**: Celery + Redis
 - **LLM Providers**: OpenAI, Anthropic
 - **Documentation**: OpenAPI/Swagger
 
@@ -76,15 +67,8 @@ Back-End-LLM/
 │       ├── __init__.py
 │       ├── audio_service.py    # Audio management
 │       └── llm_service.py      # LLM providers
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py             # Pytest fixtures
-│   └── test_health.py          # Health tests
 ├── scripts/
 │   ├── start_server.py         # Server startup
-│   ├── start_celery.py         # Celery worker
-│   └── setup_supabase.py       # Supabase setup
-├── alembic/                    # Database migrations
 ├── pyproject.toml              # Dependencies
 ├── env.example                 # Environment template
 └── README.md                   # This file
@@ -127,19 +111,12 @@ DATABASE_URL=postgresql://user:password@localhost:5432/speech_to_text_db
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_KEY=your-supabase-service-key
 
 # JWT
 SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# Celery
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
 
 # LLM Providers
 OPENAI_API_KEY=your-openai-api-key
@@ -161,35 +138,7 @@ ENVIRONMENT=development
 python scripts/setup_supabase.py
 ```
 
-Sigue las instrucciones para:
-1. Crear bucket de storage `audio-files`
-2. Configurar políticas RLS en la base de datos
-
-### 5. Configurar Base de Datos
-
-```bash
-# Crear tablas
-alembic upgrade head
-
-# O ejecutar directamente
-python -c "from app.database import create_db_and_tables; create_db_and_tables()"
-```
-
 ## 🏃‍♂️ Ejecución Local
-
-### 1. Iniciar Redis
-
-```bash
-# macOS (con Homebrew)
-brew install redis
-brew services start redis
-
-# Linux
-sudo systemctl start redis
-
-# Docker
-docker run -d -p 6379:6379 redis:alpine
-```
 
 ### 2. Iniciar Servidor FastAPI
 
@@ -204,14 +153,6 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 3. Iniciar Celery Worker
-
-```bash
-# Terminal separada
-python scripts/start_celery.py
-
-# O con Celery CLI
-celery -A app.tasks worker --loglevel=info --concurrency=2
 ```
 
 ### 4. Verificar Funcionamiento
@@ -336,89 +277,9 @@ def test_health_check(client: TestClient):
 
 ## 🔧 Desarrollo
 
-### Estructura de Base de Datos
-
-```sql
--- Tabla de usuarios
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    supabase_id VARCHAR UNIQUE NOT NULL,
-    email VARCHAR UNIQUE NOT NULL,
-    full_name VARCHAR,
-    is_active BOOLEAN DEFAULT TRUE,
-    is_admin BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Tabla de archivos de audio
-CREATE TABLE audios (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    filename VARCHAR NOT NULL,
-    original_filename VARCHAR NOT NULL,
-    file_size INTEGER NOT NULL,
-    mime_type VARCHAR NOT NULL,
-    storage_path VARCHAR NOT NULL,
-    status VARCHAR DEFAULT 'uploaded',
-    language VARCHAR,
-    duration FLOAT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Tabla de transcripciones
-CREATE TABLE transcriptions (
-    id SERIAL PRIMARY KEY,
-    audio_id INTEGER REFERENCES audios(id) UNIQUE,
-    status VARCHAR DEFAULT 'pending',
-    text TEXT,
-    confidence FLOAT,
-    language VARCHAR,
-    processing_time FLOAT,
-    error_message TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Tabla de sesiones de chat
-CREATE TABLE chat_sessions (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    title VARCHAR,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Tabla de mensajes
-CREATE TABLE messages (
-    id SERIAL PRIMARY KEY,
-    chat_session_id INTEGER REFERENCES chat_sessions(id),
-    role VARCHAR NOT NULL,
-    content TEXT NOT NULL,
-    tokens_used INTEGER,
-    model_used VARCHAR,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
 
 ### Migraciones
 
-```bash
-# Crear nueva migración
-alembic revision --autogenerate -m "Add new table"
-
-# Aplicar migraciones
-alembic upgrade head
-
-# Revertir migración
-alembic downgrade -1
-
-# Ver estado de migraciones
-alembic current
-alembic history
-```
 
 ### Debugging
 

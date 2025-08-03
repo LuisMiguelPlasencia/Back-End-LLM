@@ -9,8 +9,6 @@ class Settings(BaseSettings):
     print(database_url)
     database_pwd: str = Field(default="", env="DATABASE_PWD")
     
-
-    
     # LLM Providers
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
     anthropic_api_key: str = Field(default="", env="ANTHROPIC_API_KEY")
@@ -18,8 +16,6 @@ class Settings(BaseSettings):
     # App Settings
     debug: bool = Field(default=True, env="DEBUG")
     environment: str = Field(default="development", env="ENVIRONMENT")
-    
-
     
     class Config:
         env_file = ".env"

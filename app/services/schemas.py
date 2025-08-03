@@ -3,24 +3,6 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
-# Text schemas
-class TextUpload(BaseModel):
-    title: str
-    content: str
-    language: Optional[str] = None
-    source: Optional[str] = None
-
-
-class TextResponse(BaseModel):
-    id: int
-    title: str
-    content: str
-    language: Optional[str] = None
-    source: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-
-
 # Health check
 class HealthResponse(BaseModel):
     status: str

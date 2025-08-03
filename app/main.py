@@ -1,12 +1,11 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 import logging
 
 from app.config import settings
-from app.database import create_db_and_tables
-from app.routers import text, health
+from app.routers import health, db_operations
+
 
 # Configure logging
 logging.basicConfig(
@@ -51,7 +50,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(health.router, prefix="/api/v1")
-app.include_router(text.router, prefix="/api/v1")
+app.include_router(db_operations.router, prefix="/api/v1")
 
 
 @app.get("/")
