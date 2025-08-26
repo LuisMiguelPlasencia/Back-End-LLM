@@ -17,7 +17,7 @@ Backend API para transcripción de audio y generación de respuestas con modelos
 │  │ Text  Router│ │ Chat Router │ │ Health      │            │
 │  │             │ │             │ │ Router      │            │
 │  └─────────────┘ └─────────────┘ └─────────────┘            │
-│           │               │               │                 │
+│           │               │              │                  │
 │  ┌───────▼──────┐ ┌──────▼──────┐ ┌─────▼─────┐             │
 │  │ Text  Service│ │ LLM Service │ │ Auth      │             │
 │  │              │ │             │ │ Service   │             │
@@ -462,3 +462,4 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 - [ ] Tests de integración
 - [ ] CI/CD pipeline
 - [ ] Kubernetes deployment
+
