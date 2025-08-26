@@ -90,10 +90,16 @@ Back-End-LLM/
 git clone <repository-url>
 cd Back-End-LLM
 
+# Instalar poetry
+pip install poetry
+
 # Instalar dependencias
 poetry install
 
-# Activar entorno virtual
+# Activar entorno virtual Metodo 1
+poetry env activate
+
+# Activar entorno virtual Metodo 2
 poetry shell
 
 # Copiar variables de entorno
@@ -131,10 +137,10 @@ DEBUG=True
 ENVIRONMENT=development
 ```
 
-### 4. Configurar Supabase
+### 4. Configurar Supabase (una vez al inicio del proyecto)
 
 ```bash
-# Ejecutar script de configuración
+# Ejecutar script de configuración / Creación de BBDD
 python scripts/setup_supabase.py
 ```
 
@@ -143,14 +149,14 @@ python scripts/setup_supabase.py
 ### 2. Iniciar Servidor FastAPI
 
 ```bash
-# Opción 1: Script
+# Opción 1: Poetry
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Opción 2: Script
 python scripts/start_server.py
 
-# Opción 2: Uvicorn directo
+# Opción 3: Uvicorn directo
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Opción 3: Poetry
-poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ```
