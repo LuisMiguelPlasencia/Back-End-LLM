@@ -434,11 +434,12 @@ tail -f logs/redis.log
 
 ## 🤝 Contribución
 
-1. Fork el proyecto
-2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
+1. Todos somos contributors
+2. Bajarse la ultima versión de main (`git checkout main && git pull`)
+3. Crear rama de desarrollo (`git checkout -b my_branch`)
+4. Una vez terminado el desarrollo hacer rebase con la última version de main (`git checkout main && git pull && git checkout my_branch && git rebase main`)
+5. Subir los cambios con un force-push: (`git push --force`)
+6. Abrir Pull Request
 
 ## 📝 Licencia
 
