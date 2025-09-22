@@ -10,8 +10,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 logger = logging.getLogger(__name__)
 
 # Database engine
-engine = create_engine(
-    settings.database_url,
+engine = settings.create_engine(
     echo=settings.debug,
     pool_pre_ping=True,
     pool_recycle=300,
