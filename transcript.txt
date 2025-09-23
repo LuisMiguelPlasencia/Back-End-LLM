@@ -1,6 +1,8 @@
-vendedor:  anda anda anda vamos a hablar normal y que coja lo que le dé la porfa gelo gelo gelo
-cliente: No me saludaste wey. Me gustaría hacerte una serie de preguntas para asegurarme de que el producto sea un buen fit para mi empresaCual es el ROI esperado?
-vendedor:  mi hermano que esta haciendo trampadas con el carne del sas el que esta haciendo? que gana como van
+vendedor:  Hola, mi nombre es Daniel y... ehh... me gustaría venderte el Park Enterprise de Gira.
+cliente: Hola buenas, me gustaría hacerte una serie de preguntas para asegurarme de que el producto sea un buen fit para mi empresa. Cual es el ROI esperado?
+vendedor:  El roi que solemos manejar está entre... 1,5 y 10%
 cliente: Cuanto tiempo se tardaría en implementar la solucion?
-vendedor:  Més a qual carnet de la universitat i van con el meu a la piscina, a la casa blanca. A tu, perquè té el TfM aún.
+vendedor:  Solemos tardar entre 2-3 semanas.
 cliente: Como ha funcionado el producto en otras empresas?
+vendedor:  Bueno, de momento os seguíais la tercera empresa en piloto, pero estamos bastante contentos con los resultados.
+cliente: Eso es todo lo que quería saber, muchas gracias!
