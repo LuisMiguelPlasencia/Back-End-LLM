@@ -1,8 +1,0 @@
-vendedor:  Hola, mi nombre es Daniel y... ehh... me gustaría venderte el Park Enterprise de Gira.
-cliente: Hola buenas, me gustaría hacerte una serie de preguntas para asegurarme de que el producto sea un buen fit para mi empresa. Cual es el ROI esperado?
-vendedor:  El roi que solemos manejar está entre... 1,5 y 10%
-cliente: Cuanto tiempo se tardaría en implementar la solucion?
-vendedor:  Solemos tardar entre 2-3 semanas.
-cliente: Como ha funcionado el producto en otras empresas?
-vendedor:  Bueno, de momento os seguíais la tercera empresa en piloto, pero estamos bastante contentos con los resultados.
-cliente: Eso es todo lo que quería saber, muchas gracias!
