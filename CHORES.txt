@@ -1,0 +1,11 @@
+LITTAR 
+- Hacer que el bot nos hable en español
+- Transcripción con nuestro formato (lista de diccionarios) en paralelo 
+
+NICO 
+- Conseguir que se cierre la llamada automáticamente
+- Explorar alternativas a websockets
+
+DANI
+- Ajustar tiempo de respuesta y/o voz del robot
+- Devolver feedback como output de get_conver_scores y get_conver_skills
