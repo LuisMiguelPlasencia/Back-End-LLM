@@ -37,20 +37,20 @@ REENGAGE_DELAY_MS = 500
 def clear_audio_buffer():
     global audio_buffer
     audio_buffer = bytearray()
-    print('🔵 Audio buffer cleared.')
+    # print('🔵 Audio buffer cleared.')
 
 # Function to stop audio playback
 def stop_audio_playback():
     global is_playing
     is_playing = False
-    print('🔵 Stopping audio playback.')
+    # print('🔵 Stopping audio playback.')
 
 # Function to handle microphone input and put it into a queue
 def mic_callback(in_data, frame_count, time_info, status):
     global mic_on_at, mic_active
 
     if mic_active != True:
-        print('🎙️🟢 Mic active')
+        # print('🎙️🟢 Mic active')
         mic_active = True
     mic_queue.put(in_data)
 
@@ -113,13 +113,13 @@ def receive_audio_from_websocket(ws):
             try:
                 message = ws.recv()
                 if not message:  # Handle empty message (EOF or connection close)
-  #                  print('🔵 Received empty message (possibly EOF or WebSocket closing).')
+                    #print('🔵 Received empty message (possibly EOF or WebSocket closing).')
                     break
 
                 # Now handle valid JSON messages only
                 message = json.loads(message)
                 event_type = message['type']
- #               print(f'⚡️ Received WebSocket event: {event_type}')
+                # print(f'⚡️ Received WebSocket event: {event_type}')
 
                 if event_type == 'session.created':
                     send_fc_session_update(ws)
@@ -127,27 +127,27 @@ def receive_audio_from_websocket(ws):
                 elif event_type == 'response.audio.delta':
                     audio_content = base64.b64decode(message['delta'])
                     audio_buffer.extend(audio_content)
-#                    print(f'🔵 Received {len(audio_content)} bytes, total buffer size: {len(audio_buffer)}')
+                    #print(f'🔵 Received {len(audio_content)} bytes, total buffer size: {len(audio_buffer)}')
 
-                elif event_type == 'response.output_text.delta':
-                    print(message['delta'])
-                elif event_type == 'response.output_text.done':
-                    print(message['text'])
-                elif event_type == 'response.output_audio_transcript.delta':
-                    print(message['delta'])
-                elif event_type == 'response.output_audio_transcript.done':
+                elif event_type == 'conversation.item.input_audio_transcription.completed':
+                    # aquí la transcripción de lo que dice el usuario
+                    print('========= Usuario =========')
+                    print(message['transcript'])# esto nos da la duración del mensaje
+                    print('\n')
+                    print(message['usage'])
+                    print('\n')
+                elif event_type == 'response.audio_transcript.done':
+                    # este nos da las respuestas del LLM
+                    print('========= LLM =========')
                     print(message['transcript'])
+                    print('\n')
 
                 elif event_type == 'input_audio_buffer.speech_started':
- #                   print('🔵 Speech started, clearing buffer and stopping playback.')
                     clear_audio_buffer()
                     stop_audio_playback()
 
                 #elif event_type == 'response.audio.done':
- #                   print('🔵 AI finished speaking.')
-
-                elif event_type == 'response.function_call_arguments.done':
-                    handle_function_call(message,ws)
+                    #print('🔵 AI finished speaking.')
                 
             except Exception as e:
                 print(f'Error receiving audio: {e}')
@@ -156,79 +156,6 @@ def receive_audio_from_websocket(ws):
     finally:
         print('Exiting receive_audio_from_websocket thread.')
 
-
-# Function to handle function calls
-def handle_function_call(event_json, ws):
-    try:
-
-        name= event_json.get("name","")
-        call_id = event_json.get("call_id", "")
-
-        arguments = event_json.get("arguments", "{}")
-        function_call_args = json.loads(arguments)
-
-
-
-        if name == "write_notepad":
-            print(f"start open_notepad,event_json = {event_json}")
-            content = function_call_args.get("content", "")
-            date = function_call_args.get("date", "")
-
-            subprocess.Popen(
-                ["powershell", "-Command", f"Add-Content -Path temp.txt -Value 'date: {date}\n{content}\n\n'; notepad.exe temp.txt"])
-
-            send_function_call_result("write notepad successful.", call_id, ws)
-
-        elif name  =="get_weather":
-
-            # Extract arguments from the event JSON
-            city = function_call_args.get("city", "")
-
-            # Extract the call_id from the event JSON
-
-            # If the city is provided, call get_weather and send the result
-            if city:
-                weather_result = get_weather(city)
-                # wait http response  -> send fc result to openai
-                send_function_call_result(weather_result, call_id, ws)
-            else:
-                print("City not provided for get_weather function.")
-    except Exception as e:
-        print(f"Error parsing function call arguments: {e}")
-
-# Function to send the result of a function call back to the server
-def send_function_call_result(result, call_id, ws):
-    # Create the JSON payload for the function call result
-    result_json = {
-        "type": "conversation.item.create",
-        "item": {
-            "type": "function_call_output",
-            "output": result,
-            "call_id": call_id
-        }
-    }
-
-    # Convert the result to a JSON string and send it via WebSocket
-    try:
-        ws.send(json.dumps(result_json))
-        print(f"Sent function call result: {result_json}")
-
-        # Create the JSON payload for the response creation and send it
-        rp_json = {
-            "type": "response.create"
-        }
-        ws.send(json.dumps(rp_json))
-        print(f"json = {rp_json}")
-    except Exception as e:
-        print(f"Failed to send function call result: {e}")
-
-# Function to simulate retrieving weather information for a given city
-def get_weather(city):
-    # Simulate a weather response for the specified city
-    return json.dumps({
-        "city": city,
-        "temperature": "99°C"
-    })
 
 # Function to send session configuration updates to the server
 def send_fc_session_update(ws):
@@ -251,52 +178,22 @@ def send_fc_session_update(ws):
             "input_audio_format": "pcm16",
             "output_audio_format": "pcm16",     
             "input_audio_transcription": {
-                "model": "whisper-1"
+                "model": "whisper-1",#"gpt-4o-transcribe", #"whisper-1"
+                #"prompt": "",
+                #"language": "es"
             },
-            "tool_choice": "auto",
-            "tools": [
-                {
-                    "type": "function",
-                    "name": "get_weather",
-                    "description": "Get current weather for a specified city",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "city": {
-                                "type": "string",
-                                "description": "The name of the city for which to fetch the weather."
-                            }
-                        },
-                        "required": ["city"]
-                    }
-                },
-                    {
-                        "type": "function",
-                        "name": "write_notepad",
-                        "description": "Open a text editor and write the time, for example, 2024-10-29 16:19. Then, write the content, which should include my questions along with your answers.",
-                        "parameters": {
-                          "type": "object",
-                          "properties": {
-                            "content": {
-                              "type": "string",
-                              "description": "The content consists of my questions along with the answers you provide."
-                            },
-                             "date": {
-                              "type": "string",
-                              "description": "the time, for example, 2024-10-29 16:19. "
-                            }
-                          },
-                          "required": ["content","date"]
-                        }
-                     },
-            ]
+            "input_audio_noise_reduction": {
+                "type": "near_field"
+            },
+            "include": [
+                "item.input_audio_transcription.logprobs"
+            ],
+            
         }
     }
-    # open notepad fc
-
     # Convert the session config to a JSON string
     session_config_json = json.dumps(session_config)
-    print(f"Send FC session update: {session_config_json}")
+    # print(f"Send FC session update: {session_config_json}")
 
     # Send the JSON configuration through the WebSocket
     try:
@@ -332,7 +229,7 @@ def connect_to_openai():
                 'OpenAI-Beta: realtime=v1'
             ]
         )
-        print('Connected to OpenAI WebSocket.')
+        # print('Connected to OpenAI WebSocket.')
 
 
         # Start the recv and send threads
@@ -347,20 +244,20 @@ def connect_to_openai():
             time.sleep(0.1)
 
         # Send a close frame and close the WebSocket gracefully
-        print('Sending WebSocket close frame.')
+        # print('Sending WebSocket close frame.')
         ws.send_close()
 
         receive_thread.join()
         mic_thread.join()
 
-        print('WebSocket closed and threads terminated.')
+        # print('WebSocket closed and threads terminated.')
     except Exception as e:
         print(f'Failed to connect to OpenAI: {e}')
     finally:
         if ws is not None:
             try:
                 ws.close()
-                print('WebSocket connection closed.')
+                # print('WebSocket connection closed.')
             except Exception as e:
                 print(f'Error closing WebSocket connection: {e}')
 
@@ -397,7 +294,7 @@ def main():
             time.sleep(0.1)
 
     except KeyboardInterrupt:
-        print('Gracefully shutting down...')
+        # print('Gracefully shutting down...')
         stop_event.set()
 
     finally:
@@ -407,7 +304,7 @@ def main():
         speaker_stream.close()
 
         p.terminate()
-        print('Audio streams stopped and resources released. Exiting.')
+        # print('Audio streams stopped and resources released. Exiting.')
 
 
 if __name__ == '__main__':
