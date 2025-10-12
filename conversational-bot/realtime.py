@@ -154,7 +154,7 @@ def receive_audio_from_websocket(ws):
     except Exception as e:
         print(f'Exception in receive_audio_from_websocket thread: {e}')
     finally:
-  #      print('Exiting receive_audio_from_websocket thread.')
+        print('Exiting receive_audio_from_websocket thread.')
 
 
 # Function to handle function calls
