@@ -143,7 +143,7 @@ def receive_audio_from_websocket(ws):
                     clear_audio_buffer()
                     stop_audio_playback()
 
-                elif event_type == 'response.audio.done':
+                #elif event_type == 'response.audio.done':
  #                   print('🔵 AI finished speaking.')
 
                 elif event_type == 'response.function_call_arguments.done':
