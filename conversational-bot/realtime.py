@@ -113,13 +113,13 @@ def receive_audio_from_websocket(ws):
             try:
                 message = ws.recv()
                 if not message:  # Handle empty message (EOF or connection close)
-                    print('🔵 Received empty message (possibly EOF or WebSocket closing).')
+  #                  print('🔵 Received empty message (possibly EOF or WebSocket closing).')
                     break
 
                 # Now handle valid JSON messages only
                 message = json.loads(message)
                 event_type = message['type']
-                print(f'⚡️ Received WebSocket event: {event_type}')
+ #               print(f'⚡️ Received WebSocket event: {event_type}')
 
                 if event_type == 'session.created':
                     send_fc_session_update(ws)
@@ -127,15 +127,24 @@ def receive_audio_from_websocket(ws):
                 elif event_type == 'response.audio.delta':
                     audio_content = base64.b64decode(message['delta'])
                     audio_buffer.extend(audio_content)
-                    print(f'🔵 Received {len(audio_content)} bytes, total buffer size: {len(audio_buffer)}')
+#                    print(f'🔵 Received {len(audio_content)} bytes, total buffer size: {len(audio_buffer)}')
+
+                elif event_type == 'response.output_text.delta':
+                    print(message['delta'])
+                elif event_type == 'response.output_text.done':
+                    print(message['text'])
+                elif event_type == 'response.output_audio_transcript.delta':
+                    print(message['delta'])
+                elif event_type == 'response.output_audio_transcript.done':
+                    print(message['transcript'])
 
                 elif event_type == 'input_audio_buffer.speech_started':
-                    print('🔵 Speech started, clearing buffer and stopping playback.')
+ #                   print('🔵 Speech started, clearing buffer and stopping playback.')
                     clear_audio_buffer()
                     stop_audio_playback()
 
                 elif event_type == 'response.audio.done':
-                    print('🔵 AI finished speaking.')
+ #                   print('🔵 AI finished speaking.')
 
                 elif event_type == 'response.function_call_arguments.done':
                     handle_function_call(message,ws)
@@ -145,7 +154,7 @@ def receive_audio_from_websocket(ws):
     except Exception as e:
         print(f'Exception in receive_audio_from_websocket thread: {e}')
     finally:
-        print('Exiting receive_audio_from_websocket thread.')
+  #      print('Exiting receive_audio_from_websocket thread.')
 
 
 # Function to handle function calls
