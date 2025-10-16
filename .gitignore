@@ -145,7 +145,7 @@ ENV/
 env.bak/
 venv.bak/
 test/
-scoringnotebooks/
+scoring-notebooks/
 
 # Spyder project settings
 .spyderproject
@@ -208,3 +208,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Audio 
+*.wav
+
+# Text
+*.txt
