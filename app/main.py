@@ -1,74 +1,44 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import logging
+# FastAPI application main entry point
+# Creates and configures the FastAPI app with all routes
+# Exports app for uvicorn: uvicorn app.main:app --reload
 
-from app.config import settings
-from app.routers import health, db_operations
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from .services.db import init_db, close_db
+from .routers import auth, read, insert
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown"""
+    # Startup
+    await init_db()
+    yield
+    # Shutdown
+    await close_db()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
-
-# Create FastAPI app
+# Create FastAPI application
 app = FastAPI(
-    title="Speech-to-Text Backend API",
-    description="Backend API for Speech-to-Text with LLM integration",
+    title="Conversa API",
+    description="REST API for conversation management with courses and messaging",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    lifespan=lifespan
 )
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# Global exception handler
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler"""
-    logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": "Internal server error",
-            "detail": str(exc) if settings.debug else "An unexpected error occurred"
-        }
-    )
-
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(db_operations.router, prefix="/api/v1")
-
+app.include_router(auth.router)
+app.include_router(read.router)
+app.include_router(insert.router)
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Health check endpoint"""
+    return {"message": "Conversa API is running", "status": "healthy"}
+
+@app.get("/health")
+async def health_check():
+    """Detailed health check"""
     return {
-        "message": "Speech-to-Text Backend API",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "health": "/api/v1/health"
+        "status": "healthy",
+        "service": "conversa-api",
+        "version": "1.0.0"
     }
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.debug
-    ) 

@@ -90,6 +90,53 @@ CREATE TABLE IF NOT EXISTS conversaScoring.conversations_scoring (
   PRIMARY KEY (user_id, conversation_id)
 );
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+------------------------------
+-- Tabla: user_types
+------------------------------
+CREATE TABLE IF NOT EXISTS conversaConfig.user_types (
+  user_type   VARCHAR(64)    NOT NULL,   -- p.ej. 'student','teacher','admin'
+  description TEXT           NULL,
+  is_active   BOOLEAN        NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMP    NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMP    NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_type)
+);
 
+------------------------------
+-- Tabla: master_courses
+------------------------------
+CREATE TABLE IF NOT EXISTS conversaConfig.master_courses (
+  course_id    UUID           NOT NULL DEFAULT gen_random_uuid(),
+  name         TEXT           NOT NULL,
+  description  TEXT           NULL,
+  image_id     UUID           NULL,                    -- referencia opcional a recursos/archivos
+  created_on   TIMESTAMP   NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMP    NOT NULL DEFAULT now(),
+  is_active    BOOLEAN        NOT NULL DEFAULT TRUE,
+  PRIMARY KEY (course_id)
+);
+
+------------------------------
+-- Tabla: user_type_relations
+-- (relación entre user_type y course_id)
+------------------------------
+drop table conversaConfig.user_type_relations;
+CREATE TABLE IF NOT EXISTS conversaConfig.user_type_relations (
+  user_type   VARCHAR(64)     NOT NULL,
+  course_id   UUID            NOT NULL,
+  event_time  TIMESTAMP     NOT NULL DEFAULT now(),  -- "time"
+  metrics     JSONB           NULL,                    -- flexible: {"score": 95, "progress": 0.6}
+  notes       TEXT            NULL,
+  created_at  TIMESTAMP     NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMP    NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_type, course_id),
+  CONSTRAINT utr_user_type_fk FOREIGN KEY (user_type)
+    REFERENCES conversaConfig.user_types(user_type)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT utr_course_fkey FOREIGN KEY (course_id)
+    REFERENCES conversaConfig.master_courses(course_id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
 
