@@ -1,8 +1,5 @@
-# FastAPI application main entry point
-# Creates and configures the FastAPI app with all routes
-# Exports app for uvicorn: uvicorn app.main:app --reload
-
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .services.db import init_db, close_db
 from .routers import auth, read, insert
@@ -10,13 +7,11 @@ from .routers import auth, read, insert
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown"""
-    # Startup
     await init_db()
     yield
-    # Shutdown
     await close_db()
 
-# Create FastAPI application
+# Create FastAPI app
 app = FastAPI(
     title="Conversa API",
     description="REST API for conversation management with courses and messaging",
@@ -24,19 +19,26 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Include routers
+# ✅ Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or specify your frontend origin(s), e.g. ["http://localhost:5173"]
+    allow_credentials=True,
+    allow_methods=["*"],  # or ["GET", "POST", "OPTIONS"]
+    allow_headers=["*"],  # or specify headers you expect, e.g. ["Content-Type", "Authorization"]
+)
+
+# Routers
 app.include_router(auth.router)
 app.include_router(read.router)
 app.include_router(insert.router)
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
     return {"message": "Conversa API is running", "status": "healthy"}
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
     return {
         "status": "healthy",
         "service": "conversa-api",

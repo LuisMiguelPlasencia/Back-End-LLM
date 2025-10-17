@@ -18,6 +18,7 @@ router = APIRouter(prefix="/read", tags=["read"])
 async def get_courses(user_id: UUID = Query(..., description="User ID to get courses for")):
     """Get courses available to user based on their user type"""
     try:
+        print("Fetching courses for user:", user_id)
         courses = await get_user_courses(user_id)
         return courses
     except Exception as e:
