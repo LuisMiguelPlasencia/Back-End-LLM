@@ -14,7 +14,7 @@ async def authenticate_user(email: str, password: str) -> Optional[Dict]:
     SELECT user_id, email, name, user_type, is_active
     FROM conversaConfig.user_info
     WHERE email = $1
-      AND password = crypt($2, password)
+      AND password = $2
     """
     
     result = await execute_query_one(query, email, password)
@@ -25,6 +25,6 @@ async def authenticate_user(email: str, password: str) -> Optional[Dict]:
 
 async def user_exists(email: str) -> bool:
     """Check if user exists by email"""
-    query = "SELECT 1 FROM conversaConfig.user_info WHERE email = $1"
+    query = "SELECT 1 FROM conversaConfig.user_info WHERE email = $1 AND is_active = TRUE"
     result = await execute_query_one(query, email)
     return result is not None

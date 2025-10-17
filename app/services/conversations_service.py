@@ -9,7 +9,10 @@ from typing import List, Dict, Optional
 async def get_user_conversations(user_id: UUID) -> List[Dict]:
     """Get all conversations for a user, ordered by start time (newest first)"""
     query = """
-    SELECT conversation_id, user_id, start_timestamp, end_timestamp, status, created_at, updated_at
+    SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
+    , updated_at, couser_id, fillerwords_scoring, clarity_scoring
+    , participation_scoring, keythemes_scoring, indexofquestions_scoring
+    , rhythm_scoring
     FROM conversaApp.conversations
     WHERE user_id = $1
     ORDER BY start_timestamp DESC
@@ -24,12 +27,12 @@ async def create_conversation(user_id: UUID, course_id: UUID) -> Optional[Dict]:
     Note: course_id accepted for compatibility but not stored in DB
     """
     query = """
-    INSERT INTO conversaApp.conversations (user_id, conversation_id, start_timestamp, status, created_at, updated_at)
-    VALUES ($1, gen_random_uuid(), now(), 'open', now(), now())
+    INSERT INTO conversaApp.conversations (user_id,couser_id, conversation_id, start_timestamp, status, created_at, updated_at)
+    VALUES ($1,$2, gen_random_uuid(), now(), 'open', now(), now())
     RETURNING conversation_id, user_id, start_timestamp, status, created_at
     """
     
-    result = await execute_query_one(query, user_id)
+    result = await execute_query_one(query, user_id, course_id)
     
     if result:
         return dict(result)

@@ -17,7 +17,7 @@ async def login(request: LoginRequest):
     """
     # Check if user exists first
     if not await user_exists(request.email):
-        error(404, "user not found")
+        error(404, "user not found or is inactive")
     
     # Authenticate user
     user_data = await authenticate_user(request.email, request.password)
