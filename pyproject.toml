@@ -16,7 +16,7 @@ psycopg2-binary = "^2.9.9"
 python-multipart = "^0.0.6"
 
 httpx = "^0.25.2"
-pydantic = "^2.5.0"
+pydantic = {extras = ["email"], version = "^2.12.3"}
 pydantic-settings = "^2.1.0"
 python-dotenv = "^1.0.0"
 
@@ -28,6 +28,7 @@ wavio = "^0.0.9"
 sounddevice = "^0.5.2"
 whisper = "^1.1.10"
 asyncpg = "^0.30.0"
+email-validator = "^2.3.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.11.0"
