@@ -10,7 +10,9 @@ import time
 import pyaudio
 import socks
 import websocket
+import psycopg2
 from dotenv import load_dotenv
+import os
 
 # Load variables from a .env file into environment variables
 load_dotenv()
@@ -150,14 +152,14 @@ def receive_audio_from_websocket(ws):
                 elif event_type == 'conversation.item.input_audio_transcription.completed':
                     user_text = message.get('transcript', '')
                     if user_text and user_start_time:
-                        duracion = round(time.time() - user_start_time - 1, 2)
+                        duracion = round(time.time() - user_start_time, 2)
                         user_start_time = None
                         print('========= Usuario =========')
                         print(user_text)
                         print(f"(duración: {duracion}s)\n")
                         print('\n')
                         conversation_log.append({
-                            "speaker": "vendedor",
+                            "speaker": "user",
                             "text": user_text,
                             "duracion": round(duracion, 2)
                         })
@@ -174,7 +176,7 @@ def receive_audio_from_websocket(ws):
 
                         last_user_end_time = time.time()
 
-                elif event_type == 'response.audio_transcript.done' and 'response.audio.done':
+                elif event_type == 'response.audio_transcript.done':
                     llm_text = message.get('transcript', '')
                     if llm_text:
                         duracion = round(time.time() - last_user_end_time + 5, 2)
@@ -184,7 +186,7 @@ def receive_audio_from_websocket(ws):
                         print(f"(duración: {duracion}s)\n")
                         print('\n')
                         conversation_log.append({
-                            "speaker": "cliente",
+                            "speaker": "assistant",
                             "text": llm_text,
                             "duracion": round(duracion, 2)
                         })
@@ -322,7 +324,7 @@ def connect_to_openai():
 
 
 # Main function to start audio streams and connect to OpenAI
-def main():
+def start_conver_and_get_transcript():
     p = pyaudio.PyAudio()
 
     mic_stream = p.open(
@@ -379,7 +381,7 @@ def main():
                 duracion = turno["duracion"]
                 print(f"{speaker.upper()} ({duracion}s): {text}\n")
 
-            print(conversation_log)
+            # print(conversation_log)
 
             # Guardar JSON
             # with open("transcript.json", "w", encoding="utf-8") as f:
@@ -391,6 +393,70 @@ def main():
         
         return conversation_log
 
-if __name__ == '__main__':
-    main()
+def send_transcript_to_db(transcript):
+
+    # --- 1. Load Environment Variables ---
+    # This looks for a .env file and loads its contents into os.environ
+    load_dotenv()
+
+    # --- 2. Retrieve Connection Variables ---
+    DB_HOST = os.getenv("DB_HOST")
+    DB_USER = os.getenv("DB_USER")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
+    DB_NAME = os.getenv("DB_NAME")
+    DB_PORT = os.getenv("DB_PORT")
+
+    """Establishes a connection to the pgEdge Cloud database."""
+    conn = None
+    cur = None
+
+    #conversation_id = 'sdjlkfsdlfdks'
     
+    try:
+        print("Attempting to connect to pgEdge Cloud...")
+        
+        # Connect to the Database using retrieved environment variables
+        conn = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            port=DB_PORT
+        )
+        
+        # Create a cursor object to execute SQL commands
+        cur = conn.cursor()
+        
+        print("✅ Connection successful!")
+        
+        # --- 3. Execute SQL Query ---
+        insert_query = """
+            insert into conversaapp.messages (role, content)
+            values (%s, %s)
+        """
+
+        cur.executemany(
+            insert_query,
+            [(m["speaker"], m["text"]) for m in transcript]
+        )
+        conn.commit()
+        
+    except psycopg2.Error as e:
+        # Handle specific PostgreSQL errors
+        print(f"❌ Database Error: {e}")
+        
+    except Exception as e:
+        # Handle other general errors
+        print(f"❌ An unexpected error occurred: {e}")
+        
+    finally:
+        # --- 4. Close the Connection and Cursor ---
+        if cur is not None:
+            cur.close()
+        if conn is not None:
+            conn.close()
+            print("Database connection closed.")
+
+if __name__ == '__main__':
+    transcript = start_conver_and_get_transcript()
+    send_transcript_to_db(transcript)

@@ -180,7 +180,7 @@ Responde ÚNICAMENTE devolviendo:
     
     return output
 
-def evaluar_transcript(transcript: str) -> Dict[str, Dict[str, str]]:
+def get_conver_skills(transcript: str) -> Dict[str, Dict[str, str]]:
     """
     Evalúa un transcript en todas las skills definidas.
     Devuelve un diccionario con las puntuaciones y justificaciones.
@@ -212,5 +212,5 @@ if __name__ == "__main__":
     C: Es una buena pregunta. El reprocesamiento nos cuesta tiempo y reactivos, calculo unos 50€ por caso...
     """
     
-    resultados = evaluar_transcript(transcript_demo)
+    resultados = get_conver_skills(transcript_demo)
     print(limpiar_output(resultados))

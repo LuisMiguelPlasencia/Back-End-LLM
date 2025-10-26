@@ -352,7 +352,7 @@ def calcular_ppm_variabilidad(transcript):
 
 
 ## Scoring function
-def evaluar_transcript_global(transcript):
+def get_conver_scores(transcript):
     # Factores de ponderación
     pesos = {
         "muletillas_pausas": 0.15,
@@ -405,5 +405,5 @@ if __name__ == "__main__":
     {"speaker": "cliente", "text": "Igualmente, Pedro. Hasta el martes.", "duracion": 10}
     ]
 
-    output = evaluar_transcript_global(transcript_demo)
+    output = get_conver_scores(transcript_demo)
     print(output)
