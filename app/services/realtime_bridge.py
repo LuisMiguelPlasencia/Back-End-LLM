@@ -63,27 +63,58 @@ class RealtimeBridge:
         await self.openai_ws.send(json.dumps(session_config))
 
     async def forward_frontend_to_openai(self):
-        """Frontend sends audio → we forward to OpenAI"""
         try:
             while not self.stop_event.is_set():
-                await asyncio.sleep(0.1)
-                msg = await self.frontend_ws.receive_text()
-                print(f"Frontend message: ")
-                await self.openai_ws.send(msg)
+                try:
+                    msg = await self.frontend_ws.receive_text()
+                    print("📥 Received from frontend:", msg[:100], "...")  # print first 100 chars
+                    await self.openai_ws.send(msg)
+                except Exception as e:
+                    print("⚠️ Frontend WebSocket error:", e)
+                    await self.stop()
         except Exception as e:
             print("Frontend stream ended:", e)
             await self.stop()
 
+
     async def forward_openai_to_frontend(self):
-        """OpenAI sends back audio + transcript → send to frontend"""
         try:
             async for msg in self.openai_ws:
-                await asyncio.sleep(0.1)
-                print(f"OpenAI message: ")
+                try:
+                    data = json.loads(msg)
+                except json.JSONDecodeError:
+                    print("⚠️ [OpenAI] Received non-JSON message.")
+                    continue
+
+                msg_type = data.get("type")
+                print("📥 Received from OpenAI:", msg[:100], "...")  # print first 100 chars
+                if msg_type == "conversation.item.input_audio_transcription.completed":
+                    print('data', data)
+                    transcript = (
+                        data.get("transcript") or
+                        data.get("item", {}).get("transcript") or
+                        data.get("item", {}).get("input_audio_transcription", {}).get("transcript")
+                    )
+                    if transcript:
+                        print(f"[User audio]: {transcript}")
+
+                elif msg_type == "response.audio_transcript.delta":
+                    partial = data.get("delta", "")
+                    if partial:
+                        print(f"[Assistant audio partial]: {partial}")
+
+                elif msg_type == "response.audio_transcript.done":
+                    transcript = data.get("transcript", "")
+                    if transcript:
+                        print(f"[Assistant audio full]: {transcript}")
+
+                # forward raw message to frontend
                 await self.frontend_ws.send_text(msg)
+
         except Exception as e:
             print("OpenAI stream ended:", e)
             await self.stop()
+
 
     async def run(self):
         # establish connection to OpenAI
