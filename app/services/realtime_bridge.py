@@ -47,9 +47,9 @@ class RealtimeBridge:
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",     
                 "input_audio_transcription": {
-                    "model": "whisper-1",#"gpt-4o-transcribe", #"whisper-1"
+                    "model": "gpt-4o-transcribe",#"gpt-4o-transcribe", #"whisper-1"
                     #"prompt": "",
-                    #"language": "es"
+                    "language": "es"
                 },
                 "input_audio_noise_reduction": {
                     "type": "near_field"
@@ -57,7 +57,6 @@ class RealtimeBridge:
                 "include": [
                     "item.input_audio_transcription.logprobs"
                 ],
-                
             }
         }
         await self.openai_ws.send(json.dumps(session_config))
@@ -67,7 +66,7 @@ class RealtimeBridge:
             while not self.stop_event.is_set():
                 try:
                     msg = await self.frontend_ws.receive_text()
-                    print("📥 Received from frontend:", msg[:100], "...")  # print first 100 chars
+                    #print("📥 Received from frontend:", msg[:100], "...")  # print first 100 chars
                     await self.openai_ws.send(msg)
                 except Exception as e:
                     print("⚠️ Frontend WebSocket error:", e)
@@ -87,9 +86,7 @@ class RealtimeBridge:
                     continue
 
                 msg_type = data.get("type")
-                print("📥 Received from OpenAI:", msg[:100], "...")  # print first 100 chars
                 if msg_type == "conversation.item.input_audio_transcription.completed":
-                    print('data', data)
                     transcript = (
                         data.get("transcript") or
                         data.get("item", {}).get("transcript") or
