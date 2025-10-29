@@ -69,10 +69,14 @@ class RealtimeBridge:
             while not self.stop_event.is_set():
                 try:
                     msg = await self.frontend_ws.receive_text()
-                    #print("📥 Received from frontend:", msg[:100], "...")  # print first 100 chars
-                    print('Message from frontend received')
+                    print("Received from frontend:", msg[:100], "...")
+                    msg_type = json.loads(msg).get("type")
+
                     ## Logica front to openai
                     ## TO DO
+                    if msg_type == "input_audio_session.start":
+                        print('new audio session started')
+                        ## TO DO: create new conversation in db, get conversation_id
                     ##if msg.type == 'cancel':
                     ##    stop()
                     ##else:
