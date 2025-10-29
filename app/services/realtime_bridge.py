@@ -73,7 +73,6 @@ class RealtimeBridge:
                     print('Message from frontend received')
                     ## Logica front to openai
                     ## TO DO
-                    print("Forwarding to OpenAI: ", msg[:100], "...")
                     ##if msg.type == 'cancel':
                     ##    stop()
                     ##else:
