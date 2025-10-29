@@ -47,7 +47,7 @@ class RealtimeBridge:
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",     
                 "input_audio_transcription": {
-                    "model": "gpt-4o-transcribe",#"gpt-4o-transcribe", #"whisper-1"
+                    "model": "whisper-1",#"gpt-4o-transcribe", #"whisper-1"
                     #"prompt": "",
                     "language": "es"
                 },
