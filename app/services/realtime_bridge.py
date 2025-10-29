@@ -2,9 +2,11 @@
 import asyncio
 import json
 import base64
+from multiprocessing.resource_sharer import stop
 import os
 import websockets
 from dotenv import load_dotenv
+from ..services.messages_service import send_message
 
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
@@ -61,12 +63,20 @@ class RealtimeBridge:
         }
         await self.openai_ws.send(json.dumps(session_config))
 
+
     async def forward_frontend_to_openai(self):
         try:
             while not self.stop_event.is_set():
                 try:
                     msg = await self.frontend_ws.receive_text()
                     #print("📥 Received from frontend:", msg[:100], "...")  # print first 100 chars
+                    print('Message from frontend received')
+                    ## Logica front to openai
+                    ## TO DO
+                    print("Forwarding to OpenAI: ", msg[:100], "...")
+                    ##if msg.type == 'cancel':
+                    ##    stop()
+                    ##else:
                     await self.openai_ws.send(msg)
                 except Exception as e:
                     print("⚠️ Frontend WebSocket error:", e)
@@ -86,6 +96,7 @@ class RealtimeBridge:
                     continue
 
                 msg_type = data.get("type")
+                ## USER AUDIO TRANSCRIPTION
                 if msg_type == "conversation.item.input_audio_transcription.completed":
                     transcript = (
                         data.get("transcript") or
@@ -94,17 +105,22 @@ class RealtimeBridge:
                     )
                     if transcript:
                         print(f"[User audio]: {transcript}")
+                        ## insert to db as user message
+                        ## async send_message(transcript_user_id, transcript_conversation_id, transcript)
 
+                ## AI AUDIO CHUNK
                 elif msg_type == "response.audio_transcript.delta":
                     partial = data.get("delta", "")
                     if partial:
                         print(f"[Assistant audio partial]: {partial}")
 
+                ## AI AUDIO FULL
                 elif msg_type == "response.audio_transcript.done":
                     transcript = data.get("transcript", "")
                     if transcript:
                         print(f"[Assistant audio full]: {transcript}")
-
+                        ## insert to db as assistant message
+                        ## async send_message(assistant_id, assistant_conversation_id, transcript)
                 # forward raw message to frontend
                 await self.frontend_ws.send_text(msg)
 
@@ -123,6 +139,8 @@ class RealtimeBridge:
         )
 
     async def stop(self):
+        ## update conversation status to closed in db
+
         if not self.stop_event.is_set():
             self.stop_event.set()
         try:
