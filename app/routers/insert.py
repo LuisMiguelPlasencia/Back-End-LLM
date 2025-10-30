@@ -5,8 +5,8 @@
 # curl -X POST "http://localhost:8000/insert/message" -H "Content-Type: application/json" -d '{"user_id":"123e4567-e89b-12d3-a456-426614174000","conversation_id":"123e4567-e89b-12d3-a456-426614174002","message":"Hello, how are you?"}'
 
 from fastapi import APIRouter
-from ..schemas.insert import StartConversationRequest, SendMessageRequest
-from ..services.conversations_service import create_conversation
+from ..schemas.insert import StartConversationRequest, SendMessageRequest, CloseConversationRequest
+from ..services.conversations_service import create_conversation, close_conversation
 from ..services.messages_service import send_message
 from ..utils.responses import error
 
@@ -60,3 +60,22 @@ async def send_user_message(request: SendMessageRequest):
     
     except Exception as e:
         error(500, f"Failed to send message: {str(e)}")
+
+@router.post("/close_conversation")
+async def close_conversation_route(request: CloseConversationRequest):
+    """
+    Close a conversation for user
+    """
+    try:
+        result = await close_conversation(request.conversation_id, request.user_id, request.course_id)
+        
+        if not result:
+            error(500, "Failed to close conversation")
+        
+        return {
+            "status": "conversation closed success",
+            "result": result
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to create conversation: {str(e)}")

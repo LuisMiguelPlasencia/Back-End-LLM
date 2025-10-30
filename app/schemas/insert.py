@@ -10,6 +10,13 @@ class StartConversationRequest(BaseModel):
     user_id: UUID
     course_id: UUID  # Accepted for compatibility but not stored in DB
 
+class CloseConversationRequest(BaseModel):
+    """Close conversation request payload"""
+    conversation_id: UUID
+    user_id: UUID
+    course_id: UUID
+    
+
 class SendMessageRequest(BaseModel):
     """Send message request payload"""
     user_id: UUID

@@ -7,7 +7,7 @@ import os
 import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
-
+from ..services.conversations_service import close_conversation
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 WS_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
@@ -143,7 +143,7 @@ class RealtimeBridge:
 
     async def stop(self):
         ## update conversation status to closed in db
-
+        await close_conversation(self.user_id, self.course_id, self.conversation_id)
         if not self.stop_event.is_set():
             self.stop_event.set()
         try:

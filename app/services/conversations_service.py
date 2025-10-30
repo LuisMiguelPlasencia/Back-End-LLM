@@ -37,3 +37,14 @@ async def create_conversation(user_id: UUID, course_id: UUID) -> Optional[Dict]:
     if result:
         return dict(result)
     return None
+
+async def close_conversation(conversation_id: UUID, user_id: UUID, course_id: UUID) -> Optional[Dict]:
+    """
+    Close conversation
+    """
+    query = """
+    UPDATE conversaApp.conversations SET status = 'FINISHED', end_timestamp = now()
+     WHERE conversation_id = $1 AND user_id = $2 AND couser_id = $3
+    """
+    await execute_query(query, course_id, user_id, conversation_id)
+    return True
