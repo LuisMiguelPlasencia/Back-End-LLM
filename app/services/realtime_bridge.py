@@ -18,6 +18,9 @@ class RealtimeBridge:
         self.openai_ws = None
         # Event to signal stopping
         self.stop_event = asyncio.Event()
+        self.user_id = None
+        self.conversation_id = None
+        self.course_id = None
 
     async def connect_openai(self):
         self.openai_ws = await websockets.connect(
@@ -70,17 +73,28 @@ class RealtimeBridge:
                 try:
                     msg = await self.frontend_ws.receive_text()
                     print("Received from frontend:", msg[:100], "...")
-                    msg_type = json.loads(msg).get("type")
+
+                    parsed = json.loads(msg)
+                    self.user_id = parsed.get("user_id")
+                    self.conversation_id = parsed.get("conversation_id")
+                    self.course_id = parsed.get("course_id")
 
                     ## Logica front to openai
                     ## TO DO
-                    if msg_type == "input_audio_session.start":
-                        print('new audio session started')
+                    if parsed.get("type") == "input_audio_session.start":
+                        print("new audio session started")
+                        # TODO: create new conversation in DB and update self.conversation_id
                         ## TO DO: create new conversation in db, get conversation_id
                     ##if msg.type == 'cancel':
                     ##    stop()
                     ##else:
-                    await self.openai_ws.send(msg)
+
+                    parsed.pop("user_id", None)
+                    parsed.pop("conversation_id", None)
+                    parsed.pop("course_id", None)
+
+                    print("Forwarding to OpenAI:", json.dumps(parsed))
+                    await self.openai_ws.send(json.dumps(parsed))
                 except Exception as e:
                     print("⚠️ Frontend WebSocket error:", e)
                     await self.stop()
@@ -143,7 +157,7 @@ class RealtimeBridge:
 
     async def stop(self):
         ## update conversation status to closed in db
-        await close_conversation(self.user_id, self.course_id, self.conversation_id)
+        await close_conversation(self.user_id, self.conversation_id)
         if not self.stop_event.is_set():
             self.stop_event.set()
         try:
