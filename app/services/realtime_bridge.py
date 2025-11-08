@@ -72,28 +72,27 @@ class RealtimeBridge:
             while not self.stop_event.is_set():
                 try:
                     msg = await self.frontend_ws.receive_text()
-                    print("Received from frontend:", msg[:100], "...")
 
                     parsed = json.loads(msg)
-                    self.user_id = parsed.get("user_id")
-                    self.conversation_id = parsed.get("conversation_id")
-                    self.course_id = parsed.get("course_id")
+                    self.user_id = parsed.get("user_id", None)
+                    self.conversation_id = parsed.get("conversation_id", None)
+                    self.course_id = parsed.get("course_id", None)
 
                     ## Logica front to openai
                     ## TO DO
                     if parsed.get("type") == "input_audio_session.start":
                         print("new audio session started")
+                        print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id)
                         # TODO: create new conversation in DB and update self.conversation_id
                         ## TO DO: create new conversation in db, get conversation_id
                     ##if msg.type == 'cancel':
                     ##    stop()
                     ##else:
 
-                    parsed.pop("user_id", None)
-                    parsed.pop("conversation_id", None)
-                    parsed.pop("course_id", None)
+                    #parsed.pop("user_id", None)
+                    #parsed.pop("conversation_id", None)
+                    #parsed.pop("course_id", None)
 
-                    print("Forwarding to OpenAI:", json.dumps(parsed))
                     await self.openai_ws.send(json.dumps(parsed))
                 except Exception as e:
                     print("⚠️ Frontend WebSocket error:", e)

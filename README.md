@@ -149,8 +149,10 @@ python scripts/setup_supabase.py
 ### 2. Iniciar Servidor FastAPI
 
 ```bash
+poetry env activate
 # Opción 1: Poetry
 poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+poetry run uvicorn app.main:app --reload
 
 # Opción 2: Script
 python scripts/start_server.py
