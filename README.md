@@ -26,22 +26,23 @@ Backend API para transcripción de audio y generación de respuestas con modelos
                       │
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
-│                    Supabase                                 │
+│                         PdEdge                              │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
-│  │ PostgreSQL  │ │ Storage     │ │ Auth        │            │
-│  │ Database    │ │ (Audio      │ │ (JWT)       │            │
-│  │             │ │  Files)     │ │             │            │
+│  │ Data Engine │ │ Object      │ │ Identity    │            │
+│  │ (Tables)    │ │ Storage     │ │ & Access    │            │
+│  │             │ │ (Audio etc.)│ │ Control     │            │
 │  └─────────────┘ └─────────────┘ └─────────────┘            │
 └─────────────────────────────────────────────────────────────┘
+
 ```
 
 ### Stack Tecnológico
 
 - **Backend Framework**: FastAPI (Python 3.10+)
-- **Database**: PostgreSQL (Supabase)
+- **Database**: PostgreSQL (PdEdge)
 - **ORM**: SQLModel (SQLAlchemy + Pydantic)
-- **File Storage**: Supabase Storage
-- **Authentication**: JWT + Supabase Auth
+- **File Storage**: PdEdge Storage
+- **Authentication**: JWT + PdEdge Auth
 - **LLM Providers**: OpenAI, Anthropic
 - **Documentation**: OpenAPI/Swagger
 
@@ -81,7 +82,6 @@ Back-End-LLM/
 - Python 3.10+
 - Poetry (gestión de dependencias)
 - Redis (para Celery)
-- Supabase project
 
 ### 2. Clonar y Configurar
 
@@ -112,36 +112,20 @@ Edita el archivo `.env` con tus credenciales:
 
 ```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/speech_to_text_db
-
-# Supabase
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-supabase-anon-key
-
-# JWT
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-
-# LLM Providers
-OPENAI_API_KEY=your-openai-api-key
-ANTHROPIC_API_KEY=your-anthropic-api-key
-
-# File Upload
-MAX_FILE_SIZE=10485760  # 10MB
-ALLOWED_AUDIO_TYPES=audio/wav,audio/mp3,audio/m4a,audio/ogg
+DB_DRIVER="postgresql+psycopg2"
+DB_USER="app"
+DB_PASSWORD="3o5LR5AWi7IlUeh5HR355G74"
+DB_HOST="openly-powerful-gator.a1.pgedge.io"
+DB_PORT="5432"
+DB_NAME="conversa"
 
 # App Settings
 DEBUG=True
 ENVIRONMENT=development
-```
+DATABASE_URL=postgresql://app:3o5LR5AWi7IlUeh5HR355G74@openly-powerful-gator.a1.pgedge.io:5432/conversa
 
-### 4. Configurar Supabase (una vez al inicio del proyecto)
-
-```bash
-# Ejecutar script de configuración / Creación de BBDD
-python scripts/setup_supabase.py
+# LLM Providers
+OPENAI_API_KEY=your-openai-api-key
 ```
 
 ## 🏃‍♂️ Ejecución Local
