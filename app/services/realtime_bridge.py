@@ -4,6 +4,7 @@ import json
 import base64
 from multiprocessing.resource_sharer import stop
 import os
+from app.services.realtime_service import openai_msg_process, stop_process, user_msg_processed
 import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
@@ -66,7 +67,6 @@ class RealtimeBridge:
         }
         await self.openai_ws.send(json.dumps(session_config))
 
-
     async def forward_frontend_to_openai(self):
         try:
             while not self.stop_event.is_set():
@@ -74,20 +74,22 @@ class RealtimeBridge:
                     msg = await self.frontend_ws.receive_text()
 
                     parsed = json.loads(msg)
-                    self.user_id = parsed.get("user_id", None)
-                    self.conversation_id = parsed.get("conversation_id", None)
-                    self.course_id = parsed.get("course_id", None)
+                    
 
                     ## Logica front to openai
                     ## TO DO
+                    await user_msg_processed(self.user_id, self.conversation_id)
+
                     if parsed.get("type") == "input_audio_session.start":
                         print("new audio session started")
                         print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id)
-                        # TODO: create new conversation in DB and update self.conversation_id
-                        ## TO DO: create new conversation in db, get conversation_id
-                    ##if msg.type == 'cancel':
-                    ##    stop()
-                    ##else:
+                        self.user_id = parsed.get("user_id", None)
+                        self.conversation_id = parsed.get("conversation_id", None)
+                        self.course_id = parsed.get("course_id", None)
+
+                    elif parsed.get("type") == "input_audio_session.end":
+                        print("audio session ended")
+                        await self.stop()
 
                     #parsed.pop("user_id", None)
                     #parsed.pop("conversation_id", None)
@@ -101,7 +103,6 @@ class RealtimeBridge:
             print("Frontend stream ended:", e)
             await self.stop()
 
-
     async def forward_openai_to_frontend(self):
         try:
             async for msg in self.openai_ws:
@@ -112,6 +113,9 @@ class RealtimeBridge:
                     continue
 
                 msg_type = data.get("type")
+
+                await openai_msg_process(self.user_id, self.conversation_id)
+
                 ## USER AUDIO TRANSCRIPTION
                 if msg_type == "conversation.item.input_audio_transcription.completed":
                     transcript = (
@@ -135,6 +139,9 @@ class RealtimeBridge:
                     transcript = data.get("transcript", "")
                     if transcript:
                         print(f"[Assistant audio full]: {transcript}")
+                        # if keyword in transcript:
+                        # stop()
+                        await openai_msg_process(self.user_id, self.conversation_id)
                         ## insert to db as assistant message
                         ## async send_message(assistant_id, assistant_conversation_id, transcript)
                 # forward raw message to frontend
@@ -143,7 +150,6 @@ class RealtimeBridge:
         except Exception as e:
             print("OpenAI stream ended:", e)
             await self.stop()
-
 
     async def run(self):
         # establish connection to OpenAI
@@ -156,7 +162,7 @@ class RealtimeBridge:
 
     async def stop(self):
         ## update conversation status to closed in db
-        await close_conversation(self.user_id, self.conversation_id) 
+        await stop_process(self.user_id, self.conversation_id)
         if not self.stop_event.is_set():
             self.stop_event.set()
         try:
