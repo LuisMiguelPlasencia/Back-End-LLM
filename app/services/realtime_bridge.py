@@ -156,7 +156,7 @@ class RealtimeBridge:
 
     async def stop(self):
         ## update conversation status to closed in db
-        await close_conversation(self.user_id, self.conversation_id)
+        await close_conversation(self.user_id, self.conversation_id) 
         if not self.stop_event.is_set():
             self.stop_event.set()
         try:
@@ -164,4 +164,4 @@ class RealtimeBridge:
                 await self.openai_ws.close()
             await self.frontend_ws.close()
         except:
-            pass
+            pass 
