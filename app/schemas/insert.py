@@ -22,6 +22,7 @@ class SendMessageRequest(BaseModel):
     user_id: UUID
     conversation_id: UUID
     message: str
+    role: str
 
 class ConversationCreatedResponse(BaseModel):
     """Response for created conversation"""

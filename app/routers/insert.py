@@ -46,7 +46,8 @@ async def send_user_message(request: SendMessageRequest):
         user_message, assistant_response = await send_message(
             request.user_id, 
             request.conversation_id, 
-            request.message.strip()
+            request.message.strip(),
+            request.role
         )
         
         if not user_message or not assistant_response:

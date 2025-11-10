@@ -126,7 +126,7 @@ class RealtimeBridge:
                     if transcript:
                         print(f"[User audio]: {transcript}")
                         ## insert to db as user message
-                        ## async send_message(transcript_user_id, transcript_conversation_id, transcript)
+                        await send_message(self.user_id, self.conversation_id, transcript, "user")
 
                 ## AI AUDIO CHUNK
                 elif msg_type == "response.audio_transcript.delta":
@@ -143,7 +143,7 @@ class RealtimeBridge:
                         # stop()
                         await openai_msg_process(self.user_id, self.conversation_id)
                         ## insert to db as assistant message
-                        ## async send_message(assistant_id, assistant_conversation_id, transcript)
+                        await send_message('', self.conversation_id, transcript, "assistant")
                 # forward raw message to frontend
                 await self.frontend_ws.send_text(msg)
 

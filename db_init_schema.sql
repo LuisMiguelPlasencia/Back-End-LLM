@@ -140,3 +140,32 @@ CREATE TABLE IF NOT EXISTS conversaConfig.user_type_relations (
     ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS conversaconfig.course_stages (
+  stage_id uuid DEFAULT gen_random_uuid() NOT NULL,
+  course_id uuid NOT NULL REFERENCES conversaconfig.master_courses(course_id) ON DELETE CASCADE,
+  stage_order integer NOT NULL,
+  stage_name text NOT NULL,
+  stage_description text NULL,
+  created_on timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT course_stages_pkey PRIMARY KEY (stage_id)
+);
+
+CREATE TABLE IF NOT EXISTS conversaconfig.course_contents (
+  content_id uuid DEFAULT gen_random_uuid() NOT NULL,
+  course_id uuid NOT NULL REFERENCES conversaconfig.master_courses(course_id) ON DELETE CASCADE,
+  stage_id uuid NULL REFERENCES conversaconfig.course_stages(stage_id) ON DELETE SET NULL,
+  position integer NULL,
+  title text NOT NULL,
+  body text NULL,
+  resource_url text NULL,
+  created_on timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  CONSTRAINT course_contents_pkey PRIMARY KEY (content_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_stages_course ON conversaconfig.course_stages(course_id, stage_order);
+CREATE INDEX IF NOT EXISTS idx_course_contents_course_stage ON conversaconfig.course_contents(course_id, stage_id, position);
+
+
+ALTER TABLE conversaconfig.course_contents ADD COLUMN bot_prompt text NULL;
