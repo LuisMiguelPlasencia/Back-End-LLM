@@ -9,6 +9,7 @@ import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
 from ..services.conversations_service import close_conversation
+from ..services.scoring_service import scoring
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 WS_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
@@ -165,6 +166,8 @@ class RealtimeBridge:
         await stop_process(self.user_id, self.conversation_id)
         if not self.stop_event.is_set():
             self.stop_event.set()
+        ## scoring conversation
+        await scoring(self.conversation_id)
         try:
             if self.openai_ws:
                 await self.openai_ws.close()
