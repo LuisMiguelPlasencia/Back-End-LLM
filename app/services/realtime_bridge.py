@@ -83,10 +83,11 @@ class RealtimeBridge:
 
                     if parsed.get("type") == "input_audio_session.start":
                         print("new audio session started")
-                        print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id)
+                        
                         self.user_id = parsed.get("user_id", None)
                         self.conversation_id = parsed.get("conversation_id", None)
                         self.course_id = parsed.get("course_id", None)
+                        print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id)
 
                     elif parsed.get("type") == "input_audio_session.end":
                         print("audio session ended")
@@ -127,6 +128,7 @@ class RealtimeBridge:
                     if transcript:
                         print(f"[User audio]: {transcript}")
                         ## insert to db as user message
+                        print(self.user_id, self.conversation_id, transcript, "user")
                         await send_message(self.user_id, self.conversation_id, transcript, "user")
 
                 ## AI AUDIO CHUNK
@@ -142,9 +144,9 @@ class RealtimeBridge:
                         print(f"[Assistant audio full]: {transcript}")
                         # if keyword in transcript:
                         # stop()
-                        await openai_msg_process(self.user_id, self.conversation_id)
+                        #await openai_msg_process(self.user_id, self.conversation_id)
                         ## insert to db as assistant message
-                        await send_message('', self.conversation_id, transcript, "assistant")
+                        await send_message(self.user_id, self.conversation_id, transcript, "assistant")
                 # forward raw message to frontend
                 await self.frontend_ws.send_text(msg)
 
@@ -163,6 +165,7 @@ class RealtimeBridge:
 
     async def stop(self):
         ## update conversation status to closed in db
+        print('stopping realtime bridge...')
         await stop_process(self.user_id, self.conversation_id)
         if not self.stop_event.is_set():
             self.stop_event.set()
