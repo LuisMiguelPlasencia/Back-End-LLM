@@ -1,14 +1,11 @@
 # app/services/realtime_bridge.py
 import asyncio
 import json
-import base64
-from multiprocessing.resource_sharer import stop
 import os
 from app.services.realtime_service import openai_msg_process, stop_process, user_msg_processed
 import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
-from ..services.conversations_service import close_conversation
 from ..services.scoring_service import scoring
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
@@ -170,6 +167,7 @@ class RealtimeBridge:
         if not self.stop_event.is_set():
             self.stop_event.set()
         ## scoring conversation
+        print(self.conversation_id)
         await scoring(self.conversation_id)
         try:
             if self.openai_ws:
