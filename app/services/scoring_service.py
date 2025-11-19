@@ -36,7 +36,7 @@ def read_msg(conv_id):
 
     df = pd.read_sql(query, conn)
 
-    role_map = {"user": "cliente", "assistant": "vendedor"}
+    role_map = {"user": "vendedor", "assistant": "cliente"}
     
     conversation = [
         {
