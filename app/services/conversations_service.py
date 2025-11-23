@@ -46,5 +46,5 @@ async def close_conversation(conversation_id: UUID, user_id: UUID) -> Optional[D
     UPDATE conversaApp.conversations SET status = 'FINISHED', end_timestamp = now()
      WHERE conversation_id = $1 AND user_id = $2
     """
-    await execute_query(query, user_id, conversation_id)
+    await execute_query(query, conversation_id, user_id)
     return True
