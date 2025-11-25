@@ -7,7 +7,7 @@
 
 from fastapi import APIRouter, Query
 from uuid import UUID
-from ..services.courses_service import get_user_courses
+from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_user_conversations
 from ..services.messages_service import get_conversation_messages
 from ..utils.responses import error
@@ -23,6 +23,26 @@ async def get_courses(user_id: UUID = Query(..., description="User ID to get cou
         return courses
     except Exception as e:
         error(500, f"Failed to retrieve courses: {str(e)}")
+
+@router.get("/courses_stages")
+async def get_courses_stages(course_id: UUID = Query(..., description="Course ID to get stages for")):
+    """Get stages available for a course"""
+    try:
+        print("Fetching stages for course:", course_id)
+        stages = await get_user_courses_stages(course_id)
+        return stages
+    except Exception as e:
+        error(500, f"Failed to retrieve stages: {str(e)}")
+
+@router.get("/courses_details")
+async def get_user_courses_details(course_id: UUID = Query(..., description="Course ID to get details for"), stage_id: UUID = Query(..., description="Stage ID to get details for")):
+    """Get details for a course and stage"""
+    try:
+        print("Fetching details for course:", course_id, "and stage:", stage_id)
+        details = await get_courses_details(course_id, stage_id)
+        return details
+    except Exception as e:
+        error(500, f"Failed to retrieve details: {str(e)}")
 
 @router.get("/conversation")
 async def get_conversations(user_id: UUID = Query(..., description="User ID to get conversations for")):

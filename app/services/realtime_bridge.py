@@ -21,6 +21,7 @@ class RealtimeBridge:
         self.user_id = None
         self.conversation_id = None
         self.course_id = None
+        self.stage_id = None
 
     async def connect_openai(self):
         self.openai_ws = await websockets.connect(
@@ -33,7 +34,7 @@ class RealtimeBridge:
         print("✅ Connected to OpenAI Realtime API")
 
         # Send initial session configuration (reuse from realtime.py)
-        master_prompt = await master_prompt_generator(self.course_id)
+        master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
         session_config = {
             "type": "session.update",
             "session": {
