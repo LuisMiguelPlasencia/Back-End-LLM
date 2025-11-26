@@ -34,11 +34,11 @@ class RealtimeBridge:
         print("✅ Connected to OpenAI Realtime API")
 
         # Send initial session configuration (reuse from realtime.py)
-        master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
+        #master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
         session_config = {
             "type": "session.update",
             "session": {
-                "instructions": (master_prompt),
+                "instructions": 'Eres una ia inteligente',#(master_prompt),
                 "turn_detection": {
                     "type": "server_vad",
                     "threshold": 0.5,
@@ -85,7 +85,12 @@ class RealtimeBridge:
                         self.user_id = parsed.get("user_id", None)
                         self.conversation_id = parsed.get("conversation_id", None)
                         self.course_id = parsed.get("course_id", None)
-                        print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id)
+                        self.stage_id = parsed.get("stage_id", None)
+                        print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id, 'stage_id:', self.stage_id)
+                        #master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
+                        
+                        #await self.openai_ws.send(json.dumps(session_config))
+                        #continue
 
                     elif parsed.get("type") == "input_audio_session.end":
                         print("audio session ended")
