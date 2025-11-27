@@ -2,7 +2,6 @@
 import asyncio
 import json
 import os
-from app.services.realtime_service import openai_msg_process, stop_process, user_msg_processed
 import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
