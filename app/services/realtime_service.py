@@ -5,7 +5,7 @@ from app.services.conversations_service import close_conversation
 
 async def stop_process(user_id, conversation_id):
 
-    close_conversation(user_id, conversation_id) 
+    await close_conversation(user_id, conversation_id) 
     pass
 
 async def openai_msg_process(user_id, conversation_id):
