@@ -5,100 +5,155 @@ from collections import Counter
 import string
 import re
 import numpy as np
+import sys
+from dotenv import load_dotenv
+import os 
+from openai import OpenAI
 
-### Muletillas
-def calcular_muletillas(transcript, duracion=None, muletillas=None):
-    if muletillas is None:
-        muletillas = ["eh", "em", "este", "pues", "entonces", "bueno", "mmm", "osea", "en plan"] 
-        pausas = ["ppausaa"] # La pausa deberá ser detectada por el whisper/gpt de turno   
+sys.path.insert(0, "../../src")
+load_dotenv()
+OPENAI_TOKEN = os.getenv("OPENAI_TOKEN")
 
-    vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
+client = OpenAI(api_key=OPENAI_TOKEN)
 
-    # Eliminar signos de puntuación y tokenizar
-    translator = str.maketrans('', '', string.punctuation)
-    palabras_limpias = [word.translate(translator) for word in vendedor_texto.split()]
+def call_gpt(prompt: str) -> str:
+    response = client.responses.create(
+        model="gpt-5-nano",
+        input=prompt,
+        
+    )
+    return response.output_text
+
+def muletillas_gpt(transcript):
+
+    prompt = f"""
+Te voy a pasar la transcripcion de una conversación, presta atención tan solo a las interacciones del vendedor para responder a la pregunta que te voy a hacer: 
+¿Cuántas muletillas ha dicho/usado el usuario (vendedor) a lo largo de toda la conversación? Algunos ejemplos de muletillas o titubeos son:
+ "eh", "em", "este", "pues", "entonces", "bueno", "mmm", "osea", "en plan"
+Dime el número total de muletillas del vendedor.
+
+TRANSCRIPCIÓN:
+{[entry for entry in transcript if entry.get("speaker") == "vendedor"]}
+
+Responde ÚNICAMENTE devolviendo un número entero
+"""
+    output = call_gpt(prompt)
+    
+    return output
+
+def calcular_muletillas(transcript):
 
     # Contar muletillas y pausas
-    muletillas_usadas = [word for word in palabras_limpias if word in muletillas]
-    total_muletillas = len(muletillas_usadas)
-    total_pausas = sum(1 for word in palabras_limpias if word in pausas)
+    total_muletillas = int(muletillas_gpt(transcript))
 
-    penalizacion = total_muletillas // 5 + total_pausas*10
-
-    # Penalización extra si más del 70% de las muletillas son la misma
-    if total_muletillas > 2:
-        conteo = Counter(muletillas_usadas)
-        muletilla_mas_frecuente, frecuencia = conteo.most_common(1)[0]
-        if frecuencia / total_muletillas > 0.7:
-            penalizacion += 10
+    penalizacion = total_muletillas 
 
     puntuacion = max(0, 100 - penalizacion)  # nunca bajar de 0
 
     return  {
         "puntuacion": puntuacion, 
         "penalizacion": penalizacion,
-        "total_muletillas": total_muletillas,
-        "total_pausas": total_pausas,
-        "muletillas_usadas": muletillas_usadas
     }
-    
-### Claridad y complejidad
+
 def calcular_claridad(transcript):
-    # Lista de tecnicismos a detectar
-    tecnicismos = [
-        "kpi", "roi", "funnel", "pipeline", "crm", "saas", "onboarding", "cloud computing", "escalabilidad", 
-        "benchmarking", "sla", "bant", "mql", "sql", "tco", "erp", "seo", "api", "throughput", 
-        "lead nurturing", "proof of concept", "poc", "framework"
-    ]
-    
-    # Expresiones de lenguaje positivo
-    lenguaje_positivo = [
-        "absolutamente", "excelente pregunta", "me encanta esa idea", "claro que sí", "con gusto", 
-        "es un placer", "podemos lograr", "le aseguro", "le confirmo", "fantástico", "maravilloso", 
-        "por supuesto", "genial", "tiene razón", "lo valoro mucho", "vamos a avanzar", 
-        "estoy seguro de que", "lo conseguiremos", "gran punto"
-    ]
-    
-    # Unir todo el texto del vendedor
-    vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
-
-    # Eliminar signos de puntuación para facilitar análisis
-    translator = str.maketrans('', '', string.punctuation + "¿¡")
-    texto_limpio = vendedor_texto.translate(translator)
-
-    # Dividir en frases por punto, ? o !
-    frases = [f.strip() for f in texto_limpio.replace("?", ".").replace("!", ".").split(".") if f.strip()]
-
-    # Inicializar métricas
-    penalizacion = 0
-    bonificacion = 0
-    
-    # ---- Penalización por tecnicismos ----
-    for term in tecnicismos:
-        count = vendedor_texto.count(term)
-        penalizacion += 15 * count
-
-    # ---- Penalización por frases largas ----
-    for frase in frases:
-        palabras = frase.split()
-        if len(palabras) > 25:
-            penalizacion += 10
-
-    # ---- Bonificación por lenguaje positivo ----
-    for expresion in lenguaje_positivo:
-        if expresion in vendedor_texto:
-            bonificacion += 10
-            break  # solo bonificamos una vez aunque haya varias
-
-    # ---- Calcular puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
-
     return {
-        "puntuacion": puntuacion,
-        "penalizacion": penalizacion,
-        "bonificacion": bonificacion,
-        "num_frases_largas": sum(1 for f in frases if len(f.split()) > 25)
+        "puntuacion": 50
     }
+
+# ### Muletillas
+# def calcular_muletillas(transcript, duracion=None, muletillas=None):
+#     if muletillas is None:
+#         muletillas = ["eh", "em", "este", "pues", "entonces", "bueno", "mmm", "osea", "en plan"] 
+#         pausas = ["ppausaa"] # La pausa deberá ser detectada por el whisper/gpt de turno   
+
+#     vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
+
+#     # Eliminar signos de puntuación y tokenizar
+#     translator = str.maketrans('', '', string.punctuation)
+#     palabras_limpias = [word.translate(translator) for word in vendedor_texto.split()]
+
+#     # Contar muletillas y pausas
+#     muletillas_usadas = [word for word in palabras_limpias if word in muletillas]
+#     total_muletillas = len(muletillas_usadas)
+#     total_pausas = sum(1 for word in palabras_limpias if word in pausas)
+
+#     penalizacion = total_muletillas // 5 + total_pausas*10
+
+#     # Penalización extra si más del 70% de las muletillas son la misma
+#     if total_muletillas > 2:
+#         conteo = Counter(muletillas_usadas)
+#         muletilla_mas_frecuente, frecuencia = conteo.most_common(1)[0]
+#         if frecuencia / total_muletillas > 0.7:
+#             penalizacion += 10
+
+#     puntuacion = max(0, 100 - penalizacion)  # nunca bajar de 0
+
+#     return  {
+#         "puntuacion": puntuacion, 
+#         "penalizacion": penalizacion,
+#         "total_muletillas": total_muletillas,
+#         "total_pausas": total_pausas,
+#         "muletillas_usadas": muletillas_usadas
+#     }
+    
+# ### Claridad y complejidad
+# def calcular_claridad(transcript):
+#     # Lista de tecnicismos a detectar
+#     tecnicismos = [
+#         "kpi", "roi", "funnel", "pipeline", "crm", "saas", "onboarding", "cloud computing", "escalabilidad", 
+#         "benchmarking", "sla", "bant", "mql", "sql", "tco", "erp", "seo", "api", "throughput", 
+#         "lead nurturing", "proof of concept", "poc", "framework"
+#     ]
+    
+#     # Expresiones de lenguaje positivo
+#     lenguaje_positivo = [
+#         "absolutamente", "excelente pregunta", "me encanta esa idea", "claro que sí", "con gusto", 
+#         "es un placer", "podemos lograr", "le aseguro", "le confirmo", "fantástico", "maravilloso", 
+#         "por supuesto", "genial", "tiene razón", "lo valoro mucho", "vamos a avanzar", 
+#         "estoy seguro de que", "lo conseguiremos", "gran punto"
+#     ]
+    
+#     # Unir todo el texto del vendedor
+#     vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
+
+#     # Eliminar signos de puntuación para facilitar análisis
+#     translator = str.maketrans('', '', string.punctuation + "¿¡")
+#     texto_limpio = vendedor_texto.translate(translator)
+
+#     # Dividir en frases por punto, ? o !
+#     frases = [f.strip() for f in texto_limpio.replace("?", ".").replace("!", ".").split(".") if f.strip()]
+
+#     # Inicializar métricas
+#     penalizacion = 0
+#     bonificacion = 0
+    
+#     # ---- Penalización por tecnicismos ----
+#     for term in tecnicismos:
+#         count = vendedor_texto.count(term)
+#         penalizacion += 15 * count
+
+#     # ---- Penalización por frases largas ----
+#     for frase in frases:
+#         palabras = frase.split()
+#         if len(palabras) > 25:
+#             penalizacion += 10
+
+#     # ---- Bonificación por lenguaje positivo ----
+#     for expresion in lenguaje_positivo:
+#         if expresion in vendedor_texto:
+#             bonificacion += 10
+#             break  # solo bonificamos una vez aunque haya varias
+
+#     # ---- Calcular puntuación final ----
+#     puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+
+#     return {
+#         "puntuacion": puntuacion,
+#         "penalizacion": penalizacion,
+#         "bonificacion": bonificacion,
+#         "num_frases_largas": sum(1 for f in frases if len(f.split()) > 25)
+#     }
+
 ### Participación y dinámica
 def calcular_participacion_dinamica(transcript):
     # Heurísticas de interrupciones (puedes ampliar con más expresiones típicas)
