@@ -2,6 +2,7 @@
 # Handles conversation creation and retrieval from conversaApp.conversations
 # Note: course_id is accepted in payload but not stored (no field in table)
 
+from tokenize import String
 from .db import execute_query, execute_query_one
 from uuid import UUID
 from typing import List, Dict, Optional
@@ -48,3 +49,11 @@ async def close_conversation(conversation_id: UUID, user_id: UUID) -> Optional[D
     """
     await execute_query(query, conversation_id, user_id)
     return True
+
+async def get_conversation_status(conversation_id: UUID, user_id: UUID) -> Optional[str]:
+    print('Gettin conver status')
+    query = """
+    SELECT status FROM conversaApp.conversations WHERE conversation_id = $1 AND user_id = $2
+    """
+    result = await execute_query(query, conversation_id, user_id)
+    return result[0]["status"]

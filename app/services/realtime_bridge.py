@@ -2,6 +2,8 @@
 import asyncio
 import json
 import os
+from app.services.conversations_service import get_conversation_status
+from app.services.realtime_service import openai_msg_process, stop_process, user_msg_processed
 import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
@@ -87,6 +89,7 @@ class RealtimeBridge:
                         self.stage_id = parsed.get("stage_id", None)
                         print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id, 'stage_id:', self.stage_id)
                         #master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
+                        
                         #await self.openai_ws.send(json.dumps(session_config))
                         #continue
 
@@ -167,12 +170,19 @@ class RealtimeBridge:
     async def stop(self):
         ## update conversation status to closed in db
         print('stopping realtime bridge...')
-        await stop_process(self.user_id, self.conversation_id)
+        await stop_process(self.conversation_id, self.user_id)
         if not self.stop_event.is_set():
             self.stop_event.set()
-        ## scoring conversation
+
         print(self.conversation_id)
-        await scoring(self.conversation_id)
+        
+        ## scoring conversation if conver finished
+        status = await get_conversation_status(self.conversation_id,self.user_id)
+        print(f'status checked: {status}')
+        if status == "FINISHED": 
+            print('computing scores')
+            await scoring(self.conversation_id)
+
         try:
             if self.openai_ws:
                 await self.openai_ws.close()

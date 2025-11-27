@@ -22,6 +22,7 @@ def read_msg(conv_id):
         host=HOST,
         port=PORT
     )
+
     # read from db
     # output: dict with conv 
     query = f"""
