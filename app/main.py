@@ -46,4 +46,3 @@ async def health_check():
         "service": "conversa-api",
         "version": "1.0.0"
     }
-
