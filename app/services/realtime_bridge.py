@@ -88,7 +88,6 @@ class RealtimeBridge:
                         self.stage_id = parsed.get("stage_id", None)
                         print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id, 'stage_id:', self.stage_id)
                         #master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
-                        
                         #await self.openai_ws.send(json.dumps(session_config))
                         #continue
 
