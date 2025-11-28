@@ -55,5 +55,7 @@ async def get_conversation_status(conversation_id: UUID, user_id: UUID) -> Optio
     query = """
     SELECT status FROM conversaApp.conversations WHERE conversation_id = $1 AND user_id = $2
     """
-    result = await execute_query(query, conversation_id, user_id)
-    return result[0]["status"]
+    row = await execute_query_one(query, conversation_id, user_id)
+    if not row:
+        return None
+    return row["status"]
