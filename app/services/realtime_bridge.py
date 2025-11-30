@@ -35,11 +35,11 @@ class RealtimeBridge:
         print("✅ Connected to OpenAI Realtime API")
 
         # Send initial session configuration (reuse from realtime.py)
-        #master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
+        # master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
         session_config = {
             "type": "session.update",
             "session": {
-                "instructions": 'Eres una ia inteligente',#(master_prompt),
+                "instructions": 'Eres una ia inteligente',
                 "turn_detection": {
                     "type": "server_vad",
                     "threshold": 0.5,
@@ -88,14 +88,18 @@ class RealtimeBridge:
                         self.course_id = parsed.get("course_id", None)
                         self.stage_id = parsed.get("stage_id", None)
                         print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id, 'stage_id:', self.stage_id)
-                        #master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
                         
-                        #await self.openai_ws.send(json.dumps(session_config))
-                        #continue
+                        master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
+                        await self.openai_ws.send(json.dumps({
+                            "type": "session.update",
+                            "session": {"instructions": master_prompt}
+                        }))
+                        continue  # Don't forward this control message to OpenAI
 
                     elif parsed.get("type") == "input_audio_session.end":
                         print("audio session ended")
                         await self.stop()
+                        continue  # Don't forward this control message to OpenAI
 
                     #parsed.pop("user_id", None)
                     #parsed.pop("conversation_id", None)
@@ -181,7 +185,7 @@ class RealtimeBridge:
         print(f'status checked: {status}')
         if status == "FINISHED": 
             print('computing scores')
-            await scoring(self.conversation_id)
+            await asyncio.to_thread(scoring, self.conversation_id)
 
         try:
             if self.openai_ws:
