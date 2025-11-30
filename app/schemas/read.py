@@ -19,7 +19,7 @@ class CourseResponse(BaseModel):
     course_id: UUID
     name: str
     description: Optional[str]
-    image_id: Optional[str]
+    image_src: Optional[str]
     created_on: datetime
     is_active: bool
     event_time: Optional[datetime]

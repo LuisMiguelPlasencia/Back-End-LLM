@@ -30,6 +30,7 @@ async def login(request: LoginRequest):
         error(401, "account is inactive")
     
     # Return successful login response
+    print(user_data)
     user_response = UserResponse(**user_data)
     return {
         "status": "login success",

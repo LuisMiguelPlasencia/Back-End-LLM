@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS conversaConfig.master_courses (
   course_id    UUID           NOT NULL DEFAULT gen_random_uuid(),
   name         TEXT           NOT NULL,
   description  TEXT           NULL,
-  image_id     UUID           NULL,                    -- referencia opcional a recursos/archivos
+  image_src    VARCHAR(256)           NULL,                    -- referencia opcional a recursos/archivos
   created_on   TIMESTAMP   NOT NULL DEFAULT now(),
   updated_at   TIMESTAMP    NOT NULL DEFAULT now(),
   is_active    BOOLEAN        NOT NULL DEFAULT TRUE,

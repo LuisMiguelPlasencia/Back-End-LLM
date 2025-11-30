@@ -12,7 +12,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
     Joins master_courses with user_type_relations via user's type
     """
     query = """
-    SELECT mc.course_id, mc.name, mc.description, mc.image_id, mc.created_on, mc.is_active,
+    SELECT mc.course_id, mc.name, mc.description, mc.image_src, mc.created_on, mc.is_active,
            utr.event_time, utr.metrics
     FROM conversaConfig.master_courses mc
     JOIN conversaConfig.user_type_relations utr ON mc.course_id = utr.course_id
