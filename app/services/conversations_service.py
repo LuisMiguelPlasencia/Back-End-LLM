@@ -7,6 +7,21 @@ from .db import execute_query, execute_query_one
 from uuid import UUID
 from typing import List, Dict, Optional
 
+async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
+    """Get conversation details for a conversation ID"""
+    query = """
+    SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
+    , updated_at, couser_id, fillerwords_scoring, clarity_scoring
+    , participation_scoring, keythemes_scoring, indexofquestions_scoring
+    , rhythm_scoring
+    FROM conversaApp.conversations
+    WHERE conversation_id = $1
+    ORDER BY start_timestamp DESC
+    """
+    
+    results = await execute_query(query, conversation_id)
+    return [dict(row) for row in results]
+
 async def get_user_conversations(user_id: UUID) -> List[Dict]:
     """Get all conversations for a user, ordered by start time (newest first)"""
     query = """

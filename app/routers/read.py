@@ -8,7 +8,7 @@
 from fastapi import APIRouter, Query
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
-from ..services.conversations_service import get_user_conversations
+from ..services.conversations_service import get_conversation_details, get_user_conversations
 from ..services.messages_service import get_conversation_messages
 from ..utils.responses import error
 
@@ -45,6 +45,15 @@ async def get_user_courses_details(course_id: UUID = Query(..., description="Cou
         error(500, f"Failed to retrieve details: {str(e)}")
 
 @router.get("/conversation")
+async def get_conversation(conversation_id: UUID = Query(..., description="Conversation ID to get conversation details for")):
+    """Get conversation details for a conversation ID"""
+    try:
+        conversation = await get_conversation_details(conversation_id)
+        return conversation
+    except Exception as e:
+        error(500, f"Failed to retrieve conversations: {str(e)}")
+
+@router.get("/conversations")
 async def get_conversations(user_id: UUID = Query(..., description="User ID to get conversations for")):
     """Get all conversations for a user"""
     try:
