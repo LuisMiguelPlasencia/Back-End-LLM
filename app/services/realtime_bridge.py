@@ -174,18 +174,11 @@ class RealtimeBridge:
     async def stop(self):
         ## update conversation status to closed in db
         print('stopping realtime bridge...')
+        print(self.conversation_id)
         await stop_process(self.conversation_id, self.user_id)
+        
         if not self.stop_event.is_set():
             self.stop_event.set()
-
-        print(self.conversation_id)
-        
-        ## scoring conversation if conver finished
-        status = await get_conversation_status(self.conversation_id,self.user_id)
-        print(f'status checked: {status}')
-        if status == "FINISHED": 
-            print('computing scores')
-            await asyncio.to_thread(scoring, self.conversation_id)
 
         try:
             if self.openai_ws:
