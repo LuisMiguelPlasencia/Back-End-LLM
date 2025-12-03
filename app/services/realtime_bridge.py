@@ -39,7 +39,7 @@ class RealtimeBridge:
         session_config = {
             "type": "session.update",
             "session": {
-                "instructions": 'Eres una ia inteligente',
+                "instructions": '',
                 "turn_detection": {
                     "type": "server_vad",
                     "threshold": 0.5,
