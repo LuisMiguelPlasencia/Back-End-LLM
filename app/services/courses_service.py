@@ -8,21 +8,82 @@ from typing import List, Dict
 
 async def get_user_courses(user_id: UUID) -> List[Dict]:
     """
-    Get courses available to user based on their user_type
-    Joins master_courses with user_type_relations via user's type
+    Retrieves a list of courses for a specific user, nested with their respective stages.
+    
+    Structure: [  
+        {
+            "courseid": UUID,
+            "Coursename": str,
+            "Coursedetails": str,
+            "Progress": int,
+            "Stages": [ { "stageid": int, "stage_name": str, ... }, ... ]
+        }, 
+        ...
+    ]
     """
+    
+    # Optimization: Removed JOIN on 'course_contents' to prevent Cartesian product (row duplication).
+    # Ordering by course_id first is crucial for efficient grouping.
     query = """
-    SELECT mc.course_id, mc.name, mc.description, mc.image_src, mc.created_on, mc.is_active,
-           utr.event_time, utr.metrics
-    FROM conversaConfig.master_courses mc
-    JOIN conversaConfig.user_type_relations utr ON mc.course_id = utr.course_id
-    WHERE utr.user_type = (
-      SELECT user_type FROM conversaConfig.user_info WHERE user_id = $1
-    )
+        SELECT 
+            mc.course_id,
+            mc.name,
+            mc.description,
+            mc.image_src,
+            mc.created_on,
+            cs.stage_id,
+            cs.stage_name,
+            cs.stage_description,
+            cs.stage_order,
+            CASE 
+                WHEN (c.conversation_id IS NOT NULL AND c.status = 'FINISHED') 
+                THEN cs.stage_order 
+                ELSE 0 
+            END AS stage_progress
+        FROM conversaconfig.master_courses mc
+        JOIN conversaConfig.user_type_relations utr ON mc.course_id = utr.course_id
+        LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
+        LEFT JOIN conversaapp.conversations c ON c.couser_id = mc.course_id AND c.stage_id = cs.stage_id
+        WHERE mc.is_active 
+          AND utr.user_type = (SELECT user_type FROM conversaConfig.user_info WHERE user_id = $1)
+        ORDER BY mc.created_on ASC, cs.stage_order ASC;
     """
     
     results = await execute_query(query, user_id)
-    return [dict(row) for row in results]
+    
+    courses_map: Dict[str, Dict] = {}
+
+    for row in results:
+        c_id = str(row['course_id'])
+
+        # Initialize course in map if not present
+        if c_id not in courses_map:
+            courses_map[c_id] = {
+                "course_id": row['course_id'],
+                "name": row['name'],
+                "description": row['description'],
+                "image_src": row['image_src'],
+                "created_on":row['created_on'],
+                "Progress": 0, # Default value, updated below
+                "Stages": []
+            }
+
+        # Update Course Progress: Keep the highest stage_order completed
+        if row['stage_progress'] > courses_map[c_id]["Progress"]:
+            courses_map[c_id]["Progress"] = row['stage_progress']
+
+        # Append Stage if it exists (handling LEFT JOIN nulls)
+        if row['stage_id']:
+            courses_map[c_id]["Stages"].append({
+                "stage_id": row['stage_id'],
+                "stage_name": row['stage_name'],
+                "stage_description": row['stage_description'],
+                "stage_order": row['stage_order']
+            })
+
+    return list(courses_map.values())
+
+
 
 async def get_user_courses_stages(course_id: UUID) -> List[Dict]:
     """

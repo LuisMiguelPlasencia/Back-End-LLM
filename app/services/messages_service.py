@@ -18,19 +18,19 @@ async def get_conversation_messages(conversation_id: UUID) -> List[Dict]:
     results = await execute_query(query, conversation_id)
     return [dict(row) for row in results]
 
-async def send_message(user_id: UUID, conversation_id: UUID, message: str, role: str) -> Tuple[Optional[Dict], Optional[Dict]]:
+async def send_message(user_id: UUID, conversation_id: UUID, message: str, role: str, stage_id: UUID) -> Tuple[Optional[Dict], Optional[Dict]]:
     """
     Send user message and generate assistant response
     Returns tuple of (user_message, assistant_response)
     """
     # Insert user message
     user_query = """
-    INSERT INTO conversaApp.messages (id, user_id, conversation_id, role, content, created_at)
-    VALUES (gen_random_uuid(), $1, $2, $4, $3, now())
-    RETURNING id, user_id, conversation_id, role, content, created_at
+    INSERT INTO conversaApp.messages (id, user_id, conversation_id, role, content, created_at, stage_id)
+    VALUES (gen_random_uuid(), $1, $2, $4, $3, now(), $5)
+    RETURNING id, user_id, conversation_id, role, content, created_at, stage_id
     """
     
-    user_message = await execute_query_one(user_query, user_id, conversation_id, message, role)
+    user_message = await execute_query_one(user_query, user_id, conversation_id, message, role, stage_id)
     
     if not user_message:
         return None, None

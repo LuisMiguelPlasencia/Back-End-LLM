@@ -169,3 +169,4 @@ CREATE INDEX IF NOT EXISTS idx_course_contents_course_stage ON conversaconfig.co
 
 
 ALTER TABLE conversaconfig.course_contents ADD COLUMN bot_prompt text NULL;
+ALTER TABLE conversaapp.conversations ADD COLUMN stage_id uuid NULL;
