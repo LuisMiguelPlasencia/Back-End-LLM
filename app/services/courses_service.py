@@ -64,17 +64,17 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "description": row['description'],
                 "image_src": row['image_src'],
                 "created_on":row['created_on'],
-                "Progress": 0, # Default value, updated below
-                "Stages": []
+                "progress": 0, # Default value, updated below
+                "stages": []
             }
 
         # Update Course Progress: Keep the highest stage_order completed
-        if row['stage_progress'] > courses_map[c_id]["Progress"]:
-            courses_map[c_id]["Progress"] = row['stage_progress']
+        if row['stage_progress'] > courses_map[c_id]["progress"]:
+            courses_map[c_id]["progress"] = row['stage_progress']
 
         # Append Stage if it exists (handling LEFT JOIN nulls)
         if row['stage_id']:
-            courses_map[c_id]["Stages"].append({
+            courses_map[c_id]["stages"].append({
                 "stage_id": row['stage_id'],
                 "stage_name": row['stage_name'],
                 "stage_description": row['stage_description'],
