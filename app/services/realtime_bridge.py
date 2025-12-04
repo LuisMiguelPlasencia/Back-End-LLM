@@ -41,11 +41,19 @@ class RealtimeBridge:
             "session": {
                 "instructions": '',
                 "turn_detection": {
-                    "type": "server_vad",
+                    "type": "server_vad", 
                     "threshold": 0.5,
                     "prefix_padding_ms": 300,
-                    "silence_duration_ms": 500
+                    "silence_duration_ms": 500,
+                    # "create_response": true, # probar a activar estos dos parámetros 
+                    # "interrupt_response": true
                 },
+                # "turn_detection": {           # probar estos parámetros para turn_detection en vez de los de arriba
+                #     "type": "semantic_vad", 
+                #     "eagerness": "medium", # alternativas: low, high, auto (controla como de dispuesto está el modelo a interrumpir al usuario. auto=medium)
+                #     "create_response": true,# estos dos últimos igual no son necesarios
+                #     "interrupt_response": true 
+                # },
                 "voice": "alloy",
                 "temperature": 1,
                 "max_response_output_tokens": 4096,
@@ -123,7 +131,8 @@ class RealtimeBridge:
                     continue
 
                 msg_type = data.get("type")
-
+                print(msg_type)
+                print('\t', data)
                 await openai_msg_process(self.user_id, self.conversation_id)
 
                 ## USER AUDIO TRANSCRIPTION
