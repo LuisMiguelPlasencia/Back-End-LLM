@@ -19,7 +19,7 @@ async def start_conversation(request: StartConversationRequest):
     Note: course_id is accepted for compatibility but not stored in database
     """
     try:
-        conversation = await create_conversation(request.user_id, request.course_id)
+        conversation = await create_conversation(request.user_id, request.course_id,request.stage_id)
         
         if not conversation:
             error(500, "Failed to create conversation")

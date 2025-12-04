@@ -37,18 +37,18 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
     results = await execute_query(query, user_id)
     return [dict(row) for row in results]
 
-async def create_conversation(user_id: UUID, course_id: UUID) -> Optional[Dict]:
+async def create_conversation(user_id: UUID, course_id: UUID, stage_id: UUID) -> Optional[Dict]:
     """
     Create new conversation for user
     Note: course_id accepted for compatibility but not stored in DB
     """
     query = """
-    INSERT INTO conversaApp.conversations (user_id,couser_id, conversation_id, start_timestamp, status, created_at, updated_at)
-    VALUES ($1,$2, gen_random_uuid(), now(), 'open', now(), now())
-    RETURNING conversation_id, user_id, start_timestamp, status, created_at
+    INSERT INTO conversaApp.conversations (user_id,couser_id, stage_id, conversation_id, start_timestamp, status, created_at, updated_at)
+    VALUES ($1,$2,$3, gen_random_uuid(), now(), 'open', now(), now())
+    RETURNING conversation_id, user_id, couser_id, stage_id, start_timestamp, status, created_at
     """
     
-    result = await execute_query_one(query, user_id, course_id)
+    result = await execute_query_one(query, user_id, course_id, stage_id)
     
     if result:
         return dict(result)

@@ -9,6 +9,7 @@ class StartConversationRequest(BaseModel):
     """Start conversation request payload"""
     user_id: UUID
     course_id: UUID  # Accepted for compatibility but not stored in DB
+    stage_id: UUID
 
 class CloseConversationRequest(BaseModel):
     """Close conversation request payload"""
