@@ -44,7 +44,7 @@ async def create_conversation(user_id: UUID, course_id: UUID, stage_id: UUID) ->
     """
     query = """
     INSERT INTO conversaApp.conversations (user_id,couser_id, stage_id, conversation_id, start_timestamp, status, created_at, updated_at)
-    VALUES ($1,$2,$3, gen_random_uuid(), now(), 'open', now(), now())
+    VALUES ($1,$2,$3, gen_random_uuid(), now(), 'OPEN', now(), now())
     RETURNING conversation_id, user_id, couser_id, stage_id, start_timestamp, status, created_at
     """
     
