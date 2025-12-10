@@ -5,7 +5,7 @@ from app.services.conversations_service import close_conversation, get_conversat
 from app.services.scoring_service import scoring
 
 
-async def stop_process(user_id, conversation_id):
+async def stop_process(user_id, conversation_id, frontend_ws):
 
     await close_conversation(user_id, conversation_id) 
         ## scoring conversation if conver finished
@@ -15,9 +15,11 @@ async def stop_process(user_id, conversation_id):
         print('computing scores')
         await asyncio.to_thread(scoring, conversation_id)
         # notify frontend that conversation is closed and scored
+        await frontend_ws.send_text('conversation.scoring.completed')
     else:
         print('conversation not finished, skipping scoring')
         # notify frontend that conversation is closed but not finished
+        await frontend_ws.send_text('conversation.scoring.skipped')
 
 async def openai_msg_process(user_id, conversation_id):
     # placeholder for any processing needed when receiving messages from OpenAI
