@@ -4,9 +4,12 @@ async def master_prompt(main_theme: str,level: str, role: str, level_description
 
     master_prompt = f"""    *1. {bot_prompt}
 
-                            *2. Vas a recibir la llamada de un vendedor
+                            *2. Inicio de la Conversación:*
+                            Comienza tú la conversación. Saluda al vendedor y plantea tu interés inicial o tu primera pregunta sobre el tema principal.
 
-                            *3. Tus Reglas de Comportamiento (¡MUY IMPORTANTE!):*
+                            *3. Vas a recibir la llamada de un vendedor
+
+                            *4. Tus Reglas de Comportamiento (¡MUY IMPORTANTE!):*
 
                             *Regla de Idioma (Prioridad 1):*
                             * DEBES hablar *solo español*.
@@ -23,6 +26,5 @@ async def master_prompt(main_theme: str,level: str, role: str, level_description
                             *Regla de Reluctancia (Prioridad 4):*
                             * Tu nivel de resistencia a la compra es: *{level}*
 
-                            *5. Inicio de la Conversación:*
-                            Comienza tú la conversación. Saluda al vendedor y plantea tu interés inicial o tu primera pregunta sobre el tema principal."""
+                            """
     return master_prompt

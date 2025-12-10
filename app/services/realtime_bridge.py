@@ -90,11 +90,16 @@ class RealtimeBridge:
 
                     if parsed.get("type") == "input_audio_session.start":
                         print("new audio session started")
+
+                        
                         
                         self.user_id = parsed.get("user_id", None)
-                        self.conversation_id = parsed.get("conversation_id", None)
                         self.course_id = parsed.get("course_id", None)
                         self.stage_id = parsed.get("stage_id", None)
+
+                        ## create conversation here and return conversation_id
+                        self.conversation_id = parsed.get("conversation_id", None)
+                        
                         print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id, 'stage_id:', self.stage_id)
                         
                         master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
@@ -184,7 +189,7 @@ class RealtimeBridge:
         ## update conversation status to closed in db
         print('stopping realtime bridge...')
         print(self.conversation_id)
-        await stop_process(self.conversation_id, self.user_id, self.frontend_ws)
+        await stop_process(self.user_id, self.conversation_id, self.frontend_ws)
         
         if not self.stop_event.is_set():
             self.stop_event.set()

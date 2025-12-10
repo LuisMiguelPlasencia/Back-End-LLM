@@ -113,7 +113,7 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
     muletillas_usadas = [word for word in palabras_limpias if word in muletillas]
     total_muletillas = len(muletillas_usadas)
     #total_pausas = sum(1 for word in palabras_limpias if word in pausas)
-
+    frecuencia = 0
     penalizacion = total_muletillas * 5 #+ total_pausas*10
 
     # Penalización extra si más del 70% de las muletillas son la misma
@@ -133,7 +133,7 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
         "penalizacion": penalizacion,
         "total_muletillas": total_muletillas,
         "repeticion_constante": repeticion_constante,
-        "porcentaje": frecuencia / total_muletillas,
+        "porcentaje": frecuencia / total_muletillas if total_muletillas > 0 else 0,
         #"total_pausas": total_pausas,
         "muletillas_usadas": muletillas_usadas
     }
