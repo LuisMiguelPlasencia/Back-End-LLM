@@ -2,6 +2,8 @@
 import asyncio
 import json
 import os
+
+from pandas.core.generic import T
 from app.services.conversations_service import get_conversation_status
 from app.services.realtime_service import openai_msg_process, stop_process, user_msg_processed
 import websockets
@@ -40,20 +42,20 @@ class RealtimeBridge:
             "type": "session.update",
             "session": {
                 "instructions": '',
-                "turn_detection": {
-                    "type": "server_vad", 
-                    "threshold": 0.5,
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": 500,
-                    # "create_response": true, # probar a activar estos dos parámetros 
-                    # "interrupt_response": true
-                },
-                # "turn_detection": {           # probar estos parámetros para turn_detection en vez de los de arriba
-                #     "type": "semantic_vad", 
-                #     "eagerness": "medium", # alternativas: low, high, auto (controla como de dispuesto está el modelo a interrumpir al usuario. auto=medium)
-                #     "create_response": true,# estos dos últimos igual no son necesarios
-                #     "interrupt_response": true 
+                # "turn_detection": {
+                #     "type": "server_vad", 
+                #     "threshold": 0.5,
+                #     "prefix_padding_ms": 300,
+                #     "silence_duration_ms": 500,
+                #     # "create_response": true, # probar a activar estos dos parámetros 
+                #     # "interrupt_response": true
                 # },
+                "turn_detection": {           # probar estos parámetros para turn_detection en vez de los de arriba
+                    "type": "semantic_vad", 
+                    "eagerness": "medium", # alternativas: low, high, auto (controla como de dispuesto está el modelo a interrumpir al usuario. auto=medium)
+                    "create_response": True, # estos dos últimos igual no son necesarios
+                    "interrupt_response": True 
+                },
                 "voice": "alloy",
                 "temperature": 1,
                 "max_response_output_tokens": 4096,
@@ -136,8 +138,8 @@ class RealtimeBridge:
                     continue
 
                 msg_type = data.get("type")
-                print(msg_type)
-                print('\t', data)
+                # print(msg_type)
+                # print('\t', data)
                 await openai_msg_process(self.user_id, self.conversation_id)
 
                 ## USER AUDIO TRANSCRIPTION
@@ -150,7 +152,7 @@ class RealtimeBridge:
                     if transcript:
                         print(f"[User audio]: {transcript}")
                         ## insert to db as user message
-                        print(self.user_id, self.conversation_id, transcript, "user")
+                        # print(self.user_id, self.conversation_id, transcript, "user")
                         await send_message(self.user_id, self.conversation_id, transcript, "user")
 
                 ## AI AUDIO CHUNK

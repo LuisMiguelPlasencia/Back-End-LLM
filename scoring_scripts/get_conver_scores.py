@@ -257,7 +257,19 @@ def calcular_participacion_dinamica(transcript):
     bonificacion = min(num_escucha * 10, 40) 
     
     # Arbol de decision
-    if 0.6 < ratio <= 0.7:
+    if ratio < 0.1: 
+        penalizacion += 100
+    elif 0.1 <= ratio <= 0.2:
+        penalizacion += 50
+    elif 0.2 < ratio <= 0.3:
+        penalizacion += 25
+    elif 0.3 < ratio <= 0.4:
+        penalizacion += 10
+    elif 0.4 < ratio <= 0.5:
+        penalizacion += 5
+    elif 0.5 < ratio <= 0.6:
+        penalizacion += 5
+    elif 0.6 < ratio <= 0.7:
         penalizacion += 25
     elif 0.7 < ratio <= 0.8:
         penalizacion += 50
