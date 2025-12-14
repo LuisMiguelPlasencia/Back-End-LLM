@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_conversation_messages
+from ..services.messages_service import get_conversation_messages, get_user_scoring_by_company
 from ..utils.responses import error
 
 router = APIRouter(prefix="/read", tags=["read"])
@@ -68,5 +68,16 @@ async def get_messages(conversation_id: UUID = Query(..., description="Conversat
     try:
         messages = await get_conversation_messages(conversation_id)
         return messages
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")
+
+## Advanced Routes
+##-------------------------------------------------------------
+@router.get("/allUserScoreByCompany")
+async def get_all_user_score_by_company(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
+    """Get all user scores for a company"""
+    try:
+        user_scores_list = await get_user_scoring_by_company(company_id)
+        return user_scores_list
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")

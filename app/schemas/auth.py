@@ -18,6 +18,7 @@ class UserResponse(BaseModel):
     user_type: str
     is_active: bool
     avatar: str | None
+    company_id: str | None
 
 class LoginResponse(BaseModel):
     """Login success response"""

@@ -37,3 +37,31 @@ async def send_message(user_id: UUID, conversation_id: UUID, message: str, role:
     
     return dict(user_message) if user_message else None
 
+async def get_user_scoring_by_company(company_id: str) -> List[Dict]:
+    """Get all user scores for a company, ordered by puntuation"""
+    try:
+        query = """
+        SELECT 
+            ui.user_id,
+            ui.name,
+            ui.company_id,
+            ui.user_type,
+            ui.avatar,
+            COALESCE(AVG(c.clarity_scoring), 0) AS score
+        FROM 
+            conversaconfig.user_info ui
+            LEFT JOIN conversaapp.conversations c
+                ON c.user_id = ui.user_id and c.status = 'FINISHED'
+        WHERE 
+            ui.company_id = $1 AND ui.is_active = true
+        GROUP BY 
+            ui.user_id, ui.name, ui.company_id, ui.user_type, ui.avatar
+        ORDER BY 
+            score DESC
+        """
+
+        results = await execute_query(query, company_id)
+        return [dict(row) for row in results]
+    except Exception as e:
+        print(f"Error fetching user scores for company_id {company_id}: {str(e)}")
+        return []
