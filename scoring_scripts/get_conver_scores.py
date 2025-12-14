@@ -11,6 +11,8 @@ import os
 from openai import OpenAI
 from wordfreq import zipf_frequency
 import pandas as pd
+import time
+import json
 
 sys.path.insert(0, "../../src")
 load_dotenv()
@@ -18,9 +20,9 @@ OPENAI_TOKEN = os.getenv("OPENAI_TOKEN")
 
 client = OpenAI(api_key=OPENAI_TOKEN)
 
-def call_gpt(prompt: str) -> str:
+def call_gpt(prompt: str, model="gpt-4.1-nano-2025-04-14") -> str:
     response = client.responses.create(
-        model="gpt-5-nano",
+        model=model,
         input=prompt,
         
     )
@@ -44,17 +46,16 @@ def escucha_activa(transcript):
 
 def proximos_pasos(transcript):
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor al final de la conversación ha establecido o hablado de unos próximos pasos en la interacción con el cliente. Se exigente, puede que el vendedor no mencione nada acerca de próximos pasos. 
-
+    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor al final de la conversación ha establecido o hablado de unos próximos pasos en la interacción con el cliente. Por ejemplo, el vendedor puede intentar agendar una segunda llamada, una prueba del producto o un futuro contacto. Se exigente, puede que el vendedor no mencione nada acerca de próximos pasos. 
     TRANSCRIPCIÓN:
     {transcript}
 
-    Responde ÚNICAMENTE devolviendo: 
-    - Un booleano que indique si ha habido una formulación de los siguientes pasos
-    - Señales de proximos pasos
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    {{"indicador": true/false, 
+     "señales": "Indica la intervención en la que el vendedor habla de proximos pasos"
+    }}
     """
     output = call_gpt(prompt)
-    
     return output
 
 def temas_clave(transcript):
@@ -71,6 +72,26 @@ def temas_clave(transcript):
     Responde ÚNICAMENTE devolviendo: 
     - Un numero entero mencionando el número de temas clave abordados
     - Para cada tema clave abordado, señalar donde lo has identificado
+    """
+    output = call_gpt(prompt)
+    
+    return output
+
+def objetivo(transcript,objetivo="Vender el coche Mike XL"):
+    prompt = f"""
+    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor consigue el objetivo principal: {objetivo} 
+
+    TRANSCRIPCIÓN:
+    {transcript}
+
+    TEMAS CLAVE: 
+    Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)
+
+
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    {{"indicador": true/false, 
+     "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo...'" 
+    }}
     """
     output = call_gpt(prompt)
     
@@ -149,13 +170,14 @@ def calcular_claridad(transcript):
     anglicismos = ["pipeline", "forecast", "lead", "target", "budget", "business", "meeting", "call", "feedback", "report", "follow-up", "deadline", "schedule", "planning", "marketing", "sales", "manager", "ceo", "staff", "stock", "partner", "account", "key account", "stakeholder", "b2b", "b2c", "kick-off", "brainstorming", "networking", "pitch", "speech", "storytelling", "insight", "driver", "gap", "pain point", "focus", "know-how", "expertise", "background", "skill", "mindset", "workflow", "task", "check", "update", "asap", "on hold", "stand by", "briefing", "debriefing", "recap", "forward", "attach", "kpi", "roi", "revenue", "profit", "margin", "cash flow", "churn", "growth", "share", "fee", "pricing", "ticket", "online", "offline", "e-commerce", "mailing", "newsletter", "landing page", "webinar", "demo", "trial", "freemium", "premium", "commodity", "niche", "trend", "hype", "branding", "awareness", "conversion", "traffic", "inbound", "outbound", "cold calling", "cross-selling", "up-selling", "pack", "outsourcing", "junior", "senior", "deal", "closing", "win-win", "engagement", "performance", "ranking", "headhunter", "spam", "dashboard", "crm"] 
 
     # Unir todo el texto del vendedor
-    vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
+    # vendedor_texto as array of phrases (split by '.' for now, lower)
+    vendedor_texto = [f.strip() for t in transcript if t["speaker"] == "vendedor" for f in t["text"].lower().replace("?", ".").replace("!", ".").split(".") if f.strip()]
 
     translator = str.maketrans('', '', string.punctuation + "¿!")
-    palabras_limpias = [word.translate(translator) for word in vendedor_texto.split()]
+    palabras_limpias = [word.translate(translator) for frase in vendedor_texto for word in frase.split()]
 
-    # Dividir en frases por punto, ? o !
-    frases = [f.strip() for f in vendedor_texto.replace("?", ".").replace("!", ".").split(".") if f.strip()]
+    # Now frases == vendedor_texto (already split by punctuation, stripped, lower)
+    frases = vendedor_texto
 
     negativas_texto = []
     positivas_texto = []
@@ -293,71 +315,7 @@ def calcular_participacion_dinamica(transcript):
     }
 
 ### Cobertura de temas y palabras clave
-#def calcular_cobertura_temas(transcript, temas_clave=None):
-
-    # Temas clave esperados. Aquí habrá que hacer un trabajo de customización 
-    palabras_clave = ["seguridad", "fiabilidad", "garantía", "asistencia", "estabilidad", "eficiencia", "ahorro", "valor de reventa", "financiación", "cuota", "tasación", "confort", "conectividad", "versatilidad", "espacio", "autonomía", "equipamiento"]
-    
-    
-    vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
-    #cliente_texto  = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "cliente")
-
-    penalizacion = 0
-    bonificacion = 0
-
-    ## Detector de proximos pasos con GPT
-    gpt_proximos_pasos = proximos_pasos(transcript)
-    # Try to extract boolean or number from GPT response
-    # First try to find a boolean pattern
-    bool_match = re.search(r'(true|false|verdadero|falso|sí|si|no)', gpt_proximos_pasos, re.IGNORECASE)
-    if bool_match:
-        bool_value = bool_match.group(1).lower()
-        proximos_pasos_bool = 1 if bool_value in ['true', 'verdadero', 'sí', 'si'] else 0
-    else:
-        # Try to find a number pattern
-        match = re.search(r"señales de proximos pasos:\s*(\d+)", gpt_proximos_pasos, re.IGNORECASE)
-        if match:
-            proximos_pasos_bool = int(match.group(1))
-        else:
-            # Try to find any number in the response as fallback
-            numbers = re.findall(r'\d+', gpt_proximos_pasos)
-            proximos_pasos_bool = int(numbers[0]) if numbers else 0
-    
-    output_gpt = gpt_proximos_pasos  # Store the full GPT response
-    
-    # ---- Temas clave olvidados ----
-    temas_olvidados = []
-    for palabra in palabras_clave:
-        if palabra not in vendedor_texto:
-            penalizacion += 15
-            temas_olvidados.append(palabra)
-    
-    # # ---- Objeciones críticas no resueltas ----
-    # objeciones_cliente = ["precio", "coste", "caro", "elevado", "demasiado"]
-    # objecion_detectada = any(word in cliente_texto for word in objeciones_cliente)
-    
-    # if objecion_detectada:
-    #     # ¿Responde el vendedor?
-    #     respuesta = any(word in vendedor_texto for word in ["precio", "coste", "inversión", "valor"])
-    #     if not respuesta:
-    #         penalizacion += 30
-    
-    
-    # ---- Puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
-    
-    return {
-        "puntuacion": puntuacion,
-        "penalizacion": penalizacion,
-        "bonificacion": bonificacion,
-        "temas_olvidados": temas_olvidados,
-        #"objecion_no_resuelta": objecion_detectada and not respuesta,
-        "proximos_pasos": proximos_pasos_bool,
-        "output_gpt": output_gpt
-    }
-
-### Cobertura de temas y palabras clave (mejorado con LLMs)
-def calcular_cobertura_temas(transcript,num_temas=6):
+def calcular_cobertura_temas_json(transcript,num_temas=6):
 
     penalizacion = 0
     bonificacion = 0
@@ -382,36 +340,13 @@ def calcular_cobertura_temas(transcript,num_temas=6):
     penalizacion += num_temas_olvidados*20
 
     ## Detector de proximos pasos con GPT
-    gpt_proximos_pasos = proximos_pasos(transcript)
-    # Try to extract boolean or number from GPT response
-    # First try to find a boolean pattern
-    bool_match = re.search(r'(true|false|verdadero|falso|sí|si|no)', gpt_proximos_pasos, re.IGNORECASE)
-    if bool_match:
-        bool_value = bool_match.group(1).lower()
-        proximos_pasos_bool = 1 if bool_value in ['true', 'verdadero', 'sí', 'si'] else 0
-    else:
-        # Try to find a number pattern
-        match = re.search(r"señales de proximos pasos:\s*(\d+)", gpt_proximos_pasos, re.IGNORECASE)
-        if match:
-            proximos_pasos_bool = int(match.group(1))
-        else:
-            # Try to find any number in the response as fallback
-            numbers = re.findall(r'\d+', gpt_proximos_pasos)
-            proximos_pasos_bool = int(numbers[0]) if numbers else 0
+    gpt_proximos_pasos = json.loads(proximos_pasos(transcript))
+    
+    indicador = bool(gpt_proximos_pasos["indicador"])
+    señales_proximos_pasos = gpt_proximos_pasos["señales"]
     
     output_gpt = gpt_proximos_pasos  # Store the full GPT response
-    bonificacion = 10 * proximos_pasos_bool
-    
-    
-    # # ---- Objeciones críticas no resueltas ----
-    # objeciones_cliente = ["precio", "coste", "caro", "elevado", "demasiado"]
-    # objecion_detectada = any(word in cliente_texto for word in objeciones_cliente)
-    
-    # if objecion_detectada:
-    #     # ¿Responde el vendedor?
-    #     respuesta = any(word in vendedor_texto for word in ["precio", "coste", "inversión", "valor"])
-    #     if not respuesta:
-    #         penalizacion += 30
+    bonificacion = 10 * indicador
     
     
     # ---- Puntuación final ----
@@ -423,10 +358,100 @@ def calcular_cobertura_temas(transcript,num_temas=6):
         "bonificacion": bonificacion,
         "temas_olvidados": num_temas_olvidados,
         #"objecion_no_resuelta": objecion_detectada and not respuesta,
-        "proximos_pasos": proximos_pasos_bool,
+        "proximos_pasos": indicador,
         "señales_temas": señales_temas,
+        "señales_proximos_pasos": señales_proximos_pasos,
         "output_gpt": output_gpt
     }
+
+# ### Cobertura de temas y palabras clave (mejorado con LLMs)
+# def calcular_cobertura_temas_old(transcript,num_temas=6):
+
+#     penalizacion = 0
+#     bonificacion = 0
+
+#     ## Detector de palabras clave con GPT
+#     # INSERT_YOUR_CODE
+#     gpt_temas_clave = temas_clave(transcript)
+
+#     # Intentar extraer el número de temas clave abordados
+#     match_num = re.search(r"(\d+)", gpt_temas_clave)
+#     num_temas_abordados = int(match_num.group(1)) if match_num else 0
+
+#     # Si no se extrajeron señales explícitas, tomar el resto del output después del número
+#     if match_num:
+#         num_pos = gpt_temas_clave.find(match_num.group(1))
+#         restantes = gpt_temas_clave[num_pos + len(match_num.group(1)) :]
+#         # Extraer líneas no vacías y quitar espacios extras
+#         señales_temas = [l.strip() for l in restantes.split('\n') if l.strip()]
+
+#     # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
+#     num_temas_olvidados = num_temas - num_temas_abordados
+#     penalizacion += num_temas_olvidados*20
+
+#     ## Detector de proximos pasos con GPT
+#     gpt_proximos_pasos = json.loads(proximos_pasos(transcript))
+#     # Try to extract boolean or number from GPT response
+#     # First try to find a boolean pattern
+#     bool_match = re.search(r'(true|false)', gpt_proximos_pasos, re.IGNORECASE)
+#     if bool_match:
+#         bool_value = bool_match.group(1).lower()
+#         proximos_pasos_bool = 1 if bool_value in ['true'] else 0
+#         señales_proximos_pasos = []
+#     else:
+#         # Try to find a number pattern
+#         match = re.search(r"señales de proximos pasos:\s*(\d+)", gpt_proximos_pasos, re.IGNORECASE)
+#         if match:
+#             proximos_pasos_bool = int(match.group(1))
+#             # Extraer las señales concretas si están listadas tras los dos puntos
+#             sig_pos = gpt_proximos_pasos.find(match.group(1)) + len(match.group(1))
+#             restantes = gpt_proximos_pasos[sig_pos:].strip()
+#             señales_proximos_pasos = [l.strip() for l in restantes.split('\n') if l.strip()]
+#         else:
+#             # Try to find any number in the response as fallback
+#             numbers = re.findall(r'\d+', gpt_proximos_pasos)
+#             proximos_pasos_bool = int(numbers[0]) if numbers else 0
+#             # Como señales, tomar todas las líneas no vacías tras cualquier "proximos pasos:" o después de los números encontrados
+#             señales_proximos_pasos = []
+#             fallback_match = re.search(r"proximos pasos:([^\n]*)", gpt_proximos_pasos, re.IGNORECASE)
+#             if fallback_match:
+#                 after_header = fallback_match.group(1)
+#                 señales_proximos_pasos = [l.strip() for l in after_header.split('\n') if l.strip()]
+#             elif numbers:
+#                 idx = gpt_proximos_pasos.find(numbers[0]) + len(numbers[0])
+#                 restantes = gpt_proximos_pasos[idx:].strip()
+#                 señales_proximos_pasos = [l.strip() for l in restantes.split('\n') if l.strip()]
+    
+#     output_gpt = gpt_proximos_pasos  # Store the full GPT response
+#     bonificacion = 10 * proximos_pasos_bool
+    
+    
+#     # # ---- Objeciones críticas no resueltas ----
+#     # objeciones_cliente = ["precio", "coste", "caro", "elevado", "demasiado"]
+#     # objecion_detectada = any(word in cliente_texto for word in objeciones_cliente)
+    
+#     # if objecion_detectada:
+#     #     # ¿Responde el vendedor?
+#     #     respuesta = any(word in vendedor_texto for word in ["precio", "coste", "inversión", "valor"])
+#     #     if not respuesta:
+#     #         penalizacion += 30
+    
+    
+#     # ---- Puntuación final ----
+#     puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    
+#     return {
+#         "puntuacion": puntuacion,
+#         "penalizacion": penalizacion,
+#         "bonificacion": bonificacion,
+#         "temas_olvidados": num_temas_olvidados,
+#         #"objecion_no_resuelta": objecion_detectada and not respuesta,
+#         "bool_value": bool_value,
+#         "proximos_pasos": proximos_pasos_bool,
+#         "señales_temas": señales_temas,
+#         "señales_proximos_pasos": señales_proximos_pasos,
+#         "output_gpt": output_gpt
+#     }
 
 ### Indice de preguntas (Aquí hay que darle una pensadica)
 def calcular_indice_preguntas(transcript):
@@ -562,6 +587,19 @@ def calcular_ppm_variabilidad(transcript):
         "bonificacion": bonificacion
     }
 
+def calcular_objetivo_principal(transcript):
+    gpt_objetivo = json.loads(objetivo(transcript))
+
+    indicador = bool(gpt_objetivo["indicador"])
+    señales = gpt_objetivo["señales"]
+
+    puntuacion = 100 * indicador
+
+    return {
+        "puntuacion": puntuacion,
+        "señales": señales
+    }
+
 ## Scoring function
 def get_conver_scores(transcript):
     # Factores de ponderación
@@ -578,19 +616,31 @@ def get_conver_scores(transcript):
     res_muletillas = calcular_muletillas(transcript)
     res_claridad = calcular_claridad(transcript)
     res_participacion = calcular_participacion_dinamica(transcript)
-    res_cobertura = calcular_cobertura_temas(transcript)
+    res_cobertura = calcular_cobertura_temas_json(transcript)
     res_preguntas = calcular_indice_preguntas(transcript)
     res_ppm = calcular_ppm_variabilidad(transcript)
-    
+
+    palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
+        
+    if palabras_totales > 500: 
     # Extraer puntuaciones
-    scores = {
-        "muletillas_pausas": res_muletillas["puntuacion"],
-        "claridad": res_claridad["puntuacion"],
-        "participacion": res_participacion["puntuacion"],
-        "cobertura": res_cobertura["puntuacion"],
-        "preguntas": res_preguntas["puntuacion"],
-        "ppm": res_ppm["puntuacion"]
-    }
+        scores = {
+            "muletillas_pausas": res_muletillas["puntuacion"],
+            "claridad": res_claridad["puntuacion"],
+            "participacion": res_participacion["puntuacion"],
+            "cobertura": res_cobertura["puntuacion"],
+            "preguntas": res_preguntas["puntuacion"],
+            "ppm": res_ppm["puntuacion"]
+        }
+    else: 
+        scores = {
+            "muletillas_pausas": 0,
+            "claridad": 0,
+            "participacion": 0,
+            "cobertura": 0,
+            "preguntas": 0,
+            "ppm": 0
+        } 
     
     # Calcular puntuación ponderada global
     puntuacion_final = sum(scores[k] * pesos[k] for k in scores)
@@ -602,187 +652,96 @@ def get_conver_scores(transcript):
 
 if __name__ == "__main__":
     transcript_demo = [
-        {
-            "speaker": "vendedor", 
-            "text": "Hola, buenas tardes. Bienvenido a nuestra exposición, eh... mi nombre es Carlos. Veo que se ha detenido justo delante del nuevo Conversa XL. Tiene buen ojo, es la unidad que acabamos de recibir esta misma mañana desde fábrica.", 
-            "duracion": 18
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Hola Carlos. Sí, la verdad es que estaba buscando algo más grande porque la familia ha crecido y mi coche actual se nos ha quedado minúsculo.", 
-            "duracion": 12
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Le entiendo perfectamente. El espacio es vital. Déjeme decirle que hemos cambiado totalmente el **mindset** de diseño para enfocarnos en familias como la suya. Fíjese en estas líneas laterales, no solo son estética, son refuerzos de acero al boro que absorben impactos. De hecho, quería comentarle que en temas de seguridad somos líderes absolutos; hemos ganado los premios 'Safety Best 2024' y las 5 estrellas Euro NCAP, así que no tendrá ningún miedo al llevar a sus hijos en carretera.", 
-            "duracion": 38
-        },
-        {
-            "speaker": "cliente", 
-            "text": "La seguridad es importante, claro. Pero mi esposa está obsesionada con el maletero. En el que tenemos ahora, meter el carrito del bebé y la compra es imposible, siempre tenemos que dejar bolsas en los asientos de atrás.", 
-            "duracion": 18
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Comprendo. Si le sigo bien, lo que me está diciendo es que su mayor dolor de cabeza actual es la falta de capacidad de carga y necesita garantías de que podrá meter el carrito y las bolsas del supermercado todo junto en el maletero sin invadir los asientos, ¿es eso correcto?", 
-            "duracion": 25
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Exacto, eso es justo lo que necesito. Que no sea un tetris cada vez que salimos de viaje.", 
-            "duracion": 8
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Pues venga por aquí, quiero que vea esto. Abra el portón. Tenemos 650 litros de capacidad real. O sea, aquí le caben dos carritos si hace falta. Además, la boca de carga es muy baja para que no se deje la espalda levantando peso. Y mire los asientos traseros, son individuales. No va a tener problema para colocar tres sillas infantiles, algo que muy pocos coches de la competencia permiten hoy en día.", 
-            "duracion": 35
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Oye, pues es verdad que se ve inmenso. ¿Y de tecnología qué tal va? Porque no quiero algo que sea muy complicado de usar, la pantalla esa parece una nave espacial.", 
-            "duracion": 15
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Parece compleja, pero el **feedback** que recibimos de todos los usuarios es que se aprende a usar en cinco minutos. Mire, le voy a ser sincero, la integración tecnológica hoy en día es algo que no podemos ignorar de ninguna manera porque la conectividad nos facilita la vida y usted necesita saber que puede gestionar las llamadas y el mapa sin soltar el volante en ningún momento bajo ninguna circunstancia.", 
-            "duracion": 40
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Ya, mientras no se cuelgue... ¿Y el motor? Hago muchos kilómetros para ir al trabajo y la gasolina está carísima.", 
-            "duracion": 10
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Esteee... no se preocupe por eso. Montamos un motor híbrido auto-recargable de última generación. El coche gestiona solo cuándo usar la batería y cuándo el motor térmico. Esto significa que en ciudad va a ir casi siempre en eléctrico, reduciendo el gasto de combustible a la mitad comparado con su coche actual. Es eficiencia pura.", 
-            "duracion": 28
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Suena bien lo del ahorro. Pero vamos a lo doloroso... he estado mirando el modelo similar de la marca alemana y se me va de precio. Imagino que este, siendo nuevo y con tanta tecnología, costará un ojo de la cara.", 
-            "duracion": 18
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Para nada, y aquí es donde el Conversa XL realmente brilla. Sabemos que el **budget** familiar es sagrado. Hemos posicionado este vehículo con una estrategia muy agresiva. Si compara equipamiento por equipamiento, nuestro precio final está actualmente un 12% por debajo de la competencia directa alemana o japonesa. Básicamente, se lleva más coche por menos dinero.", 
-            "duracion": 32
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Un 12% es bastante diferencia... ¿Y tenéis financiación? Porque no quería descapitalizarme ahora mismo pagándolo todo de golpe.", 
-            "duracion": 12
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Sí, tenemos un plan flexible. Bueno, podemos ajustar la entrada y dejar una cuota que ni note a fin de mes. Es la mejor solución para tener el coche ya sin agobios financieros.", 
-            "duracion": 18
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Tendría que consultarlo con mi mujer esta noche, no quiero precipitarme.", 
-            "duracion": 8
-        },
-        {
-            "speaker": "vendedor", 
-            "text": "Es lógico, consúltelo. Pero déjeme advertirle de una cosa: esta campaña de lanzamiento con el descuento del 12% termina estrictamente este viernes. Si lo deja pasar, corre el riesgo de tener que pagar la tarifa oficial la semana que viene, que son casi 3.000 euros más. ¿Sabes? yo en su lugar dejaría hecha una reserva simbólica hoy, que es totalmente reembolsable, solo para bloquear el precio y las condiciones.", 
-            "duracion": 40
-        },
-        {
-            "speaker": "cliente", 
-            "text": "Si es reembolsable... supongo que no pierdo nada por dejarlo reservado mientras lo pienso.", 
-            "duracion": 10
-        }
-    ]
-    
-    # print("*************** MULETILLAS ***************")
-    # print(calcular_muletillas(transcript_demo))
-    # print("******************************************")
-    # print("*************** CLARIDAD ***************")
-    # print(calcular_claridad(transcript_demo))
-    # print("******************************************")    
-    # print("*************** PARTICIPACION ***************")
-    # print(calcular_participacion_dinamica(transcript_demo))
-    # print("******************************************")
-    # print("*************** COBERTURA TEMAS ***************")
-    # print(calcular_cobertura_temas(transcript_demo))
-    # print("******************************************")
-    # print("*************** PPM ***************")
-    # print(calcular_ppm_variabilidad(transcript_demo))
-    # print("******************************************")
-
-    # INSERT_YOUR_CODE
+    {
+        "speaker": "vendedor", 
+        "text": "Hola, buenas tardes. Bienvenido a nuestra exposición virtual, eh... mi nombre es Carlos. Veo que se ha interesado justo por el nuevo Conversa XL a través de la web. Tiene buen ojo, es la unidad que acabamos de recibir esta misma mañana y ya está disponible para reserva inmediata.", 
+        "duracion": 18
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Hola Carlos. Sí, la verdad es que estaba buscando algo más grande porque la familia ha crecido y mi coche actual se nos ha quedado minúsculo.", 
+        "duracion": 12
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "Le entiendo perfectamente. El espacio es vital. Déjeme decirle que hemos cambiado totalmente el **mindset** de diseño para enfocarnos en familias como la suya. Fíjese en las fotos del catálogo que le acabo de compartir; esas líneas no solo son estética, son refuerzos de acero al boro. En seguridad somos líderes: 5 estrellas Euro NCAP para que no tenga ningún miedo al llevar a sus hijos.", 
+        "duracion": 38
+    },
+    {
+        "speaker": "cliente", 
+        "text": "La seguridad es importante, claro. Pero mi esposa está obsesionada con el maletero. En el que tenemos ahora, meter el carrito del bebé y la compra es imposible, siempre tenemos que dejar bolsas en los asientos de atrás.", 
+        "duracion": 18
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "Comprendo. Si le sigo bien, lo que me está diciendo es que su mayor dolor de cabeza actual es la falta de capacidad de carga y necesita garantías de que podrá meter el carrito y las bolsas del supermercado todo junto en el maletero sin invadir los asientos, ¿es eso correcto?", 
+        "duracion": 25
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Exacto, eso es justo lo que necesito. Que no sea un tetris cada vez que salimos de viaje.", 
+        "duracion": 8
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "Pues mire los datos técnicos que le envío. Tenemos 650 litros de capacidad real. Aquí le caben dos carritos si hace falta. Además, la boca de carga es muy baja para que no se deje la espalda levantando peso. Y los asientos traseros son individuales; no va a tener problema para colocar tres sillas infantiles.", 
+        "duracion": 35
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Oye, pues es verdad que se ve inmenso. ¿Y de tecnología qué tal va? Porque no quiero algo que sea muy complicado de usar, la pantalla esa parece una nave espacial.", 
+        "duracion": 15
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "Parece compleja, pero el **feedback** que recibimos es que se aprende a usar en cinco minutos. Mire, le voy a ser sincero, la conectividad hoy en día nos facilita la vida y usted necesita gestionar las llamadas y el mapa por voz, sin soltar el volante en ningún momento bajo ninguna circunstancia.", 
+        "duracion": 40
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Ya, mientras no se cuelgue... ¿Y el motor? Hago muchos kilómetros para ir al trabajo y la gasolina está carísima.", 
+        "duracion": 10
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "No se preocupe por eso. Montamos un motor híbrido auto-recargable. El coche gestiona solo cuándo usar la batería. En ciudad va a ir casi siempre en eléctrico, reduciendo el gasto de combustible a la mitad comparado con su coche actual. Es eficiencia pura.", 
+        "duracion": 28
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Suena bien lo del ahorro. Pero vamos a lo doloroso... he estado mirando el modelo similar de la marca alemana y se me va de precio. Imagino que este, siendo nuevo y con tanta tecnología, costará un ojo de la cara.", 
+        "duracion": 18
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "Para nada, ahí es donde el Conversa XL brilla. Sabemos que el **budget** familiar es sagrado. Al ser una gestión online, nuestro precio final está actualmente un 12% por debajo de la competencia directa. Básicamente, se lleva más coche por menos dinero.", 
+        "duracion": 32
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Un 12% es bastante diferencia... ¿Y tenéis financiación? Porque no quería descapitalizarme ahora mismo pagándolo todo de golpe.", 
+        "duracion": 12
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "Sí, tenemos un plan flexible totalmente digital. Podemos ajustar la entrada y dejar una cuota muy cómoda. De hecho, si lo tramitamos ahora por el portal, le incluyo el envío a domicilio sin coste adicional.", 
+        "duracion": 22
+    },
+    {
+        "speaker": "cliente", 
+        "text": "Pues con ese descuento y el envío a casa me habéis convencido. Me cuadra todo. ¿Qué tengo que hacer para confirmar la compra ahora mismo?", 
+        "duracion": 12
+    },
+    {
+        "speaker": "vendedor", 
+        "text": "¡Fantástico! Le acabo de enviar un enlace seguro a su correo. Solo tiene que subir una foto de su DNI y completar el formulario de la financiera. En cuanto lo reciba, bloqueamos el coche para usted y empezamos con la gestión del envío.", 
+        "duracion": 25
+    }]
 
 
+    # t0 = time.time()
+    # print(calcular_cobertura_temas_old(transcript_demo))
+    # t1 = time.time()
+    # print(f"Tiempo de ejecución: {t1 - t0} segundos")
 
-    # Calcular los resultados para cada métrica y guardar la información relevante
-    muletillas_result = calcular_muletillas(transcript_demo)
-    claridad_result = calcular_claridad(transcript_demo)
-    participacion_result = calcular_participacion_dinamica(transcript_demo)
-    cobertura_temas_result = calcular_cobertura_temas(transcript_demo)
-    ppm_result = calcular_ppm_variabilidad(transcript_demo)
-    # INSERT_YOUR_CODE
- 
-
-    # Muletillas dataframe
-    df_muletillas = pd.DataFrame([{
-        "puntuacion": muletillas_result["puntuacion"],
-        "total_muletillas": muletillas_result.get("total_muletillas", None),
-        "muletillas_detectadas": muletillas_result.get("muletillas_detectadas", None),
-        "penalizacion": muletillas_result.get("penalizacion", None),
-        "detalle": muletillas_result
-    }])
-
-    # Claridad dataframe
-    df_claridad = pd.DataFrame([{
-        "puntuacion": claridad_result["puntuacion"],
-        "palabras_largas_detectadas": claridad_result.get("palabras_largas_detectadas", None),
-        "penalizacion": claridad_result.get("penalizacion", None),
-        "detalle": claridad_result
-    }])
-
-    # Participación dataframe
-    df_participacion = pd.DataFrame([{
-        "puntuacion": participacion_result["puntuacion"],
-        "cliente": participacion_result.get("cliente", None),
-        "vendedor": participacion_result.get("vendedor", None),
-        "bonificacion": participacion_result.get("bonificacion", None),
-        "penalizacion": participacion_result.get("penalizacion", None),
-        "detalle": participacion_result
-    }])
-
-    # Cobertura de temas dataframe
-    df_cobertura_temas = pd.DataFrame([{
-        "puntuacion": cobertura_temas_result["puntuacion"],
-        "temas_olvidados": cobertura_temas_result.get("temas_olvidados", None),
-        "proximos_pasos": cobertura_temas_result.get("proximos_pasos", None),
-        "output_gpt": cobertura_temas_result.get("output_gpt", None),
-        "penalizacion": cobertura_temas_result.get("penalizacion", None),
-        "bonificacion": cobertura_temas_result.get("bonificacion", None),
-        "detalle": cobertura_temas_result
-    }])
-
-    # PPM dataframe
-    df_ppm = pd.DataFrame([{
-        "puntuacion": ppm_result["puntuacion"],
-        "ppm_cliente": ppm_result.get("ppm_cliente", None),
-        "ppm_vendedor": ppm_result.get("ppm_vendedor", None),
-        "variabilidad_cliente": ppm_result.get("variabilidad_cliente", None),
-        "variabilidad_vendedor": ppm_result.get("variabilidad_vendedor", None),
-        "detalle": ppm_result
-    }])
-
-       # Guardar los resultados en ficheros CSV mejorados por cada métrica
-    df_muletillas.to_csv("resultados_muletillas.csv", index=False, encoding="utf-8-sig")
-    df_claridad.to_csv("resultados_claridad.csv", index=False, encoding="utf-8-sig")
-    df_participacion.to_csv("resultados_participacion.csv", index=False, encoding="utf-8-sig")
-    df_cobertura_temas.to_csv("resultados_cobertura_temas.csv", index=False, encoding="utf-8-sig")
-    df_ppm.to_csv("resultados_ppm.csv", index=False, encoding="utf-8-sig")
-    print("Se guardaron los resultados mejorados en archivos CSV.")
-
-
-    
-    print("DataFrame Muletillas:\n", df_muletillas)
-    print("DataFrame Claridad:\n", df_claridad)
-    print("DataFrame Participación:\n", df_participacion)
-    print("DataFrame Cobertura Temas:\n", df_cobertura_temas)
-    print("DataFrame PPM:\n", df_ppm)
+    calcular_objetivo_principal(transcript_demo)

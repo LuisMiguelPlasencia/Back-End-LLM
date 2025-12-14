@@ -56,7 +56,7 @@ class RealtimeBridge:
                     "create_response": True, # estos dos últimos igual no son necesarios
                     "interrupt_response": True 
                 },
-                "voice": "alloy",
+                "voice": "sage",
                 "temperature": 1,
                 "max_response_output_tokens": 4096,
                 "modalities": ["text", "audio"],
