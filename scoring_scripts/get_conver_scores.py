@@ -58,7 +58,7 @@ def proximos_pasos(transcript):
     output = call_gpt(prompt)
     return output
 
-def temas_clave(transcript):
+def temas_clave(transcript, temas_clave="Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)"):
     prompt = f"""
     Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor habla acerca de los temas clave que te voy a mandar. Se exigente, hablar de un tema clave no implica solamente mencionar dicha palabra, debe haber un pequeño desarrollo. 
 
@@ -66,18 +66,20 @@ def temas_clave(transcript):
     {transcript}
 
     TEMAS CLAVE: 
-    Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)
+    {temas_clave}
 
-
-    Responde ÚNICAMENTE devolviendo: 
-    - Un numero entero mencionando el número de temas clave abordados
-    - Para cada tema clave abordado, señalar donde lo has identificado
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
+    {{"n": "numero entero mencionando el numero de temas clave abordados", 
+     "señales": "Señales donde se identifican temas claves no abordados"
+    }}
     """
     output = call_gpt(prompt)
     
     return output
 
 def objetivo(transcript,objetivo="Vender el coche Mike XL"):
+
+
     prompt = f"""
     Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor consigue el objetivo principal: {objetivo} 
 
@@ -97,24 +99,53 @@ def objetivo(transcript,objetivo="Vender el coche Mike XL"):
     
     return output
 
-# def calcular_muletillas(transcript):
+def feedback_muletillas(transcript):
+    prompt = f"""
+    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor utiliza muletillas 
 
-#     # Contar muletillas y pausas
-#     total_muletillas = int(muletillas_gpt(transcript))
+    TRANSCRIPCIÓN:
+    {transcript}
 
-#     penalizacion = total_muletillas 
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    {{
+     "señales": "Indica la intervención en la que el vendedor usa muletillas. Ejemplo: Ehh, digamos que, mmmm ..."
+    }}
+    """
+    output = call_gpt(prompt)
+    
+    return output
 
-#     puntuacion = max(0, 100 - penalizacion)  # nunca bajar de 0
+def feedback_claridad(transcript):
+    prompt = f"""
+    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar momentos en los que el vendedor no es claro en sus propuestas.
 
-#     return  {
-#         "puntuacion": puntuacion, 
-#         "penalizacion": penalizacion,
-#     }
+    TRANSCRIPCIÓN:
+    {transcript}
 
-# def calcular_claridad(transcript):
-#     return {
-#         "puntuacion": 50
-#     }
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    {{
+     "señales": "Indica la intervención en la que el vendedor no es claro en su propuesta"
+    }}
+    """
+    output = call_gpt(prompt)
+    
+    return output
+
+def feedback_participacion(transcript):
+    prompt = f"""
+    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor interrumpe al cliente 
+
+    TRANSCRIPCIÓN:
+    {transcript}
+
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    {{
+     "señales": "Indica la intervención en la que el vendedor interrumpe al cliente
+    }}
+    """
+    output = call_gpt(prompt)
+    
+    return output
 
 # ### Muletillas
 def calcular_muletillas(transcript, duracion=None, muletillas=None):
@@ -148,6 +179,7 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
             repeticion_constante = True
 
     puntuacion = max(0, 100 - penalizacion)  # nunca bajar de 0
+    feedback = json.loads(feedback_muletillas(transcript))
 
     return  {
         "puntuacion": puntuacion, 
@@ -157,7 +189,7 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
         "porcentaje": frecuencia / total_muletillas if total_muletillas > 0 else 0,
         #"total_pausas": total_pausas,
         "muletillas_usadas": muletillas_usadas,
-        "feedback": "TEST"
+        "feedback": feedback["señales"]
     }
     
 # ### Claridad y complejidad
@@ -229,6 +261,9 @@ def calcular_claridad(transcript):
     # ---- Calcular puntuación final ----
     puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
 
+    # ---- Calcular feedback -----
+    feedback = json.loads(feedback_claridad(transcript))
+
     return {
         "puntuacion": puntuacion,
         "penalizacion": penalizacion,
@@ -241,7 +276,7 @@ def calcular_claridad(transcript):
         "negativas": negativas_texto, 
         "anglicismos": anglicismos_texto,
         "frases_largas": frases_largas_texto, 
-        "feedback": "TEST"
+        "feedback": feedback['señales']
     }
 
 ### Participación y dinámica
@@ -290,9 +325,9 @@ def calcular_participacion_dinamica(transcript):
     elif 0.3 < ratio <= 0.4:
         penalizacion += 10
     elif 0.4 < ratio <= 0.5:
-        penalizacion += 5
+        penalizacion += 10
     elif 0.5 < ratio <= 0.6:
-        penalizacion += 5
+        penalizacion += 10
     elif 0.6 < ratio <= 0.7:
         penalizacion += 25
     elif 0.7 < ratio <= 0.8:
@@ -304,6 +339,9 @@ def calcular_participacion_dinamica(transcript):
 
     # ---- Puntuación final ----
     puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+
+    # ---- Feedback ----
+    feedback = json.loads(feedback_participacion(transcript))
     
     return {
         "palabras_cliente": palabras_cliente, 
@@ -314,7 +352,7 @@ def calcular_participacion_dinamica(transcript):
         "bonificacion": bonificacion,
         "escucha_activa": gpt_escucha_activa,
         "n_escuchas": num_escucha,
-        "feedback": "TEST"
+        "feedback": feedback['señales']
     }
 
 ### Cobertura de temas y palabras clave
@@ -325,18 +363,10 @@ def calcular_cobertura_temas_json(transcript,num_temas=6):
 
     ## Detector de palabras clave con GPT
     # INSERT_YOUR_CODE
-    gpt_temas_clave = temas_clave(transcript)
+    gpt_temas_clave = json.loads(temas_clave(transcript))
 
-    # Intentar extraer el número de temas clave abordados
-    match_num = re.search(r"(\d+)", gpt_temas_clave)
-    num_temas_abordados = int(match_num.group(1)) if match_num else 0
-
-    # Si no se extrajeron señales explícitas, tomar el resto del output después del número
-    if match_num:
-        num_pos = gpt_temas_clave.find(match_num.group(1))
-        restantes = gpt_temas_clave[num_pos + len(match_num.group(1)) :]
-        # Extraer líneas no vacías y quitar espacios extras
-        señales_temas = [l.strip() for l in restantes.split('\n') if l.strip()]
+    num_temas_abordados = gpt_temas_clave['n']
+    señales_temas = gpt_temas_clave['señales']
 
     # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
     num_temas_olvidados = num_temas - num_temas_abordados
@@ -365,97 +395,97 @@ def calcular_cobertura_temas_json(transcript,num_temas=6):
         "señales_temas": señales_temas,
         "señales_proximos_pasos": señales_proximos_pasos,
         "output_gpt": output_gpt,
-         "feedback": "TEST"
+         "feedback": señales_temas
     }
 
 # ### Cobertura de temas y palabras clave (mejorado con LLMs)
-# def calcular_cobertura_temas_old(transcript,num_temas=6):
+def calcular_cobertura_temas_old(transcript,num_temas=6):
 
-#     penalizacion = 0
-#     bonificacion = 0
+    penalizacion = 0
+    bonificacion = 0
 
-#     ## Detector de palabras clave con GPT
-#     # INSERT_YOUR_CODE
-#     gpt_temas_clave = temas_clave(transcript)
+    ## Detector de palabras clave con GPT
+    # INSERT_YOUR_CODE
+    gpt_temas_clave = temas_clave(transcript)
 
-#     # Intentar extraer el número de temas clave abordados
-#     match_num = re.search(r"(\d+)", gpt_temas_clave)
-#     num_temas_abordados = int(match_num.group(1)) if match_num else 0
+    # Intentar extraer el número de temas clave abordados
+    match_num = re.search(r"(\d+)", gpt_temas_clave)
+    num_temas_abordados = int(match_num.group(1)) if match_num else 0
 
-#     # Si no se extrajeron señales explícitas, tomar el resto del output después del número
-#     if match_num:
-#         num_pos = gpt_temas_clave.find(match_num.group(1))
-#         restantes = gpt_temas_clave[num_pos + len(match_num.group(1)) :]
-#         # Extraer líneas no vacías y quitar espacios extras
-#         señales_temas = [l.strip() for l in restantes.split('\n') if l.strip()]
+    # Si no se extrajeron señales explícitas, tomar el resto del output después del número
+    if match_num:
+        num_pos = gpt_temas_clave.find(match_num.group(1))
+        restantes = gpt_temas_clave[num_pos + len(match_num.group(1)) :]
+        # Extraer líneas no vacías y quitar espacios extras
+        señales_temas = [l.strip() for l in restantes.split('\n') if l.strip()]
 
-#     # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
-#     num_temas_olvidados = num_temas - num_temas_abordados
-#     penalizacion += num_temas_olvidados*20
+    # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
+    num_temas_olvidados = num_temas - num_temas_abordados
+    penalizacion += num_temas_olvidados*20
 
-#     ## Detector de proximos pasos con GPT
-#     gpt_proximos_pasos = json.loads(proximos_pasos(transcript))
-#     # Try to extract boolean or number from GPT response
-#     # First try to find a boolean pattern
-#     bool_match = re.search(r'(true|false)', gpt_proximos_pasos, re.IGNORECASE)
-#     if bool_match:
-#         bool_value = bool_match.group(1).lower()
-#         proximos_pasos_bool = 1 if bool_value in ['true'] else 0
-#         señales_proximos_pasos = []
-#     else:
-#         # Try to find a number pattern
-#         match = re.search(r"señales de proximos pasos:\s*(\d+)", gpt_proximos_pasos, re.IGNORECASE)
-#         if match:
-#             proximos_pasos_bool = int(match.group(1))
-#             # Extraer las señales concretas si están listadas tras los dos puntos
-#             sig_pos = gpt_proximos_pasos.find(match.group(1)) + len(match.group(1))
-#             restantes = gpt_proximos_pasos[sig_pos:].strip()
-#             señales_proximos_pasos = [l.strip() for l in restantes.split('\n') if l.strip()]
-#         else:
-#             # Try to find any number in the response as fallback
-#             numbers = re.findall(r'\d+', gpt_proximos_pasos)
-#             proximos_pasos_bool = int(numbers[0]) if numbers else 0
-#             # Como señales, tomar todas las líneas no vacías tras cualquier "proximos pasos:" o después de los números encontrados
-#             señales_proximos_pasos = []
-#             fallback_match = re.search(r"proximos pasos:([^\n]*)", gpt_proximos_pasos, re.IGNORECASE)
-#             if fallback_match:
-#                 after_header = fallback_match.group(1)
-#                 señales_proximos_pasos = [l.strip() for l in after_header.split('\n') if l.strip()]
-#             elif numbers:
-#                 idx = gpt_proximos_pasos.find(numbers[0]) + len(numbers[0])
-#                 restantes = gpt_proximos_pasos[idx:].strip()
-#                 señales_proximos_pasos = [l.strip() for l in restantes.split('\n') if l.strip()]
+    ## Detector de proximos pasos con GPT
+    gpt_proximos_pasos = json.loads(proximos_pasos(transcript))
+    # Try to extract boolean or number from GPT response
+    # First try to find a boolean pattern
+    bool_match = re.search(r'(true|false)', gpt_proximos_pasos, re.IGNORECASE)
+    if bool_match:
+        bool_value = bool_match.group(1).lower()
+        proximos_pasos_bool = 1 if bool_value in ['true'] else 0
+        señales_proximos_pasos = []
+    else:
+        # Try to find a number pattern
+        match = re.search(r"señales de proximos pasos:\s*(\d+)", gpt_proximos_pasos, re.IGNORECASE)
+        if match:
+            proximos_pasos_bool = int(match.group(1))
+            # Extraer las señales concretas si están listadas tras los dos puntos
+            sig_pos = gpt_proximos_pasos.find(match.group(1)) + len(match.group(1))
+            restantes = gpt_proximos_pasos[sig_pos:].strip()
+            señales_proximos_pasos = [l.strip() for l in restantes.split('\n') if l.strip()]
+        else:
+            # Try to find any number in the response as fallback
+            numbers = re.findall(r'\d+', gpt_proximos_pasos)
+            proximos_pasos_bool = int(numbers[0]) if numbers else 0
+            # Como señales, tomar todas las líneas no vacías tras cualquier "proximos pasos:" o después de los números encontrados
+            señales_proximos_pasos = []
+            fallback_match = re.search(r"proximos pasos:([^\n]*)", gpt_proximos_pasos, re.IGNORECASE)
+            if fallback_match:
+                after_header = fallback_match.group(1)
+                señales_proximos_pasos = [l.strip() for l in after_header.split('\n') if l.strip()]
+            elif numbers:
+                idx = gpt_proximos_pasos.find(numbers[0]) + len(numbers[0])
+                restantes = gpt_proximos_pasos[idx:].strip()
+                señales_proximos_pasos = [l.strip() for l in restantes.split('\n') if l.strip()]
     
-#     output_gpt = gpt_proximos_pasos  # Store the full GPT response
-#     bonificacion = 10 * proximos_pasos_bool
-    
-    
-#     # # ---- Objeciones críticas no resueltas ----
-#     # objeciones_cliente = ["precio", "coste", "caro", "elevado", "demasiado"]
-#     # objecion_detectada = any(word in cliente_texto for word in objeciones_cliente)
-    
-#     # if objecion_detectada:
-#     #     # ¿Responde el vendedor?
-#     #     respuesta = any(word in vendedor_texto for word in ["precio", "coste", "inversión", "valor"])
-#     #     if not respuesta:
-#     #         penalizacion += 30
+    output_gpt = gpt_proximos_pasos  # Store the full GPT response
+    bonificacion = 10 * proximos_pasos_bool
     
     
-#     # ---- Puntuación final ----
-#     puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    # # ---- Objeciones críticas no resueltas ----
+    # objeciones_cliente = ["precio", "coste", "caro", "elevado", "demasiado"]
+    # objecion_detectada = any(word in cliente_texto for word in objeciones_cliente)
     
-#     return {
-#         "puntuacion": puntuacion,
-#         "penalizacion": penalizacion,
-#         "bonificacion": bonificacion,
-#         "temas_olvidados": num_temas_olvidados,
-#         #"objecion_no_resuelta": objecion_detectada and not respuesta,
-#         "bool_value": bool_value,
-#         "proximos_pasos": proximos_pasos_bool,
-#         "señales_temas": señales_temas,
-#         "señales_proximos_pasos": señales_proximos_pasos,
-#         "output_gpt": output_gpt
-#     }
+    # if objecion_detectada:
+    #     # ¿Responde el vendedor?
+    #     respuesta = any(word in vendedor_texto for word in ["precio", "coste", "inversión", "valor"])
+    #     if not respuesta:
+    #         penalizacion += 30
+    
+    
+    # ---- Puntuación final ----
+    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    
+    return {
+        "puntuacion": puntuacion,
+        "penalizacion": penalizacion,
+        "bonificacion": bonificacion,
+        "temas_olvidados": num_temas_olvidados,
+        #"objecion_no_resuelta": objecion_detectada and not respuesta,
+        "bool_value": bool_value,
+        "proximos_pasos": proximos_pasos_bool,
+        "señales_temas": señales_temas,
+        "señales_proximos_pasos": señales_proximos_pasos,
+        "output_gpt": output_gpt
+    }
 
 ### Indice de preguntas (Aquí hay que darle una pensadica)
 def calcular_indice_preguntas(transcript):
@@ -733,7 +763,7 @@ if __name__ == "__main__":
     },
     {
         "speaker": "vendedor", 
-        "text": "Para nada, ahí es donde el Conversa XL brilla. Sabemos que el **budget** familiar es sagrado. Al ser una gestión online, nuestro precio final está actualmente un 12% por debajo de la competencia directa. Básicamente, se lleva más coche por menos dinero.", 
+        "text": "Mmmmm, eehhh, Para nada, ahí es donde el Conversa XL brilla. Sabemos que el **budget** familiar es sagrado. Al ser una gestión online, nuestro precio final está actualmente un 12% por debajo de la competencia directa. Básicamente, se lleva más coche por menos dinero.", 
         "duracion": 32
     },
     {
@@ -763,4 +793,4 @@ if __name__ == "__main__":
     # t1 = time.time()
     # print(f"Tiempo de ejecución: {t1 - t0} segundos")
 
-    calcular_objetivo_principal(transcript_demo)
+    print(calcular_cobertura_temas_json(transcript_demo))
