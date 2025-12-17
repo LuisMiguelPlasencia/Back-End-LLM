@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from ..services.messages_service import send_message
 from ..services.scoring_service import scoring
 from ..services.prompting_service import master_prompt_generator
+from ..services.conversations_service import create_conversation
 load_dotenv()
 API_KEY = os.getenv("OPENAI_API_KEY")
 WS_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
@@ -100,7 +101,8 @@ class RealtimeBridge:
                         self.stage_id = parsed.get("stage_id", None)
 
                         ## create conversation here and return conversation_id
-                        self.conversation_id = parsed.get("conversation_id", None)
+                        conversation_details = await create_conversation(self.user_id, self.course_id, self.stage_id)
+                        self.conversation_id = conversation_details.get("conversation_id", None)
                         
                         print('user_id:', self.user_id, 'conversation_id:', self.conversation_id, 'course_id:', self.course_id, 'stage_id:', self.stage_id)
                         
