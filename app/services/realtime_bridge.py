@@ -9,7 +9,6 @@ from app.services.realtime_service import openai_msg_process, stop_process, user
 import websockets
 from dotenv import load_dotenv
 from ..services.messages_service import send_message
-from ..services.scoring_service import scoring
 from ..services.prompting_service import master_prompt_generator
 from ..services.conversations_service import create_conversation
 load_dotenv()

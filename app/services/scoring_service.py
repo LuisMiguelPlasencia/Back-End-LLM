@@ -3,6 +3,7 @@ import pandas as pd
 import psycopg2
 import os
 from dotenv import load_dotenv
+from app.services.conversations_service import set_conversation_scoring
 from scoring_scripts.get_conver_scores import get_conver_scores
 
 load_dotenv()
@@ -52,7 +53,7 @@ def read_msg(conv_id):
     conn.close()
     return conversation
 
-def scoring(conv_id):
+async def scoring(conv_id):
     transcript = read_msg(conv_id)
     if not transcript:
         print(f"No messages found for conversation_id: {conv_id}")
@@ -85,76 +86,24 @@ def scoring(conv_id):
     print(f"   Index of Questions: {indexofquestions_scoring}")
     print(f"   Rhythm: {rhythm_scoring}\n")
 
-    conn = psycopg2.connect(
-        dbname=DB_NAME,
-        user=USER,
-        password=PASSWORD,
-        host=HOST,
-        port=PORT
+    # Update database
+    print('conversation id: ', conv_id)
+    await set_conversation_scoring(
+        fillerwords_scoring,
+        clarity_scoring,
+        participation_scoring,
+        keythemes_scoring,
+        indexofquestions_scoring,
+        rhythm_scoring,
+        fillerwords_feedback, 
+        clarity_feedback,
+        participation_feedback,
+        keythemes_feedback,
+        indexofquestions_feedback,
+        rhythm_feedback,
+        puntuacion_global,
+        conv_id
     )
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE conversaapp.conversations
-                SET
-                    fillerwords_scoring = %s,
-                    clarity_scoring = %s,
-                    participation_scoring = %s,
-                    keythemes_scoring = %s,
-                    indexofquestions_scoring = %s,
-                    rhythm_scoring = %s,
-                    fillerwords_feedback = %s,
-                    clarity_feedback = %s,
-                    participation_feedback = %s,
-                    keythemes_feedback = %s,
-                    indexofquestions_feedback = %s,
-                    rhythm_feedback = %s,
-                    updated_at = now(),
-                    general_score = %s
-                WHERE conversation_id = %s
-                """,
-                (
-                    fillerwords_scoring,
-                    clarity_scoring,
-                    participation_scoring,
-                    keythemes_scoring,
-                    indexofquestions_scoring,
-                    rhythm_scoring,
-                    fillerwords_feedback,
-                    clarity_feedback,
-                    participation_feedback,
-                    keythemes_feedback,
-                    indexofquestions_feedback,
-                    rhythm_feedback,
-                    puntuacion_global,
-                    conv_id,
-                ),
-            )
-            rows_affected = cur.rowcount
-            conn.commit()
-            
-            if rows_affected == 0:
-                print(f"⚠️  Warning: No rows updated. Conversation_id '{conv_id}' may not exist in the database.")
-                return
-            else:
-                print(f"✅ Successfully updated {rows_affected} row(s) for conversation_id: {conv_id}")
-                print(f"   Fillerwords: {fillerwords_scoring}")
-                print(f"   Clarity: {clarity_scoring}")
-                print(f"   Participation: {participation_scoring}")
-                print(f"   Key Themes: {keythemes_scoring}")
-                print(f"   Index of Questions: {indexofquestions_scoring}")
-                print(f"   Rhythm: {rhythm_scoring}")
-    except psycopg2.Error as e:
-        conn.rollback()
-        print(f"❌ Database error occurred: {e}")
-        raise
-    except Exception as e:
-        conn.rollback()
-        print(f"❌ Unexpected error occurred: {e}")
-        raise
-    finally:
-        conn.close()
 
 
 if __name__ == "__main__":

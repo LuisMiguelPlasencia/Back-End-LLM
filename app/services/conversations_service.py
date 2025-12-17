@@ -76,3 +76,57 @@ async def get_conversation_status(conversation_id: UUID, user_id: UUID) -> Optio
     if not row:
         return None
     return row["status"]
+
+async def set_conversation_scoring(
+    fillerwords_scoring: float, 
+    clarity_scoring: float, 
+    participation_scoring: float, 
+    keythemes_scoring: float, 
+    indexofquestions_scoring: float, 
+    rhythm_scoring: float, 
+    fillerwords_feedback: str, 
+    clarity_feedback: str, 
+    participation_feedback: str, 
+    keythemes_feedback: str, 
+    indexofquestions_feedback: str, 
+    rhythm_feedback: str, 
+    puntuacion_global: float, 
+    conv_id: UUID) -> Optional[str]:
+    print('Setting conversation scoring')
+    query = """
+    UPDATE conversaapp.conversations
+    SET
+        fillerwords_scoring=$1,
+        clarity_scoring=$2,
+        participation_scoring=$3,
+        keythemes_scoring=$4,
+        indexofquestions_scoring=$5,
+        rhythm_scoring=$6,
+        fillerwords_feedback=$7,
+        clarity_feedback=$8,
+        participation_feedback=$9,
+        keythemes_feedback=$10,
+        indexofquestions_feedback=$11,
+        rhythm_feedback=$12,
+        updated_at=now(),
+        general_score=$13
+    WHERE conversation_id=$14
+    """
+    row = await execute_query_one(
+        query,
+        fillerwords_scoring,
+        clarity_scoring,
+        participation_scoring,
+        keythemes_scoring,
+        indexofquestions_scoring,
+        rhythm_scoring,
+        fillerwords_feedback,
+        clarity_feedback,
+        participation_feedback,
+        keythemes_feedback,
+        indexofquestions_feedback,
+        rhythm_feedback,
+        puntuacion_global,
+        conv_id,  # UUID ok
+    )
+
