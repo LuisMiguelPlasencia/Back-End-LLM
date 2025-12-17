@@ -47,7 +47,7 @@ async def get_user_scoring_by_company(company_id: str) -> List[Dict]:
             ui.company_id,
             ui.user_type,
             ui.avatar,
-            COALESCE(AVG(c.clarity_scoring), 0) AS score
+            COALESCE(AVG(c.general_score), 0) AS score
         FROM 
             conversaconfig.user_info ui
             LEFT JOIN conversaapp.conversations c
