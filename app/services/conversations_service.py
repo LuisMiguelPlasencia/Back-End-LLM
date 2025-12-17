@@ -13,7 +13,8 @@ async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
     SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
     , updated_at, couser_id, fillerwords_scoring, clarity_scoring
     , participation_scoring, keythemes_scoring, indexofquestions_scoring
-    , rhythm_scoring
+    , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
+    , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
     FROM conversaApp.conversations
     WHERE conversation_id = $1
     ORDER BY start_timestamp DESC
@@ -28,7 +29,8 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
     SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
     , updated_at, couser_id, fillerwords_scoring, clarity_scoring
     , participation_scoring, keythemes_scoring, indexofquestions_scoring
-    , rhythm_scoring
+    , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
+    , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
     FROM conversaApp.conversations
     WHERE user_id = $1
     ORDER BY start_timestamp DESC
