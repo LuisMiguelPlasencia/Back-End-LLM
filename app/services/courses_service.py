@@ -64,7 +64,7 @@ LEFT JOIN (
    AND c.rn = 1 
 WHERE mc.is_active 
   AND utr.user_type = (SELECT user_type FROM conversaConfig.user_info WHERE user_id = $1)
-ORDER BY mc.created_on ASC, cs.stage_order ASC;
+ORDER BY mc.created_on DESC, cs.stage_order ASC;
     """
     
     results = await execute_query(query, user_id)
