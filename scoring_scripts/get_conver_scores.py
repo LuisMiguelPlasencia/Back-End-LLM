@@ -156,7 +156,8 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
         "repeticion_constante": repeticion_constante,
         "porcentaje": frecuencia / total_muletillas if total_muletillas > 0 else 0,
         #"total_pausas": total_pausas,
-        "muletillas_usadas": muletillas_usadas
+        "muletillas_usadas": muletillas_usadas,
+        "feedback": "TEST"
     }
     
 # ### Claridad y complejidad
@@ -240,6 +241,7 @@ def calcular_claridad(transcript):
         "negativas": negativas_texto, 
         "anglicismos": anglicismos_texto,
         "frases_largas": frases_largas_texto, 
+        "feedback": "TEST"
     }
 
 ### Participación y dinámica
@@ -311,7 +313,8 @@ def calcular_participacion_dinamica(transcript):
         "penalizacion": penalizacion,
         "bonificacion": bonificacion,
         "escucha_activa": gpt_escucha_activa,
-        "n_escuchas": num_escucha
+        "n_escuchas": num_escucha,
+        "feedback": "TEST"
     }
 
 ### Cobertura de temas y palabras clave
@@ -361,7 +364,8 @@ def calcular_cobertura_temas_json(transcript,num_temas=6):
         "proximos_pasos": indicador,
         "señales_temas": señales_temas,
         "señales_proximos_pasos": señales_proximos_pasos,
-        "output_gpt": output_gpt
+        "output_gpt": output_gpt,
+         "feedback": "TEST"
     }
 
 # ### Cobertura de temas y palabras clave (mejorado con LLMs)
@@ -522,7 +526,8 @@ def calcular_indice_preguntas(transcript):
         "sondeo": count_sondeo,
         "irrelevantes": count_irrelevantes,
         "penalizacion": penalizacion,
-        "bonificacion": bonificacion
+        "bonificacion": bonificacion,
+        "feedback": "TEST"
     }
 
 ### PPM y variabilidad
@@ -537,7 +542,8 @@ def calcular_ppm_variabilidad(transcript):
             "media_ppm": None,
             "variabilidad": None,
             "penalizacion": 0,
-            "bonificacion": 0
+            "bonificacion": 0,
+            "feedback": "TEST"
         }
     
     ppms = []
@@ -584,7 +590,8 @@ def calcular_ppm_variabilidad(transcript):
         "media_ppm": round(media_ppm, 1),
         "variabilidad": round(variabilidad, 1),
         "penalizacion": penalizacion,
-        "bonificacion": bonificacion
+        "bonificacion": bonificacion,
+        "feedback": "TEST"
     }
 
 def calcular_objetivo_principal(transcript):
@@ -620,6 +627,8 @@ def get_conver_scores(transcript):
     res_preguntas = calcular_indice_preguntas(transcript)
     res_ppm = calcular_ppm_variabilidad(transcript)
 
+
+
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
     if palabras_totales > 500: 
@@ -632,6 +641,14 @@ def get_conver_scores(transcript):
             "preguntas": res_preguntas["puntuacion"],
             "ppm": res_ppm["puntuacion"]
         }
+        feedback = { 
+            "muletillas_pausas": res_muletillas["feedback"],
+            "claridad": res_claridad["feedback"],
+            "participacion": res_participacion["feedback"],
+            "cobertura": res_cobertura["feedback"],
+            "preguntas": res_preguntas["feedback"],
+            "ppm": res_ppm["feedback"]
+        }
     else: 
         scores = {
             "muletillas_pausas": 0,
@@ -641,13 +658,15 @@ def get_conver_scores(transcript):
             "preguntas": 0,
             "ppm": 0
         } 
-    
+
+        feedback = {"feedback": "No hay suficientes palabras para evaluar"}
     # Calcular puntuación ponderada global
     puntuacion_final = sum(scores[k] * pesos[k] for k in scores)
     
     return {
         "puntuacion_global": round(puntuacion_final, 1),
         "detalle": scores,
+        "feedback": feedback
     }
 
 if __name__ == "__main__":

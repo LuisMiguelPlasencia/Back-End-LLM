@@ -58,13 +58,24 @@ def scoring(conv_id):
         print(f"No messages found for conversation_id: {conv_id}")
         return
     scores_detail = get_conver_scores(transcript)["detalle"]
+    feedback = get_conver_scores(transcript)["feedback"]
+    puntuacion_global = get_conver_scores(transcript)["puntuacion_global"]
 
+    # Get scores
     fillerwords_scoring = scores_detail.get("muletillas_pausas")
     clarity_scoring = scores_detail.get("claridad")
     participation_scoring = scores_detail.get("participacion")
     keythemes_scoring = scores_detail.get("cobertura")
     indexofquestions_scoring = scores_detail.get("preguntas")
     rhythm_scoring = scores_detail.get("ppm")
+
+    # Get feedback
+    fillerwords_feedback = feedback.get("muletillas_pausas")
+    clarity_feedback = feedback.get("claridad")
+    participation_feedback = feedback.get("participacion")
+    keythemes_feedback = feedback.get("cobertura")
+    indexofquestions_feedback = feedback.get("preguntas")
+    rhythm_feedback = feedback.get("ppm")
 
     print("\n📊 Computed Scores:")
     print(f"   Fillerwords: {fillerwords_scoring}")
@@ -93,7 +104,14 @@ def scoring(conv_id):
                     keythemes_scoring = %s,
                     indexofquestions_scoring = %s,
                     rhythm_scoring = %s,
-                    updated_at = now()
+                    fillerwords_feedback = %s,
+                    clarity_feedback = %s,
+                    participation_feedback = %s,
+                    keythemes_feedback = %s,
+                    indexofquestions_feedback = %s,
+                    rhythm_feedback = %s,
+                    updated_at = now(),
+                    general_score = %s
                 WHERE conversation_id = %s
                 """,
                 (
@@ -103,6 +121,13 @@ def scoring(conv_id):
                     keythemes_scoring,
                     indexofquestions_scoring,
                     rhythm_scoring,
+                    fillerwords_feedback,
+                    clarity_feedback,
+                    participation_feedback,
+                    keythemes_feedback,
+                    indexofquestions_feedback,
+                    rhythm_feedback,
+                    puntuacion_global,
                     conv_id,
                 ),
             )
