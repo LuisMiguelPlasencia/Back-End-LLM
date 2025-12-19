@@ -37,7 +37,7 @@ async def send_message(user_id: UUID, conversation_id: UUID, message: str, role:
     
     return dict(user_message) if user_message else None
 
-async def get_user_scoring_by_company(company_id: str) -> List[Dict]:
+async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
     """Get all user scores for a company, ordered by puntuation"""
     try:
         query = """
@@ -64,4 +64,39 @@ async def get_user_scoring_by_company(company_id: str) -> List[Dict]:
         return [dict(row) for row in results]
     except Exception as e:
         print(f"Error fetching user scores for company_id {company_id}: {str(e)}")
+        return []
+    
+async def get_all_user_conversation_scoring_by_stage_company(stage_id: str, company_id: str) -> List[Dict]:
+    """Get all user conversation scores for a stage and company, ordered by puntuation"""
+    try:
+        query = """
+            SELECT DISTINCT ON (ui.user_id)
+                ui.user_id,
+                ui.name,
+                ui.company_id,
+                ui.user_type,
+                ui.avatar,
+                c.stage_id,
+                c.status,
+                c.general_score,
+                c.fillerwords_scoring,
+                c.clarity_scoring,
+                c.participation_scoring,
+                c.keythemes_scoring,
+                c.indexofquestions_scoring,
+                c.rhythm_scoring
+            FROM conversaconfig.user_info ui
+            LEFT JOIN conversaapp.conversations c
+                ON c.user_id = ui.user_id
+            AND c.status = 'FINISHED'
+            AND c.stage_id = $1
+            WHERE ui.company_id = $2
+            AND ui.is_active = true
+            ORDER BY ui.user_id, c.general_score DESC NULLS LAST;
+        """
+
+        results = await execute_query(query, stage_id, company_id)
+        return [dict(row) for row in results]
+    except Exception as e:
+        print(f"Error fetching user scores for stage_id {stage_id} and company_id {company_id}: {str(e)}")
         return []

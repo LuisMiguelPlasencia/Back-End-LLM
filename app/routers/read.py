@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_conversation_messages, get_user_scoring_by_company
+from ..services.messages_service import get_all_user_conversation_scoring_by_stage_company, get_conversation_messages, get_all_user_scoring_by_company
 from ..utils.responses import error
 
 router = APIRouter(prefix="/read", tags=["read"])
@@ -77,7 +77,16 @@ async def get_messages(conversation_id: UUID = Query(..., description="Conversat
 async def get_all_user_score_by_company(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
     """Get all user scores for a company"""
     try:
-        user_scores_list = await get_user_scoring_by_company(company_id)
+        user_scores_list = await get_all_user_scoring_by_company(company_id)
+        return user_scores_list
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")
+
+@router.get("/allUserConversationScoresByStageCompany")
+async def get_all_user_conversation_scores_by_stage_company(stage_id: str = Query(..., description="Stage ID to get the list of user scores for"), company_id: str = Query(..., description="Company ID to get the list of user scores for")):
+    """Get all user conversation scores for a stage and company"""
+    try:
+        user_scores_list = await get_all_user_conversation_scoring_by_stage_company(stage_id, company_id)
         return user_scores_list
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")

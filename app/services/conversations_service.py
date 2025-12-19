@@ -11,7 +11,7 @@ async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
     """Get conversation details for a conversation ID"""
     query = """
     SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
-    , updated_at, couser_id, fillerwords_scoring, clarity_scoring
+    , updated_at, course_id, fillerwords_scoring, clarity_scoring
     , participation_scoring, keythemes_scoring, indexofquestions_scoring
     , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
     , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
@@ -27,7 +27,7 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
     """Get all conversations for a user, ordered by start time (newest first)"""
     query = """
     SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
-    , updated_at, couser_id, fillerwords_scoring, clarity_scoring
+    , updated_at, course_id, fillerwords_scoring, clarity_scoring
     , participation_scoring, keythemes_scoring, indexofquestions_scoring
     , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
     , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
@@ -45,9 +45,9 @@ async def create_conversation(user_id: UUID, course_id: UUID, stage_id: UUID) ->
     Note: course_id accepted for compatibility but not stored in DB
     """
     query = """
-    INSERT INTO conversaApp.conversations (user_id,couser_id, stage_id, conversation_id, start_timestamp, status, created_at, updated_at)
+    INSERT INTO conversaApp.conversations (user_id, course_id, stage_id, conversation_id, start_timestamp, status, created_at, updated_at)
     VALUES ($1,$2,$3, gen_random_uuid(), now(), 'OPEN', now(), now())
-    RETURNING conversation_id, user_id, couser_id, stage_id, start_timestamp, status, created_at
+    RETURNING conversation_id, user_id, course_id, stage_id, start_timestamp, status, created_at
     """
     
     result = await execute_query_one(query, user_id, course_id, stage_id)
