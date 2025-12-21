@@ -14,7 +14,7 @@ async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
     , updated_at, course_id, general_score, fillerwords_scoring, clarity_scoring
     , participation_scoring, keythemes_scoring, indexofquestions_scoring
     , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
-    , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
+    , keythemes_feedback, indexofquestions_feedback, rhythm_feedback, is_accompplished
     FROM conversaApp.conversations
     WHERE conversation_id = $1
     ORDER BY start_timestamp DESC
@@ -91,6 +91,7 @@ async def set_conversation_scoring(
     indexofquestions_feedback: str, 
     rhythm_feedback: str, 
     puntuacion_global: float, 
+    objetivo: bool,
     conv_id: UUID) -> Optional[str]:
     print('Setting conversation scoring')
     query = """
@@ -109,7 +110,8 @@ async def set_conversation_scoring(
         indexofquestions_feedback=$11,
         rhythm_feedback=$12,
         updated_at=now(),
-        general_score=$13
+        general_score=$13,
+        is_accompplished=$15
     WHERE conversation_id=$14
     """
     row = await execute_query_one(
@@ -127,6 +129,7 @@ async def set_conversation_scoring(
         indexofquestions_feedback,
         rhythm_feedback,
         puntuacion_global,
+        objetivo,
         conv_id,  # UUID ok
     )
 

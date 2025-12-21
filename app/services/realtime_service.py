@@ -6,11 +6,11 @@ from app.services.conversations_service import close_conversation, get_conversat
 from app.services.scoring_service import scoring
 
 
-async def stop_process(user_id, conversation_id, frontend_ws):
+async def stop_process(user_id, conversation_id, frontend_ws, course_id, stage_id):
 
     await close_conversation(user_id, conversation_id) 
     ## scoring conversation if conver finished
-    await scoring(conversation_id)
+    await scoring(conversation_id, course_id, stage_id)
     # notify frontend that conversation is closed and scored
     await frontend_ws.send_text(json.dumps({"type": "conversation.scoring.completed", "conversation_id": str(conversation_id)}))
 

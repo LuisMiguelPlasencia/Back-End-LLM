@@ -53,15 +53,16 @@ def read_msg(conv_id):
     conn.close()
     return conversation
 
-async def scoring(conv_id):
+async def scoring(conv_id, course_id, stage_id):
     transcript = read_msg(conv_id)
 
     if not transcript:
         print(f"No messages found for conversation_id: {conv_id}")
         return
-    scores_detail = get_conver_scores(transcript)["detalle"]
-    feedback = get_conver_scores(transcript)["feedback"]
-    puntuacion_global = get_conver_scores(transcript)["puntuacion_global"]
+    scores_detail =  get_conver_scores(transcript, course_id, stage_id)["detalle"]
+    feedback = get_conver_scores(transcript, course_id, stage_id)["feedback"]
+    puntuacion_global =  get_conver_scores(transcript, course_id, stage_id)["puntuacion_global"]
+    objetivo_json =  get_conver_scores(transcript, course_id, stage_id)["objetivo"]
     # Get scores
     fillerwords_scoring = scores_detail.get("muletillas_pausas")
     clarity_scoring = scores_detail.get("claridad")
@@ -77,6 +78,8 @@ async def scoring(conv_id):
     keythemes_feedback = feedback.get("cobertura")
     indexofquestions_feedback = feedback.get("preguntas")
     rhythm_feedback = feedback.get("ppm")
+
+    objetivo = objetivo_json.get("puntuacion")
 
     print("\n📊 Computed Scores:")
     print(f"   Fillerwords: {fillerwords_scoring}")
@@ -101,6 +104,7 @@ async def scoring(conv_id):
         indexofquestions_feedback,
         rhythm_feedback,
         puntuacion_global,
+        objetivo,
         conv_id
     )
 

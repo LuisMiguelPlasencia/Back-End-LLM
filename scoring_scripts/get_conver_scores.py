@@ -12,6 +12,7 @@ from openai import OpenAI
 from wordfreq import zipf_frequency
 import pandas as pd
 import time
+from app.services.courses_service import get_courses_details
 import json
 
 sys.path.insert(0, "../../src")
@@ -77,7 +78,7 @@ def temas_clave(transcript, temas_clave="Precio (que nuestro precio está por de
     
     return output
 
-def objetivo(transcript,objetivo="Vender el coche Mike XL"):
+async def objetivo(transcript,objetivo,key_themes):
 
 
     prompt = f"""
@@ -87,7 +88,7 @@ def objetivo(transcript,objetivo="Vender el coche Mike XL"):
     {transcript}
 
     TEMAS CLAVE: 
-    Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)
+    {key_themes}
 
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
@@ -624,8 +625,10 @@ def calcular_ppm_variabilidad(transcript):
         "feedback": "TEST"
     }
 
-def calcular_objetivo_principal(transcript):
-    gpt_objetivo = json.loads(objetivo(transcript))
+def calcular_objetivo_principal(transcript, course_id, stage_id):
+
+    stage_details = get_courses_details(course_id, stage_id)
+    gpt_objetivo = json.loads(objetivo(transcript, stage_details["stage_objectives"],key_themes=stage_details["key_themes"]))
 
     indicador = bool(gpt_objetivo["indicador"])
     señales = gpt_objetivo["señales"]
@@ -638,7 +641,7 @@ def calcular_objetivo_principal(transcript):
     }
 
 ## Scoring function
-def get_conver_scores(transcript):
+def get_conver_scores(transcript, course_id, stage_id):
     # Factores de ponderación
     pesos = {
         "muletillas_pausas": 0.15,
@@ -660,7 +663,7 @@ def get_conver_scores(transcript):
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
-    if palabras_totales > 500: 
+    if palabras_totales > 20: 
     # Extraer puntuaciones
         scores = {
             "muletillas_pausas": res_muletillas["puntuacion"],
@@ -678,6 +681,7 @@ def get_conver_scores(transcript):
             "preguntas": res_preguntas["feedback"],
             "ppm": res_ppm["feedback"]
         }
+        objetivo = calcular_objetivo_principal(transcript, course_id, stage_id)
     else: 
         scores = {
             "muletillas_pausas": 0,
@@ -689,12 +693,17 @@ def get_conver_scores(transcript):
         } 
 
         feedback = {"feedback": "No hay suficientes palabras para evaluar"}
+        objetivo = {
+        "puntuacion": False,
+        "señales": "Objetivo no Cumplido"
+    }
     # Calcular puntuación ponderada global
     puntuacion_final = sum(scores[k] * pesos[k] for k in scores)
     return {
         "puntuacion_global": round(puntuacion_final, 1),
         "detalle": scores,
-        "feedback": feedback
+        "feedback": feedback,
+        "objetivo": objetivo
     }
 
 if __name__ == "__main__":

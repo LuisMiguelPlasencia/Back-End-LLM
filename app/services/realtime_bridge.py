@@ -192,7 +192,7 @@ class RealtimeBridge:
         ## update conversation status to closed in db
         print('stopping realtime bridge...')
         print(self.conversation_id)
-        await stop_process(self.user_id, self.conversation_id, self.frontend_ws)
+        await stop_process(self.user_id, self.conversation_id, self.frontend_ws, self.course_id, self.stage_id)
         
         if not self.stop_event.is_set():
             self.stop_event.set()

@@ -146,7 +146,9 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
       cc.bot_prompt      AS bot_prompt,
       cc.user_role       AS user_role,
       cc.bot_role        AS bot_role,
-      cc.context_info    AS context_info
+      cc.context_info    AS context_info,
+      cs.key_themes,
+      cs.stage_objectives
       FROM conversaconfig.master_courses    mc
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_contents cc ON cc.course_id = mc.course_id AND cc.stage_id = cs.stage_id
@@ -156,3 +158,5 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
     
     results = await execute_query(query, course_id, stage_id)
     return [dict(row) for row in results]
+
+
