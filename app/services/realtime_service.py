@@ -10,9 +10,9 @@ async def stop_process(user_id, conversation_id, frontend_ws):
 
     await close_conversation(user_id, conversation_id) 
     ## scoring conversation if conver finished
-    await asyncio.to_thread(scoring, conversation_id)
+    await scoring(conversation_id)
     # notify frontend that conversation is closed and scored
-    await frontend_ws.send_text(json.dumps({"type": "conversation.scoring.completed", "conversation_id": conversation_id}))
+    await frontend_ws.send_text(json.dumps({"type": "conversation.scoring.completed", "conversation_id": str(conversation_id)}))
 
 async def openai_msg_process(user_id, conversation_id):
     # placeholder for any processing needed when receiving messages from OpenAI

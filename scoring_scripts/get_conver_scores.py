@@ -658,7 +658,6 @@ def get_conver_scores(transcript):
     res_ppm = calcular_ppm_variabilidad(transcript)
 
 
-
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
     if palabras_totales > 500: 
@@ -692,7 +691,6 @@ def get_conver_scores(transcript):
         feedback = {"feedback": "No hay suficientes palabras para evaluar"}
     # Calcular puntuación ponderada global
     puntuacion_final = sum(scores[k] * pesos[k] for k in scores)
-    
     return {
         "puntuacion_global": round(puntuacion_final, 1),
         "detalle": scores,

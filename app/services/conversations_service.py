@@ -11,7 +11,7 @@ async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
     """Get conversation details for a conversation ID"""
     query = """
     SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
-    , updated_at, course_id, fillerwords_scoring, clarity_scoring
+    , updated_at, course_id, general_score, fillerwords_scoring, clarity_scoring
     , participation_scoring, keythemes_scoring, indexofquestions_scoring
     , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
     , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
@@ -62,7 +62,7 @@ async def close_conversation(user_id: UUID, conversation_id: UUID) -> Optional[D
     """
     query = """
     UPDATE conversaApp.conversations SET status = 'FINISHED', end_timestamp = now()
-     WHERE user_id = $1 AND conversation_id = $2 
+    WHERE user_id = $1 AND conversation_id = $2
     """
     await execute_query(query, user_id, conversation_id)
     return True

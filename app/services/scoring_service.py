@@ -55,13 +55,13 @@ def read_msg(conv_id):
 
 async def scoring(conv_id):
     transcript = read_msg(conv_id)
+
     if not transcript:
         print(f"No messages found for conversation_id: {conv_id}")
         return
     scores_detail = get_conver_scores(transcript)["detalle"]
     feedback = get_conver_scores(transcript)["feedback"]
     puntuacion_global = get_conver_scores(transcript)["puntuacion_global"]
-
     # Get scores
     fillerwords_scoring = scores_detail.get("muletillas_pausas")
     clarity_scoring = scores_detail.get("claridad")
@@ -87,7 +87,6 @@ async def scoring(conv_id):
     print(f"   Rhythm: {rhythm_scoring}\n")
 
     # Update database
-    print('conversation id: ', conv_id)
     await set_conversation_scoring(
         fillerwords_scoring,
         clarity_scoring,
