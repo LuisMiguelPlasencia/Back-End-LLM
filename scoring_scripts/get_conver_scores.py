@@ -78,24 +78,33 @@ def temas_clave(transcript, temas_clave="Precio (que nuestro precio está por de
     
     return output
 
-def objetivo(transcript, objetivo, key_themes):
+def objetivo(transcript, objetivo):
 
 
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor consigue el objetivo principal: {objetivo} 
+    Vas a analizar la transcripción de una conversación comercial entre un vendedor y un cliente.
+    Tu tarea es evaluar exclusivamente si el vendedor logra cumplir el OBJETIVO PRINCIPAL, basándote únicamente en lo que está explícitamente dicho en la transcripción.
+
+    Instrucciones clave:
+        -El objetivo solo se considera cumplido si el vendedor lo ejecuta de forma clara, directa y verificable dentro de la conversación.
+        -Intenciones, promesas futuras, suposiciones o respuestas ambiguas NO cuentan como cumplimiento del objetivo.
+        -Si el cliente acepta algo pero el vendedor no realiza la acción correspondiente, el objetivo NO se considera cumplido.
+        -Si el objetivo se cumple, debes identificar exactamente la intervención del vendedor (frase literal) que demuestra dicho cumplimiento.
+        -Si no se cumple, el indicador debe ser false y las señales deben explicar brevemente por qué no hay evidencia suficiente.
 
     TRANSCRIPCIÓN:
     {transcript}
 
-    TEMAS CLAVE: 
-    {key_themes}
+    OBJETIVO PRINCIPAL: 
+    {objetivo} 
 
-
-    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    RESPONDE ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{"indicador": true/false, 
      "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo...'" 
     }}
     """
+
+    #print(prompt)
     output = call_gpt(prompt)
     
     return output
@@ -628,7 +637,7 @@ def calcular_ppm_variabilidad(transcript):
 async def calcular_objetivo_principal(transcript, course_id, stage_id):
 
     stage_details = await get_courses_details(course_id, stage_id)
-    gpt_objetivo = json.loads(objetivo(transcript, objetivo=stage_details[0]["stage_objectives"],key_themes=stage_details[0]["key_themes"]))
+    gpt_objetivo = json.loads(objetivo(transcript, objetivo=stage_details[0]["stage_objectives"]))
 
     indicador = bool(gpt_objetivo["indicador"])
     señales = gpt_objetivo["señales"]
