@@ -59,9 +59,9 @@ def proximos_pasos(transcript):
     output = call_gpt(prompt)
     return output
 
-def temas_clave(transcript, temas_clave="Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)"):
+def temas_clave(transcript, temas_clave="Precio, Seguridad, capacidad maletero, plazas, combustible y llantas"): #"Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)"
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor habla acerca de los temas clave que te voy a mandar. Se exigente, hablar de un tema clave no implica solamente mencionar dicha palabra, debe haber un pequeño desarrollo. 
+    Te voy a pasar la transcripcion de una conversación, haz lo siguiente: Tienes que identificar si el vendedor habla acerca de los temas clave que te voy a mandar. Se exigente, hablar de un tema clave no implica solamente mencionar dicha palabra, debe haber un pequeño desarrollo. 
 
     TRANSCRIPCIÓN:
     {transcript}
@@ -71,8 +71,8 @@ def temas_clave(transcript, temas_clave="Precio (que nuestro precio está por de
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
     {{"n": "numero entero mencionando el numero de temas clave abordados", 
-     "señales": "Señales donde se identifican temas claves no abordados"
-    }}
+     "señales": "Señales donde se identifican temas claves abordados",
+     "feedback": "Temas claves que no se han abordado"}}
     """
     output = call_gpt(prompt)
     
@@ -109,7 +109,7 @@ def objetivo(transcript, objetivo):
     
     return output
 
-def feedback_muletillas(transcript):
+def feedback_muletillas(transcript, ratio_muletilla):
     prompt = f"""
     Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor utiliza muletillas 
 
@@ -119,6 +119,7 @@ def feedback_muletillas(transcript):
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
      "señales": "Indica la intervención en la que el vendedor usa muletillas. Ejemplo: Ehh, digamos que, mmmm ..."
+     "feedback": "Has utilizado las siguientes muletillas: "señales". El ratio de muletillas respecto al total de palabras es {ratio_muletilla:.2f}, lo cual indica un uso si {ratio_muletilla} > 0.1 'excesivo', 'moderado' si {ratio_muletilla} > 0.05 y < 0.1, 'bajo' si {ratio_muletilla} < 0.05."
     }}
     """
     output = call_gpt(prompt)
@@ -134,7 +135,7 @@ def feedback_claridad(transcript):
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
-     "señales": "Indica la intervención en la que el vendedor no es claro en su propuesta"
+     "señales": "Indica la intervención en la que el vendedor no es claro en su propuesta."
     }}
     """
     output = call_gpt(prompt)
@@ -174,6 +175,8 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
     # Contar muletillas y pausas
     muletillas_usadas = [word for word in palabras_limpias if word in muletillas]
     total_muletillas = len(muletillas_usadas)
+    total_palabras = len(palabras_limpias)
+    porcentaje_muletillas = (total_muletillas / total_palabras * 100)
     #total_pausas = sum(1 for word in palabras_limpias if word in pausas)
     frecuencia = 0
     penalizacion = total_muletillas * 5 #+ total_pausas*10
@@ -182,24 +185,31 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
     if total_muletillas > 2:
         conteo = Counter(muletillas_usadas)
         muletilla_mas_frecuente, frecuencia = conteo.most_common(1)[0]
+        # Get top 3 most used filler words
+        top_2_muletillas = Counter(muletillas_usadas).most_common(2)
 
         #TODO: Veamos como podemos adaptar esto para detectar muletillas recurrentes sin perjudicar la puntuación de más
-        if (frecuencia / total_muletillas > 0.7 and frecuencia > 5):
+        ratio_muletilla = frecuencia / total_muletillas if total_muletillas > 0 else 0
+        if (ratio_muletilla > 0.7 and frecuencia > 5):
             # penalizacion += 10
             repeticion_constante = True
+    
+    
 
     puntuacion = max(0, 100 - penalizacion)  # nunca bajar de 0
-    feedback = json.loads(feedback_muletillas(transcript))
+
+
+    #feedback = json.loads(feedback_muletillas(transcript,ratio_muletilla))
 
     return  {
         "puntuacion": puntuacion, 
         "penalizacion": penalizacion,
         "total_muletillas": total_muletillas,
         "repeticion_constante": repeticion_constante,
-        "porcentaje": frecuencia / total_muletillas if total_muletillas > 0 else 0,
+        "porcentaje": porcentaje_muletillas,
         #"total_pausas": total_pausas,
-        "muletillas_usadas": muletillas_usadas,
-        "feedback": feedback["señales"]
+        "muletillas_usadas": ", ".join(muletillas_usadas),
+        "feedback": f"El porcentaje de muletillas empleadas es {porcentaje_muletillas:.2f}%, siendo las muletillas mas repetidas: {', '.join(m[0] for m in top_2_muletillas)} "
     }
     
 # ### Claridad y complejidad
@@ -377,6 +387,7 @@ def calcular_cobertura_temas_json(transcript,num_temas=6):
 
     num_temas_abordados = gpt_temas_clave['n']
     señales_temas = gpt_temas_clave['señales']
+    feedback_temas_clave = gpt_temas_clave.get('feedback')
 
     # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
     num_temas_olvidados = num_temas - num_temas_abordados
@@ -405,12 +416,11 @@ def calcular_cobertura_temas_json(transcript,num_temas=6):
         "señales_temas": señales_temas,
         "señales_proximos_pasos": señales_proximos_pasos,
         "output_gpt": output_gpt,
-         "feedback": señales_temas
+        "feedback": feedback_temas_clave
     }
 
 # ### Cobertura de temas y palabras clave (mejorado con LLMs)
 def calcular_cobertura_temas_old(transcript,num_temas=6):
-
     penalizacion = 0
     bonificacion = 0
 
@@ -658,14 +668,18 @@ async def get_conver_scores(transcript, course_id, stage_id):
         "preguntas": 0.20,
         "ppm": 0.10
     }
-    
-    # Evaluaciones individuales
-    res_muletillas = calcular_muletillas(transcript)
-    res_claridad = calcular_claridad(transcript)
-    res_participacion = calcular_participacion_dinamica(transcript)
-    res_cobertura = calcular_cobertura_temas_json(transcript)
-    res_preguntas = calcular_indice_preguntas(transcript)
-    res_ppm = calcular_ppm_variabilidad(transcript)
+
+    palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
+        
+    if palabras_totales > 500:
+
+        # Evaluaciones individuales
+        res_muletillas = calcular_muletillas(transcript)
+        res_claridad = calcular_claridad(transcript)
+        res_participacion = calcular_participacion_dinamica(transcript)
+        res_cobertura = calcular_cobertura_temas_json(transcript)
+        res_preguntas = calcular_indice_preguntas(transcript)
+        res_ppm = calcular_ppm_variabilidad(transcript) 
 
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
@@ -807,4 +821,54 @@ if __name__ == "__main__":
     # t1 = time.time()
     # print(f"Tiempo de ejecución: {t1 - t0} segundos")
 
+    '''
+    start_time = time.time()
+    print("-" * 49)
+    print("Cobertura de temas y palabras clave:\n")
     print(calcular_cobertura_temas_json(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+
+    
+    start_time = time.time()
+    print("-" * 49)
+    print("Muletillas y pausas:\n")
+    print(calcular_muletillas(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+    '''
+    
+    start_time = time.time()
+    print("-" * 49)
+    print("Claridad:\n")
+    print(calcular_claridad(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+    '''
+    start_time = time.time()
+    print("-" * 49)
+    print("Participación y dinámica:\n")
+    print(calcular_participacion_dinamica(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+
+    start_time = time.time()
+    print("-" * 49)
+    print("Índice de preguntas:\n")
+    print(calcular_indice_preguntas(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+
+    start_time = time.time()
+    print("-" * 49)
+    print("PPM y variabilidad:\n")
+    print(calcular_ppm_variabilidad(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+
+    start_time = time.time()
+    print("-" * 49)
+    print("Objetivo principal:\n")
+    print(calcular_objetivo_principal(transcript_demo))
+    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
+
+    t0 = time.time()
+    print("-" * 49)
+    print("Puntuación global de la conversación:\n")
+    print(get_conver_scores(transcript_demo))
+    t1 = time.time()
+    print(f"\nTiempo de ejecución: {t1 - t0} segundos")'''
