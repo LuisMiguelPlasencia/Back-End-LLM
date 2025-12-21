@@ -78,7 +78,7 @@ def temas_clave(transcript, temas_clave="Precio (que nuestro precio está por de
     
     return output
 
-async def objetivo(transcript,objetivo,key_themes):
+def objetivo(transcript, objetivo, key_themes):
 
 
     prompt = f"""
@@ -625,23 +625,21 @@ def calcular_ppm_variabilidad(transcript):
         "feedback": "TEST"
     }
 
-def calcular_objetivo_principal(transcript, course_id, stage_id):
+async def calcular_objetivo_principal(transcript, course_id, stage_id):
 
-    stage_details = get_courses_details(course_id, stage_id)
-    gpt_objetivo = json.loads(objetivo(transcript, stage_details["stage_objectives"],key_themes=stage_details["key_themes"]))
+    stage_details = await get_courses_details(course_id, stage_id)
+    gpt_objetivo = json.loads(objetivo(transcript, objetivo=stage_details[0]["stage_objectives"],key_themes=stage_details[0]["key_themes"]))
 
     indicador = bool(gpt_objetivo["indicador"])
     señales = gpt_objetivo["señales"]
 
-    puntuacion = 100 * indicador
-
     return {
-        "puntuacion": puntuacion,
+        "accompplished": indicador,
         "señales": señales
     }
 
 ## Scoring function
-def get_conver_scores(transcript, course_id, stage_id):
+async def get_conver_scores(transcript, course_id, stage_id):
     # Factores de ponderación
     pesos = {
         "muletillas_pausas": 0.15,
@@ -663,7 +661,7 @@ def get_conver_scores(transcript, course_id, stage_id):
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
-    if palabras_totales > 20: 
+    if palabras_totales > 0: 
     # Extraer puntuaciones
         scores = {
             "muletillas_pausas": res_muletillas["puntuacion"],
@@ -681,7 +679,7 @@ def get_conver_scores(transcript, course_id, stage_id):
             "preguntas": res_preguntas["feedback"],
             "ppm": res_ppm["feedback"]
         }
-        objetivo = calcular_objetivo_principal(transcript, course_id, stage_id)
+        objetivo = await calcular_objetivo_principal(transcript, course_id, stage_id)
     else: 
         scores = {
             "muletillas_pausas": 0,
@@ -694,7 +692,7 @@ def get_conver_scores(transcript, course_id, stage_id):
 
         feedback = {"feedback": "No hay suficientes palabras para evaluar"}
         objetivo = {
-        "puntuacion": False,
+        "accompplished": False,
         "señales": "Objetivo no Cumplido"
     }
     # Calcular puntuación ponderada global

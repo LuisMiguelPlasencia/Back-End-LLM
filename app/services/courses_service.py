@@ -140,6 +140,7 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
       cs.stage_id        AS stage_id,
       cs.stage_name      AS stage_name,
       cs.stage_description AS stage_description,
+      cs.stage_objectives AS stage_objectives,
       cc.content_id      AS content_id,
       cc.level           AS level,
       cc.body            AS body,
