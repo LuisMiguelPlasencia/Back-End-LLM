@@ -116,7 +116,7 @@ async def get_user_courses_stages(course_id: UUID) -> List[Dict]:
       cs.stage_name      AS cs_stage_name,
       cs.stage_description AS cs_stage_description,
       cc.content_id      AS cc_content_id,
-      cc.title           AS cc_title,
+      cc.level           AS cc_level,
       cc.body            AS cc_body,
       cc.bot_prompt      AS cc_bot_prompt
       FROM conversaconfig.master_courses    mc
@@ -135,15 +135,18 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
     """
     query = """
     SELECT
-      mc.course_id       AS mc_course_id,
-      mc.name            AS mc_name,
-      cs.stage_id        AS cs_stage_id,
-      cs.stage_name      AS cs_stage_name,
-      cs.stage_description AS cs_stage_description,
-      cc.content_id      AS cc_content_id,
-      cc.title           AS cc_title,
-      cc.body            AS cc_body,
-      cc.bot_prompt      AS cc_bot_prompt
+      mc.course_id       AS course_id,
+      mc.name            AS name,
+      cs.stage_id        AS stage_id,
+      cs.stage_name      AS stage_name,
+      cs.stage_description AS stage_description,
+      cc.content_id      AS content_id,
+      cc.level           AS level,
+      cc.body            AS body,
+      cc.bot_prompt      AS bot_prompt,
+      cc.user_role       AS user_role,
+      cc.bot_role        AS bot_role,
+      cc.context_info    AS context_info
       FROM conversaconfig.master_courses    mc
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_contents cc ON cc.course_id = mc.course_id AND cc.stage_id = cs.stage_id

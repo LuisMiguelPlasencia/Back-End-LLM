@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS conversaconfig.course_contents (
   course_id uuid NOT NULL REFERENCES conversaconfig.master_courses(course_id) ON DELETE CASCADE,
   stage_id uuid NULL REFERENCES conversaconfig.course_stages(stage_id) ON DELETE SET NULL,
   position integer NULL,
-  title text NOT NULL,
+  level text NOT NULL,
   body text NULL,
   resource_url text NULL,
   created_on timestamp DEFAULT now() NOT NULL,

@@ -16,10 +16,10 @@ async def master_prompt_generator(course_id: UUID, stage_id: UUID) -> str:
     row = course[0] 
 
     return await master_prompt_template(
-        row["mc_name"],                # main_theme
-        row["cc_title"],               # level
-        row["cs_stage_name"],          # role
-        row["cs_stage_description"],   # level_description
-        row["cc_bot_prompt"],          # bot_prompt
-        row["cc_body"]                 # course_body
+        row["name"],                # main_theme
+        row["level"],               # level
+        row["stage_name"],          # role
+        row["stage_description"],   # level_description
+        row["bot_prompt"],          # bot_prompt
+        row["body"]                 # course_body
     )
