@@ -35,6 +35,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
             cs.stage_name,
             cs.stage_description,
             cs.stage_order,
+            cs.stage_objectives,
             CASE 
                 WHEN (c.conversation_id IS NOT NULL AND c.status = 'FINISHED') 
                 THEN cs.stage_order 
