@@ -75,7 +75,17 @@ class RealtimeBridge:
                 ],
             }
         }
+        initial_response = {
+        "type": "response.create",
+        "response": {
+            "modalities": ["text", "audio"],
+            "instructions": "Saluda al usuario cordialmente y pregúntale en qué le puedes ayudar hoy." # Instrucción específica para este primer turno
+            }
+        }   
+        #Send session config to LLM
         await self.openai_ws.send(json.dumps(session_config))
+        #Query for initial response
+        await self.openai_ws.send(json.dumps(initial_response))
 
     async def forward_frontend_to_openai(self):
         try:
