@@ -165,6 +165,7 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
         #pausas = ["ppausaa"] # La pausa deberá ser detectada por el whisper/gpt de turno   
 
     repeticion_constante = False
+    top_2_muletillas = ''
 
     vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
 
@@ -182,7 +183,7 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
     penalizacion = total_muletillas * 5 #+ total_pausas*10
 
     # Penalización extra si más del 70% de las muletillas son la misma
-    if total_muletillas > 2:
+    if total_muletillas > 1:
         conteo = Counter(muletillas_usadas)
         muletilla_mas_frecuente, frecuencia = conteo.most_common(1)[0]
         # Get top 3 most used filler words
@@ -812,58 +813,4 @@ if __name__ == "__main__":
     }]
 
 
-    # t0 = time.time()
-    # print(calcular_cobertura_temas_old(transcript_demo))
-    # t1 = time.time()
-    # print(f"Tiempo de ejecución: {t1 - t0} segundos")
-
-    '''
-    start_time = time.time()
-    print("-" * 49)
-    print("Cobertura de temas y palabras clave:\n")
-    print(calcular_cobertura_temas_json(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-
-    '''
-    start_time = time.time()
-    print("-" * 49)
-    print("Muletillas y pausas:\n")
-    print(calcular_muletillas(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-    
-    start_time = time.time()
-    print("-" * 49)
-    print("Claridad:\n")
-    print(calcular_claridad(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-    '''
-    start_time = time.time()
-    print("-" * 49)
-    print("Participación y dinámica:\n")
-    print(calcular_participacion_dinamica(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-
-    start_time = time.time()
-    print("-" * 49)
-    print("Índice de preguntas:\n")
-    print(calcular_indice_preguntas(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-
-    start_time = time.time()
-    print("-" * 49)
-    print("PPM y variabilidad:\n")
-    print(calcular_ppm_variabilidad(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-
-    start_time = time.time()
-    print("-" * 49)
-    print("Objetivo principal:\n")
-    print(calcular_objetivo_principal(transcript_demo))
-    print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-
-    t0 = time.time()
-    print("-" * 49)
-    print("Puntuación global de la conversación:\n")
-    print(get_conver_scores(transcript_demo))
-    t1 = time.time()
-    print(f"\nTiempo de ejecución: {t1 - t0} segundos")'''
+    print(calcular_cobertura_temas_old(transcript_demo))

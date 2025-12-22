@@ -16,7 +16,7 @@ client = OpenAI(api_key=OPENAI_TOKEN)
 
 def call_gpt(prompt: str) -> str:
     response = client.responses.create(
-        model="gpt-5-nano",
+        model="gpt-4.1-nano-2025-04-14",
         input=prompt,
         
     )
@@ -24,7 +24,7 @@ def call_gpt(prompt: str) -> str:
 
 
 ## 1. Prospección
-def evaluar_prospeccion(transcript) -> Tuple[int, str]:
+def evaluate_prospection(transcript) -> Tuple[int, str]:
   
     prompt = f"""
 Analiza la siguiente transcripción de una llamada de ventas y evalúa la PROSPECCIÓN del vendedor según esta rúbrica:
@@ -43,16 +43,19 @@ BAJA (1 punto): El vendedor va directo al pitch sin fase de descubrimiento ni in
 TRANSCRIPCIÓN:
 {transcript}
 
-Responde ÚNICAMENTE devolviendo:
-- puntuacion: 1, 2 o 3
-- justificacion: Explicación específica con ejemplos de la transcripción
+Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+
+{{
+  "score": "numero entero indicando la puntuación segun la rubrica.",
+  "justification": "Explicación específica con ejemplos de la transcripción"
+}}
 """
     output = call_gpt(prompt)
     
     return output
     
 ## 2. Empatía
-def evaluar_empatia(transcript) -> Tuple[int, str]:
+def evaluate_empathy(transcript) -> Tuple[int, str]:
   
     prompt = f"""
 Analiza la siguiente transcripción y evalúa la EMPATÍA del vendedor:
@@ -75,15 +78,18 @@ Presta especial atención a:
 - ¿Valida las preocupaciones antes de responder?
 - ¿Usa un lenguaje empático y de comprensión?
 
-Responde ÚNICAMENTE devolviendo:
-- puntuacion: 1, 2, 3, 4 o 5
-- justificacion: Explicación específica con ejemplos de la transcripción
+Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+
+{{
+  "score": "numero entero indicando la puntuación segun la rubrica.",
+  "justification": "Explicación específica con ejemplos de la transcripción"
+}}
 """
     text = call_gpt(prompt)
     return text
     
 ## 3. Dominio técnico
-def evaluar_dominio_tecnico(transcript) -> Tuple[int, str]:
+def evaluate_technical_domain(transcript) -> Tuple[int, str]:
   
     prompt = f"""
 Analiza la siguiente transcripción y evalúa el DOMINIO TÉCNICO del vendedor:
@@ -106,16 +112,19 @@ Evalúa si el vendedor:
 - Las conecta con beneficios específicos
 - Responde con confianza a preguntas técnicas
 
-Responde ÚNICAMENTE devolviendo:
-- puntuacion: 1, 2, 3, 4 o 5
-- justificacion: Explicación específica con ejemplos de la transcripción
+Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+
+{{
+  "score": "numero entero indicando la puntuación segun la rubrica.",
+  "justification": "Explicación específica con ejemplos de la transcripción"
+}}
 """
     output = call_gpt(prompt)
     
     return output
     
 ## 4. Negociación
-def evaluar_negociacion(transcript) -> Tuple[int, str]:
+def evaluate_negociation(transcript) -> Tuple[int, str]:
   
     prompt = f"""
 Analiza la siguiente transcripción y evalúa la NEGOCIACIÓN del vendedor:
@@ -138,9 +147,12 @@ Evalúa:
 - ¿Justifica el valor o solo ofrece descuentos?
 - ¿Propone próximos pasos concretos?
 
-Responde ÚNICAMENTE devolviendo:
-- puntuacion: 1, 2, 3, 4 o 5
-- justificacion: Explicación específica con ejemplos de la transcripción
+Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+
+{{
+  "score": "numero entero indicando la puntuación segun la rubrica.",
+  "justification": "Explicación específica con ejemplos de la transcripción"
+}}
 
 """
     output = call_gpt(prompt)
@@ -148,7 +160,7 @@ Responde ÚNICAMENTE devolviendo:
     return output
     
 ## 5. Resiliencia
-def evaluar_resiliencia(transcript) -> Tuple[int, str]:
+def evaluate_resilience(transcript) -> Tuple[int, str]:
 
     prompt = f"""
 Analiza la siguiente transcripción y evalúa la RESILIENCIA del vendedor:
@@ -172,45 +184,55 @@ Presta atención a:
 - ¿Se detectan cambios de energía o frustración?
 - ¿Termina la llamada con próximos pasos o se rinde?
 
-Responde ÚNICAMENTE devolviendo:
-- puntuacion: 1, 2, 3, 4 o 5
-- justificacion: Explicación específica con ejemplos de la transcripción
+Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+
+{{
+  "score": "numero entero indicando la puntuación segun la rubrica.",
+  "justification": "Explicación específica con ejemplos de la transcripción"
+}}
 """
-    output = call_gpt(prompt)
+    output = call_gpt(prompt) 
     
     return output
 
-def get_conver_skills(transcript: str) -> Dict[str, Dict[str, str]]:
+async def get_conver_skills(transcript: str) -> Dict[str, Dict[str, str]]:
     """
     Evalúa un transcript en todas las skills definidas.
     Devuelve un diccionario con las puntuaciones y justificaciones.
     """
-    resultados = {
-        "prospeccion": evaluar_prospeccion(transcript),
-        "empatia": evaluar_empatia(transcript),
-        "dominio_tecnico": evaluar_dominio_tecnico(transcript),
-        "negociacion": evaluar_negociacion(transcript),
-        "resiliencia": evaluar_resiliencia(transcript),
-    }
-    return resultados
 
-def limpiar_output(resultados_raw: dict) -> dict:
-    output = {}
-    for skill, texto in resultados_raw.items():
-        partes = texto.split("justificacion:")
-        puntuacion = int(partes[0].replace("puntuacion:", "").strip())
-        justificacion = partes[1].strip()
-        output[skill] = {
-            "puntuacion": puntuacion,
-            "justificacion": justificacion
-        }
-    return output
+    prospection = json.loads(evaluate_prospection(transcript))
+    empathy = json.loads(evaluate_empathy(transcript))
+    technical_domain = json.loads(evaluate_technical_domain(transcript))
+    negociation = json.loads(evaluate_negociation(transcript))
+    resilience = json.loads(evaluate_resilience(transcript))
+
+    scores = {
+        "prospection": prospection["score"], 
+        "empathy": empathy["score"],
+        "technical_domain": technical_domain["score"],
+        "negociation": negociation["score"],
+        "resilience": resilience["score"],
+    }
+
+    feedback = {
+        "prospection": prospection["justification"],
+        "empathy": empathy["justification"],
+        "technical_domain": technical_domain["justification"],
+        "negociation": negociation["justification"],
+        "resilience": resilience["justification"],
+    }
+
+    return {
+        "scores": scores, 
+        "feedback": feedback
+    }
 
 if __name__ == "__main__":
     transcript_demo = """
     V: Hola, ¿eh? Soy Ricardo. Mira, mi empresa ayuda a reducir el error de hemólisis en un 60%...
     C: Es una buena pregunta. El reprocesamiento nos cuesta tiempo y reactivos, calculo unos 50€ por caso...
     """
-    
+
     resultados = get_conver_skills(transcript_demo)
-    print(limpiar_output(resultados))
+    print(resultados)

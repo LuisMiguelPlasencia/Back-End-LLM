@@ -133,3 +133,46 @@ async def set_conversation_scoring(
         conv_id,  # UUID ok
     )
 
+async def set_conversation_profiling(
+    prospection_scoring: int, 
+    empathy_scoring: int, 
+    technical_domain_scoring: int, 
+    negociation_scoring: int, 
+    resilience_scoring: int, 
+    prospection_feedback: str, 
+    empathy_feedback: str, 
+    technical_domain_feedback: str, 
+    negociation_feedback: str, 
+    resilience_feedback: str, 
+    conv_id: UUID) -> Optional[str]:
+    print('Setting conversation profiling')
+    query = """
+    UPDATE conversaapp.conversations
+    SET
+        prospection_scoring=$1,
+        empathy_scoring=$2,
+        technical_domain_scoring=$3,
+        negociation_scoring=$4,
+        resilience_scoring=$5,
+        prospection_feedback=$6,
+        empathy_feedback=$7,
+        technical_domain_feedback=$8,
+        negociation_feedback=$9,
+        resilience_feedback=$10,
+        updated_at=now(),
+    WHERE conversation_id=$11
+    """
+    row = await execute_query_one(
+        query,
+        prospection_scoring,
+        empathy_scoring,
+        technical_domain_scoring,
+        negociation_scoring,
+        resilience_scoring,
+        prospection_feedback,
+        empathy_feedback,
+        technical_domain_feedback,
+        negociation_feedback,
+        resilience_feedback,
+        conv_id,  # UUID ok
+    )
