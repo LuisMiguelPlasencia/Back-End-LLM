@@ -671,7 +671,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
-    if palabras_totales > 500:
+    if palabras_totales > 20:
 
         # Evaluaciones individuales
         res_muletillas = calcular_muletillas(transcript)
@@ -681,11 +681,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
         res_preguntas = calcular_indice_preguntas(transcript)
         res_ppm = calcular_ppm_variabilidad(transcript) 
 
-
-    palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
-        
-    if palabras_totales > 0: 
-    # Extraer puntuaciones
+        # Extraer puntuaciones
         scores = {
             "muletillas_pausas": res_muletillas["puntuacion"],
             "claridad": res_claridad["puntuacion"],
@@ -828,13 +824,12 @@ if __name__ == "__main__":
     print(calcular_cobertura_temas_json(transcript_demo))
     print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
 
-    
+    '''
     start_time = time.time()
     print("-" * 49)
     print("Muletillas y pausas:\n")
     print(calcular_muletillas(transcript_demo))
     print(f"\nTiempo de ejecución: {time.time() - start_time} segundos")
-    '''
     
     start_time = time.time()
     print("-" * 49)
