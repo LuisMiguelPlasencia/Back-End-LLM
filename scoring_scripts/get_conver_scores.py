@@ -144,14 +144,14 @@ def feedback_claridad(transcript):
 
 def feedback_participacion(transcript):
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor interrumpe al cliente 
+    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor interrumpe al cliente o presenta heuristicas de escucha activa. 
 
     TRANSCRIPCIÓN:
     {transcript}
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
-     "señales": "Indica la intervención en la que el vendedor interrumpe al cliente
+     "señales": "Indica las señales en la que el vendedor interrumpe al cliente o presenta heuristicas de escucha activa. Se breve"
     }}
     """
     output = call_gpt(prompt)
@@ -584,19 +584,7 @@ def calcular_indice_preguntas(transcript):
 ### PPM y variabilidad
 def calcular_ppm_variabilidad(transcript):
     # Consideramos solo al vendedor
-    turnos_vendedor = [t for t in transcript if t["speaker"] == "vendedor"]
-    
-    if not turnos_vendedor:
-        return {
-            "puntuacion": 100,
-            "ppms": [],
-            "media_ppm": None,
-            "variabilidad": None,
-            "penalizacion": 0,
-            "bonificacion": 0,
-            "feedback": "TEST"
-        }
-    
+    turnos_vendedor = [t for t in transcript if t["speaker"] == "vendedor"]    
     ppms = []
     total_palabras = 0
     total_duracion = 0.0
@@ -621,12 +609,27 @@ def calcular_ppm_variabilidad(transcript):
     # 100-119.9 o 160.1-180: penalización alta
     # 120-129.9 o 150.1-160: penalización media
     # 130-150: sin penalización
-    if media_ppm < 100 or media_ppm > 180:
+    if media_ppm < 100:
         penalizacion += 100
-    elif (100 <= media_ppm < 120) or (160 < media_ppm <= 180):
+        feedback_ppm = f"Velocidad de habla demasiado lenta ({media_ppm:.1f} PPM). Intenta aumentar el ritmo para mantener la atención del cliente."
+    elif 100 <= media_ppm < 120:
         penalizacion += 60
-    elif (120 <= media_ppm < 130) or (150 < media_ppm <= 160):
+        feedback_ppm = f"Velocidad de habla lenta ({media_ppm:.1f} PPM). Considera acelerar hacia el rango óptimo (130-150 PPM)."
+    elif 120 <= media_ppm < 130:
         penalizacion += 30
+        feedback_ppm = f"Velocidad de habla cercana al óptimo ({media_ppm:.1f} PPM), pero con margen de mejora. Intenta acercarte más al rango de 130-150 PPM."
+    elif 130 <= media_ppm <= 150:
+        penalizacion += 0
+        feedback_ppm = f"Excelente velocidad de habla ({media_ppm:.1f} PPM). Te encuentras en el rango óptimo (130-150 PPM) para una comunicación clara y efectiva."
+    elif 150 < media_ppm <= 160:
+        penalizacion += 30
+        feedback_ppm = f"Velocidad de habla cercana al óptimo ({media_ppm:.1f} PPM), pero con margen de mejora. Intenta acercarte más al rango de 130-150 PPM."
+    elif 160 < media_ppm <= 180:
+        penalizacion += 60
+        feedback_ppm = f"Velocidad de habla rápida ({media_ppm:.1f} PPM). Considera desacelerar hacia el rango óptimo (130-150 PPM)."
+    else:  # media_ppm > 180
+        penalizacion += 100
+        feedback_ppm = f"Velocidad de habla demasiado rápida ({media_ppm:.1f} PPM). Intenta disminuir el ritmo para asegurar claridad y comprensión."
 
     
     # Penalización por variabilidad extrema
@@ -642,7 +645,7 @@ def calcular_ppm_variabilidad(transcript):
         "variabilidad": round(variabilidad, 1),
         "penalizacion": penalizacion,
         "bonificacion": bonificacion,
-        "feedback": "TEST"
+        "feedback": feedback_ppm
     }
 
 async def calcular_objetivo_principal(transcript, course_id, stage_id):
@@ -812,5 +815,42 @@ if __name__ == "__main__":
         "duracion": 25
     }]
 
+    # Evaluaciones individuales
 
-    print(calcular_cobertura_temas_old(transcript_demo))
+    res_muletillas = calcular_muletillas(transcript_demo)
+    print("\n" + "="*50)
+    print("MULETILLAS Y PAUSAS")
+    print("="*50)
+    print(res_muletillas)
+
+    res_claridad = calcular_claridad(transcript_demo)
+    print("\n" + "="*50)
+    print("CLARIDAD")
+    print("="*50)
+    print(res_claridad)
+
+    res_participacion = calcular_participacion_dinamica(transcript_demo)
+    print("\n" + "="*50)
+    print("PARTICIPACIÓN Y DINÁMICA")
+    print("="*50)
+    print(res_participacion)
+
+    res_cobertura = calcular_cobertura_temas_json(transcript_demo)
+    print("\n" + "="*50)
+    print("COBERTURA DE TEMAS")
+    print("="*50)
+    print(res_cobertura)
+
+    res_preguntas = calcular_indice_preguntas(transcript_demo)
+    print("\n" + "="*50)
+    print("ÍNDICE DE PREGUNTAS")
+    print("="*50)
+    print(res_preguntas)
+
+    res_ppm = calcular_ppm_variabilidad(transcript_demo)
+    print("\n" + "="*50)
+    print("PPM Y VARIABILIDAD")
+    print("="*50)
+    print(res_ppm)
+    
+    print("\n" + "="*50)
