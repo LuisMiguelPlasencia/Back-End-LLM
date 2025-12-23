@@ -56,8 +56,9 @@ class RealtimeBridge:
                     "create_response": True, # estos dos últimos igual no son necesarios
                     "interrupt_response": True 
                 },
-                "voice": "sage",
+                "voice": "coral",
                 "temperature": 1,
+                "speed":1.0,
                 "max_response_output_tokens": 4096,
                 "modalities": ["text", "audio"],
                 "input_audio_format": "pcm16",
