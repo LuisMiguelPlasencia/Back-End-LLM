@@ -19,7 +19,7 @@ async def init_db():
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is required")
     
-    _pool = await asyncpg.create_pool(database_url)
+    _pool = await asyncpg.create_pool(database_url, statement_cache_size=0)
     return _pool
 
 async def close_db():
