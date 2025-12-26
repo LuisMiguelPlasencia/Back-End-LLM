@@ -13,12 +13,20 @@ load_dotenv()
 _pool = None
 
 async def init_db():
-    """Initialize the database connection pool"""
+    """Initialize the database connection pool based on environment"""
     global _pool
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise ValueError("DATABASE_URL environment variable is required")
     
+    current_env = os.getenv("ENVIRONMENT", "DEV").upper()
+    if current_env == "PRO":
+        database_url = os.getenv("DATABASE_URL_PRO")
+    elif current_env == "DEV":
+        database_url = os.getenv("DATABASE_URL_DEV")
+    else:
+        database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise ValueError(f"No connection URL found for environment: {current_env}")
+
     _pool = await asyncpg.create_pool(database_url, statement_cache_size=0)
     return _pool
 

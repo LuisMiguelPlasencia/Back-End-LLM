@@ -9,11 +9,17 @@ from scoring_scripts.get_conver_scores import get_conver_scores
 load_dotenv()
 
 # --- DB CONFIG ---
+current_env = os.getenv("ENVIRONMENT", "DEV").upper()
 DB_NAME = os.getenv("DB_NAME")
-USER = os.getenv("DB_USER")
 PASSWORD = os.getenv("DB_PASSWORD")
 HOST = os.getenv("DB_HOST")
 PORT = os.getenv("DB_PORT")
+
+#Get user based on environtment in ENV
+env_key = "DB_USER_PRO" if current_env == "PRO" else "DB_USER_DEV"
+USER = os.getenv(env_key) or os.getenv("DB_USER")
+if not USER: raise ValueError(f"DB_USER is missing for environment: {current_env}")
+
 
 def read_msg(conv_id):
     conn = psycopg2.connect(
