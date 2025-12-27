@@ -84,6 +84,47 @@ async def get_all_user_conversation_scoring_by_stage_company(stage_id: str, comp
                 c.participation_scoring,
                 c.keythemes_scoring,
                 c.indexofquestions_scoring,
+                c.rhythm_scoring,
+                c.fillerwords_feedback,
+                c.clarity_feedback,
+                c.participation_feedback,
+                c.keythemes_feedback,
+                c.indexofquestions_feedback,
+                c.rhythm_feedback
+            FROM conversaconfig.user_info ui
+            LEFT JOIN conversaapp.conversations c
+                ON c.user_id = ui.user_id
+            AND c.status = 'FINISHED'
+            AND c.stage_id = $1
+            WHERE ui.company_id = $2
+            AND ui.is_active = true
+            ORDER BY ui.user_id, c.general_score DESC NULLS LAST;
+        """
+
+        results = await execute_query(query, stage_id, company_id)
+        return [dict(row) for row in results]
+    except Exception as e:
+        print(f"Error fetching user scores for stage_id {stage_id} and company_id {company_id}: {str(e)}")
+        return []
+
+async def get_all_user_conversation_average_scoring_by_stage_company(stage_id: str, company_id: str) -> List[Dict]:
+    """Get all user conversation average scores for a stage and company, ordered by average score"""
+    try:
+        query = """
+            SELECT DISTINCT ON (ui.user_id)
+                ui.user_id,
+                ui.name,
+                ui.company_id,
+                ui.user_type,
+                ui.avatar,
+                c.stage_id,
+                c.status,
+                c.general_score,
+                c.fillerwords_scoring,
+                c.clarity_scoring,
+                c.participation_scoring,
+                c.keythemes_scoring,
+                c.indexofquestions_scoring,
                 c.rhythm_scoring
             FROM conversaconfig.user_info ui
             LEFT JOIN conversaapp.conversations c
@@ -92,6 +133,7 @@ async def get_all_user_conversation_scoring_by_stage_company(stage_id: str, comp
             AND c.stage_id = $1
             WHERE ui.company_id = $2
             AND ui.is_active = true
+            AND c.status = 'FINISHED'
             ORDER BY ui.user_id, c.general_score DESC NULLS LAST;
         """
 
