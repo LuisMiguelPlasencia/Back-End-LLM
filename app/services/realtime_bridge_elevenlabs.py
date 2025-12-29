@@ -5,7 +5,7 @@ import websockets
 from dotenv import load_dotenv
 
 # Services imports
-from app.services.conversations_service import get_conversation_status, create_conversation
+from app.services.conversations_service import get_voice_agent, create_conversation
 from app.services.realtime_service import stop_process, user_msg_processed
 from ..services.messages_service import send_message
 from ..services.prompting_service import master_prompt_generator
@@ -33,11 +33,12 @@ class RealtimeBridge:
         self.course_id = None
         self.stage_id = None
         self.voice_id = None
-        self.agent_id = ELEVENLABS_AGENT_ID
+        self.agent_id = None
 
     async def connect_elevenlabs(self):
         """Establece conexión con ElevenLabs Conversational AI."""
         try:
+            #WS_URL = f"wss://api.elevenlabs.io/v1/convai/conversation?agent_id={self.agent_id}"
             extra_headers = {}
             if ELEVENLABS_API_KEY:
                 extra_headers["xi-api-key"] = ELEVENLABS_API_KEY
@@ -67,10 +68,14 @@ class RealtimeBridge:
                     self.user_id = parsed.get("user_id")
                     self.course_id = parsed.get("course_id")
                     self.stage_id = parsed.get("stage_id")
-                    self.voice_id = parsed.get("voice_id", "851ejYcv2BoNPjrkw93G")
 
+                    print(f"Stage: {self.stage_id} ")
                     # Crear conversación en DB
                     conversation_details = await create_conversation(self.user_id, self.course_id, self.stage_id)
+                    stage_details = await get_voice_agent(self.stage_id)
+                    self.voice_id, self.agent_id = stage_details.get("voice_id","851ejYcv2BoNPjrkw93G"), stage_details.get("agent_id", ELEVENLABS_AGENT_ID)
+                    print(f"Voice: {self.voice_id} | Agent: {self.agent_id}")
+                    
                     self.conversation_id = conversation_details.get("conversation_id")
                     print(f"User: {self.user_id} | Conv: {self.conversation_id} | Course: {self.course_id}")
                     

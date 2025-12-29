@@ -39,6 +39,17 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
     results = await execute_query(query, user_id)
     return [dict(row) for row in results]
 
+async def get_voice_agent(stage_id: UUID) -> Optional[Dict]:
+    """Get voice and agent from the stage of the course"""
+    query = """
+    SELECT voice_id, agent_id
+    FROM conversaconfig.course_stages WHERE stage_id = $1
+    """
+    results = await execute_query(query, stage_id)
+    if results:
+        return dict(results)
+    return None
+
 async def create_conversation(user_id: UUID, course_id: UUID, stage_id: UUID) -> Optional[Dict]:
     """
     Create new conversation for user
