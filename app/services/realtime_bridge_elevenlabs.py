@@ -72,9 +72,32 @@ class RealtimeBridge:
                     
                     # Generar Prompt dinámico para el curso específico
                     master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
+                    continue
+                    payload = {
+                        "type": "conversation_initiation_client_data",
+                        "conversation_config_override": {
+                            "agent": {
+                                "prompt": {
+                                    "prompt": master_prompt
+                                },
+                                "first_message": "¡Hola! Gracias por contactarnos. ¿En qué puedo ayudarte hoy?",
+                                "language": "es"
+                            },
+                            "tts": {
+                                "voice_id": "851ejYcv2BoNPjrkw93G"
+                            }
+                        },
+                        "custom_llm_extra_body": {
+                            "temperature": 0.7,
+                            "max_tokens": 150
+                        },
+                        "dynamic_variables": {
+                            "user_name": "Mike",
+                            "account_type": "premium"
+                        }
+                    }
+                    await self.eleven_ws.send(json.dumps(payload))
                     
-                    continue 
-
                 # --- 2. FIN DE SESIÓN ---
                 elif msg_type == "input_audio_session.end":
                     print("🔴 Session ended by user")
@@ -108,7 +131,7 @@ class RealtimeBridge:
                 # --- A. SALIDA DE AUDIO (TTS) ---
                 # ElevenLabs envía audio base64 en el evento "audio"
                 if el_type == "audio":
-                    chunk = data.get("audio_event", {}).get("audio_base64")
+                    chunk = data["audio_event"]["audio_base_64"]
                     if chunk:
                         # Simulamos el paquete de OpenAI "response.audio.delta"
                         openai_fmt = {
@@ -119,8 +142,8 @@ class RealtimeBridge:
                         await self.frontend_ws.send_text(json.dumps(openai_fmt))
 
                 # --- B. TRANSCRIPCIÓN USUARIO ---
-                elif el_type == "transcription" and data.get("transcription_event", {}).get("mode") == "user":
-                    text = data["transcription_event"]["transcription"]
+                elif el_type == "user_transcript":
+                    text = data["user_transcription_event"]["user_transcript"]
                     print(f"🎤 [User]: {text}")
                     
                     # Guardar en DB
@@ -134,8 +157,8 @@ class RealtimeBridge:
                     await self.frontend_ws.send_text(json.dumps(openai_fmt))
 
                 # --- C. TRANSCRIPCIÓN AGENTE ---
-                elif el_type == "transcription" and data.get("transcription_event", {}).get("mode") == "agent":
-                    text = data["transcription_event"]["transcription"]
+                elif el_type == "agent_response":
+                    text = data["agent_response_event"]["agent_response"]
                     print(f"🤖 [AI]: {text}")
                     
                     # Guardar en DB

@@ -1,6 +1,6 @@
 # app/routers/realtime_router.py
 from fastapi import APIRouter, WebSocket
-from app.services.realtime_bridge import RealtimeBridge
+from app.services.realtime_bridge_elevenlabs import RealtimeBridge
 
 router = APIRouter()
 
