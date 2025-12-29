@@ -72,7 +72,6 @@ class RealtimeBridge:
                     
                     # Generar Prompt dinámico para el curso específico
                     master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
-                    continue
                     payload = {
                         "type": "conversation_initiation_client_data",
                         "conversation_config_override": {
