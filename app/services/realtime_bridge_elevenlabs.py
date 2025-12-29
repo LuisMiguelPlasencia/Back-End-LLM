@@ -29,8 +29,11 @@ class RealtimeBridge:
         # Context variables
         self.user_id = None
         self.conversation_id = None
+        self.conversation_id_elevenlabs = None
         self.course_id = None
         self.stage_id = None
+        self.voice_id = None
+        self.agent_id = ELEVENLABS_AGENT_ID
 
     async def connect_elevenlabs(self):
         """Establece conexión con ElevenLabs Conversational AI."""
@@ -64,6 +67,7 @@ class RealtimeBridge:
                     self.user_id = parsed.get("user_id")
                     self.course_id = parsed.get("course_id")
                     self.stage_id = parsed.get("stage_id")
+                    self.voice_id = parsed.get("voice_id", "851ejYcv2BoNPjrkw93G")
 
                     # Crear conversación en DB
                     conversation_details = await create_conversation(self.user_id, self.course_id, self.stage_id)
@@ -79,20 +83,16 @@ class RealtimeBridge:
                                 "prompt": {
                                     "prompt": master_prompt
                                 },
-                                "first_message": "¡Hola! Gracias por contactarnos. ¿En qué puedo ayudarte hoy?",
+                                "first_message": "¡Hola!, ¿qué tal?",
                                 "language": "es"
                             },
                             "tts": {
-                                "voice_id": "851ejYcv2BoNPjrkw93G"
+                                "voice_id": self.voice_id
                             }
                         },
                         "custom_llm_extra_body": {
                             "temperature": 0.7,
                             "max_tokens": 150
-                        },
-                        "dynamic_variables": {
-                            "user_name": "Mike",
-                            "account_type": "premium"
                         }
                     }
                     await self.eleven_ws.send(json.dumps(payload))
@@ -139,7 +139,9 @@ class RealtimeBridge:
                             "item_id": "elevenlabs_audio" # ID ficticio para compatibilidad
                         }
                         await self.frontend_ws.send_text(json.dumps(openai_fmt))
-
+                
+                elif el_type == "conversation_initiation_metadata":
+                    self.conversation_id_elevenlabs = data["conversation_initiation_metadata_event"]["conversation_id"]
                 # --- B. TRANSCRIPCIÓN USUARIO ---
                 elif el_type == "user_transcript":
                     text = data["user_transcription_event"]["user_transcript"]
@@ -210,7 +212,8 @@ class RealtimeBridge:
         
         # Guardar estado final en DB
         if self.conversation_id:
-            await stop_process(self.user_id, self.conversation_id, self.frontend_ws, self.course_id, self.stage_id)
+            await stop_process(self.user_id, self.conversation_id, self.frontend_ws, 
+                self.course_id, self.stage_id, self.conversation_id_elevenlabs, self.agent_id)
         
         # Cerrar sockets
         try:

@@ -56,15 +56,15 @@ async def create_conversation(user_id: UUID, course_id: UUID, stage_id: UUID) ->
         return dict(result)
     return None
 
-async def close_conversation(user_id: UUID, conversation_id: UUID) -> Optional[Dict]:
+async def close_conversation(user_id: UUID, conversation_id: UUID, conversation_id_elevenlabs: str, agent_id: str) -> Optional[Dict]:
     """
     Close conversation
     """
     query = """
-    UPDATE conversaApp.conversations SET status = 'FINISHED', end_timestamp = now()
+    UPDATE conversaApp.conversations SET status = 'FINISHED', end_timestamp = now(), conversation_id_elevenlabs = $3, agent_id = $4
     WHERE user_id = $1 AND conversation_id = $2
     """
-    await execute_query(query, user_id, conversation_id)
+    await execute_query(query, user_id, conversation_id, conversation_id_elevenlabs, agent_id)
     return True
 
 async def get_conversation_status(conversation_id: UUID, user_id: UUID) -> Optional[str]:

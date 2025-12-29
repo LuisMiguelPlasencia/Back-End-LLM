@@ -40,7 +40,9 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 WHEN (c.conversation_id IS NOT NULL AND c.status = 'FINISHED') 
                 THEN cs.stage_order 
                 ELSE 0 
-            END AS stage_progress
+            END AS stage_progress,
+            cs.voice_id,
+            cs.agent_id
         FROM conversaconfig.master_courses mc
         JOIN conversaConfig.user_type_relations utr ON mc.course_id = utr.course_id
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
@@ -97,7 +99,9 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "stage_id": row['stage_id'],
                 "stage_name": row['stage_name'],
                 "stage_description": row['stage_description'],
-                "stage_order": row['stage_order']
+                "stage_order": row['stage_order'],
+                "voice_id": row['voice_id'],
+                "agent_id": row['agent_id']
             })
 
     return list(courses_map.values())
