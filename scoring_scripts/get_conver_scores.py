@@ -53,7 +53,7 @@ def proximos_pasos(transcript):
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{"indicador": true/false, 
-     "señales": "Indica la intervención en la que el vendedor habla de proximos pasos"
+     "señales": "Indica la intervención en la que el vendedor habla de proximos pasos. Se lo más breve y conciso posible"
     }}
     """
     output = call_gpt(prompt)
@@ -71,8 +71,8 @@ def temas_clave(transcript, temas_clave="Precio, Seguridad, capacidad maletero, 
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
     {{"n": "numero entero mencionando el numero de temas clave abordados", 
-     "señales": "Señales donde se identifican temas claves abordados",
-     "feedback": "Temas claves que no se han abordado"}}
+     "señales": "Señales donde se identifican temas claves abordados. Se lo más breve y conciso posible",
+     "feedback": "Temas claves que no se han abordado. Se lo más breve y conciso posible"}}
     """
     output = call_gpt(prompt)
     
@@ -100,7 +100,7 @@ def objetivo(transcript, objetivo):
 
     RESPONDE ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{"indicador": true/false, 
-     "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo...'" 
+     "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo... . Se lo más breve y conciso posible'" 
     }}
     """
 
@@ -135,7 +135,7 @@ def feedback_claridad(transcript):
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
-     "señales": "Indica la intervención en la que el vendedor no es claro en su propuesta."
+     "señales": "Indica la intervención en la que el vendedor no es claro en su propuesta. Se lo más breve y conciso posible"
     }}
     """
     output = call_gpt(prompt)
@@ -280,7 +280,7 @@ def calcular_claridad(transcript):
     penalizacion = penalizacion_anglicismos + penalizacion_frases_largas + penalizacion_negativas
 
     # ---- Calcular puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    puntuacion = max(0, min(100, 70 - penalizacion + bonificacion))
 
     # ---- Calcular feedback -----
     feedback = json.loads(feedback_claridad(transcript))
@@ -359,7 +359,7 @@ def calcular_participacion_dinamica(transcript):
         penalizacion += 100
 
     # ---- Puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    puntuacion = max(0, min(100, 70 - penalizacion + bonificacion))
 
     # ---- Feedback ----
     feedback = json.loads(feedback_participacion(transcript))
