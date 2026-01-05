@@ -26,12 +26,27 @@ async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
 async def get_user_conversations(user_id: UUID) -> List[Dict]:
     """Get all conversations for a user, ordered by start time (newest first)"""
     query = """
-    SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
-    , updated_at, course_id, fillerwords_scoring, clarity_scoring
-    , participation_scoring, keythemes_scoring, indexofquestions_scoring
-    , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
-    , keythemes_feedback, indexofquestions_feedback, rhythm_feedback
-    FROM conversaApp.conversations
+    SELECT 
+        c.conversation_id, c.start_timestamp, c.end_timestamp, c.status, c.created_at, 
+        c.updated_at, c.course_id, 
+        mc.name,
+        mc.image_src,
+        c.general_score,
+        c.fillerwords_scoring, 
+        c.clarity_scoring, 
+        c.participation_scoring, 
+        c.keythemes_scoring, 
+        c.indexofquestions_scoring, 
+        c.rhythm_scoring, 
+        c.fillerwords_feedback, 
+        c.clarity_feedback, 
+        c.participation_feedback, 
+        c.keythemes_feedback, 
+        c.indexofquestions_feedback, 
+        c.rhythm_feedback
+    FROM conversaApp.conversations c
+    left join conversaconfig.master_courses mc 
+    on c.course_id = mc.course_id 
     WHERE user_id = $1
     ORDER BY start_timestamp DESC
     """
