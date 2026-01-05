@@ -78,6 +78,26 @@ def temas_clave(transcript, temas_clave="Precio, Seguridad, capacidad maletero, 
     
     return output
 
+def index_of_questions(transcript):
+    prompt = f"""
+    Te voy a pasar la transcripcion de una conversación, haz lo siguiente: Tienes que identificar las preguntas que realiza el vendedor y detectar las preguntas cerradas, preguntas de sondeo/impacto y preguntas irrelevantes. 
+
+    TRANSCRIPCIÓN:
+    {transcript}
+
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
+    {{
+     "n_total": "numero entero mencionando el numero total de preguntas que hace el vendedor",
+     "n_cerradas": "numero entero mencionando el numero preguntas cerradas que hace el vendedor",
+     "n_sondeo": "numero entero mencionando el numero de preguntas de sondeo que hace el vendedor", 
+     "n_irrelevantes": "numero entero mencionando el numero de preguntas irrelevantes que hace el vendedor"
+     "señales": "Señales donde se identifican los distintos tipos de preguntas que hace el vendedor",
+     "feedback": "Explica como se podrían formular mejores preguntas"}}
+    """
+    output = call_gpt(prompt)
+    
+    return output
+
 def objetivo(transcript, objetivo):
 
 
@@ -182,19 +202,19 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
     frecuencia = 0
     penalizacion = total_muletillas * 5 #+ total_pausas*10
 
+    # Get top 3 most used filler words
+    top_2_muletillas = Counter(muletillas_usadas).most_common(2)
+
     # Penalización extra si más del 70% de las muletillas son la misma
     if total_muletillas > 1:
         conteo = Counter(muletillas_usadas)
         muletilla_mas_frecuente, frecuencia = conteo.most_common(1)[0]
-        # Get top 3 most used filler words
-        top_2_muletillas = Counter(muletillas_usadas).most_common(2)
 
         #TODO: Veamos como podemos adaptar esto para detectar muletillas recurrentes sin perjudicar la puntuación de más
         ratio_muletilla = frecuencia / total_muletillas if total_muletillas > 0 else 0
         if (ratio_muletilla > 0.7 and frecuencia > 5):
             # penalizacion += 10
             repeticion_constante = True
-    
     
 
     puntuacion = max(0, 100 - penalizacion)  # nunca bajar de 0
@@ -373,7 +393,7 @@ def calcular_participacion_dinamica(transcript):
         "bonificacion": bonificacion,
         "escucha_activa": gpt_escucha_activa,
         "n_escuchas": num_escucha,
-        "feedback": feedback['señales']
+        "feedback": f"El porcentaje de participación del vendedor es del {ratio*100:.2f}%. Interrupciones: {feedback['señales']}"
     }
 
 ### Cobertura de temas y palabras clave
@@ -405,7 +425,7 @@ def calcular_cobertura_temas_json(transcript,num_temas=6):
     
     
     # ---- Puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    puntuacion = max(0, min(100, 90 - penalizacion + bonificacion))
     
     return {
         "puntuacion": puntuacion,
@@ -511,47 +531,13 @@ def calcular_cobertura_temas_old(transcript,num_temas=6):
 ### Indice de preguntas (Aquí hay que darle una pensadica)
 def calcular_indice_preguntas(transcript):
     # Definiciones de sets de preguntas
-    preguntas_cerradas = [
-        "¿necesita una demostración?", "¿le interesa el producto?", "¿está de acuerdo con el precio?", 
-        "¿tiene alguna pregunta?", "¿me escucha bien?", "¿terminamos aquí?", "¿lo ve factible?", 
-        "¿quiere seguir adelante?", "¿tiene x presupuesto?", "¿le parece bien esto?", 
-        "¿podemos empezar mañana?", "¿sí o no?", "¿cuenta con la autoridad?"
-    ]
+
+    gpt_index_of_questions = json.loads(index_of_questions(transcript))
     
-    preguntas_sondeo = [
-        "¿cómo afecta este problema a su rentabilidad?", "¿cuál es el costo de no resolver esto a tiempo?", 
-        "¿qué prioridades tiene para el próximo trimestre?", "¿qué criterios usará para tomar la decisión?", 
-        "¿qué alternativas ha evaluado hasta ahora?", "¿qué impacto tendría en su equipo?", 
-        "¿qué pasaría si mantiene el status quo?", "¿cómo mide el éxito de este proyecto?", 
-        "¿quién más está involucrado en la decisión?", "¿qué le preocupa más de la solución?", 
-        "¿por qué es importante esto ahora?"
-    ]
-    
-    preguntas_irrelevantes = [
-        "¿hizo buen tiempo hoy?", "¿cómo va el tráfico por su zona?", "¿qué tal su fin de semana?", 
-        "¿leyó las noticias de hoy?", "¿qué opina de", "¿tiene planes para las fiestas?", 
-        "¿qué equipo de fútbol le gusta?", "¿dónde está ubicado su edificio?", "¿viajó mucho para llegar hoy?"
-    ]
-    
-    # Solo texto del vendedor
-    vendedor_texto = " ".join(t["text"].lower() for t in transcript if t["speaker"] == "vendedor")
-    
-    # Extraer todas las preguntas que hace el vendedor
-    preguntas = re.findall(r"¿.*?\?", vendedor_texto, re.DOTALL)
-    
-    total_preguntas = len(preguntas)
-    count_cerradas = 0
-    count_sondeo = 0
-    count_irrelevantes = 0
-    
-    for p in preguntas:
-        p = p.strip()
-        if any(p.startswith(pc) for pc in preguntas_cerradas):
-            count_cerradas += 1
-        elif any(p.startswith(ps) for ps in preguntas_sondeo):
-            count_sondeo += 1
-        elif any(p.startswith(pi) for pi in preguntas_irrelevantes):
-            count_irrelevantes += 1
+    total_preguntas = gpt_index_of_questions['n_total']
+    count_cerradas = gpt_index_of_questions['n_cerradas']
+    count_sondeo = gpt_index_of_questions['n_sondeo']
+    count_irrelevantes = gpt_index_of_questions['n_irrelevantes']
     
     penalizacion = 0
     bonificacion = 0
@@ -564,21 +550,24 @@ def calcular_indice_preguntas(transcript):
     penalizacion += count_irrelevantes * 10
     
     # Bonificación por sondeo
-    bonificacion += count_sondeo * 10
+    bonificacion = min(count_sondeo * 10,40)
     
     # Score final
-    puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
+    puntuacion = max(0, min(100,  70 - penalizacion + bonificacion))
+
+    # Feedback
+    feedback = gpt_index_of_questions['feedback']
     
     return {
         "puntuacion": puntuacion,
         "total_preguntas": total_preguntas,
-        "preguntas": preguntas,
+        #"preguntas": preguntas,
         "cerradas": count_cerradas,
         "sondeo": count_sondeo,
         "irrelevantes": count_irrelevantes,
         "penalizacion": penalizacion,
         "bonificacion": bonificacion,
-        "feedback": "TEST"
+        "feedback": feedback
     }
 
 ### PPM y variabilidad
