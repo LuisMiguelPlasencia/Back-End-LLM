@@ -1,43 +1,43 @@
 import math
 
-# 1. Definimos los perfiles base con sus "notas numéricas"
+# 1. Definimos los profilees base con sus "notas numéricas"
 # (usamos escala: Bajo=1, Medio-Bajo=2, Medio=3, Medio-Alto=4, Alto=5)
-perfiles = {
-    "Conector": {"prospeccion": 2, "empatia": 5, "dominio": 1, "negociacion": 3, "resiliencia": 5},
-    "Especialista": {"prospeccion": 1, "empatia": 1, "dominio": 5, "negociacion": 3, "resiliencia": 3},
-    "Cazador": {"prospeccion": 5, "empatia": 1, "dominio": 1, "negociacion": 5, "resiliencia": 5},
-    "Negociador": {"prospeccion": 3, "empatia": 3, "dominio": 4, "negociacion": 5, "resiliencia": 3},
-    "Vendedor Integral": {"prospeccion": 5, "empatia": 5, "dominio": 5, "negociacion": 5, "resiliencia": 5},
-    "Asistente": {"prospeccion": 2, "empatia": 5, "dominio": 1, "negociacion": 1, "resiliencia": 2},
-    "Consultor": {"prospeccion": 3, "empatia": 5, "dominio": 4, "negociacion": 5, "resiliencia": 3},
-    "Vendedor Persuasivo": {"prospeccion": 3, "empatia": 1, "dominio": 3, "negociacion": 5, "resiliencia": 5},
-    "Constructor de Relaciones": {"prospeccion": 2, "empatia": 5, "dominio": 1, "negociacion": 1, "resiliencia": 3},
-    "Emprendedor": {"prospeccion": 5, "empatia": 3, "dominio": 2, "negociacion": 3, "resiliencia": 3}
+profiles = {
+    "Conector": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negociation": 3, "resilience": 5},
+    "Especialista": {"prospection": 1, "empathy": 1, "technical_domain": 5, "negociation": 3, "resilience": 3},
+    "Cazador": {"prospection": 5, "empathy": 1, "technical_domain": 1, "negociation": 5, "resilience": 5},
+    "Negociador": {"prospection": 3, "empathy": 3, "technical_domain": 4, "negociation": 5, "resilience": 3},
+    "Vendedor Integral": {"prospection": 5, "empathy": 5, "technical_domain": 5, "negociation": 5, "resilience": 5},
+    "Asistente": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negociation": 1, "resilience": 2},
+    "Consultor": {"prospection": 3, "empathy": 5, "technical_domain": 4, "negociation": 5, "resilience": 3},
+    "Vendedor Persuasivo": {"prospection": 3, "empathy": 1, "technical_domain": 3, "negociation": 5, "resilience": 5},
+    "Constructor de Relaciones": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negociation": 1, "resilience": 3},
+    "Emprendedor": {"prospection": 5, "empathy": 3, "technical_domain": 2, "negociation": 3, "resilience": 3}
 }
 
-def clasificar_vendedor(prospeccion, empatia, dominio, negociacion, resiliencia):
-    """Clasifica un vendedor al perfil más cercano basado en distancia euclidiana."""
+def user_clasiffier(prospection, empathy, technical_domain, negociation, resilience):
+    """Clasifica un vendedor al profile más cercano basado en distancia euclidiana."""
     input_vector = {
-        "prospeccion": prospeccion,
-        "empatia": empatia,
-        "dominio": dominio,
-        "negociacion": negociacion,
-        "resiliencia": resiliencia
+        "prospection": prospection,
+        "empathy": empathy,
+        "technical_domain": technical_domain,
+        "negociation": negociation,
+        "resilience": resilience
     }
     
-    mejor_perfil = None
+    best_profile = None
     menor_distancia = float("inf")
     
-    for perfil, valores in perfiles.items():
+    for profile, valores in profiles.items():
         # calcular distancia euclidiana
         dist = math.sqrt(sum((input_vector[k] - valores[k])**2 for k in input_vector))
         
         if dist < menor_distancia:
             menor_distancia = dist
-            mejor_perfil = perfil
+            best_profile = profile
     
-    return mejor_perfil
+    return best_profile
 
 if __name__ == "__main__":
-    perfil = clasificar_vendedor(1, 1, 1, 1, 1)
-    print("Perfil detectado:", perfil)
+    profile = user_clasiffier(1, 1, 1, 1, 1)
+    print("profile detectado:", profile)
