@@ -43,10 +43,16 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
         c.participation_feedback, 
         c.keythemes_feedback, 
         c.indexofquestions_feedback, 
-        c.rhythm_feedback
+        c.rhythm_feedback,
+        m.message_count
     FROM conversaApp.conversations c
     left join conversaconfig.master_courses mc 
     on c.course_id = mc.course_id 
+    LEFT JOIN (
+        SELECT conversation_id, COUNT(*) AS message_count
+        FROM conversaapp.messages
+        GROUP BY conversation_id
+    ) m ON c.conversation_id = m.conversation_id
     WHERE user_id = $1
     ORDER BY start_timestamp DESC
     """
