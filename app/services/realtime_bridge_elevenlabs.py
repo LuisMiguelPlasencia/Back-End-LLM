@@ -72,8 +72,14 @@ class RealtimeBridge:
                     print(f"Stage: {self.stage_id} ")
                     # Crear conversación en DB
                     conversation_details = await create_conversation(self.user_id, self.course_id, self.stage_id)
-                    stage_details = await get_voice_agent(self.stage_id)
-                    self.voice_id, self.agent_id = stage_details.get("voice_id","851ejYcv2BoNPjrkw93G"), stage_details.get("agent_id", ELEVENLABS_AGENT_ID)
+                    self.voice_id = "851ejYcv2BoNPjrkw93G"
+                    self.agent_id = ELEVENLABS_AGENT_ID
+                    record = await get_voice_agent(self.stage_id)
+
+                    if record:
+                        self.voice_id = record['voice_id'] or self.voice_id
+                        self.agent_id = record['agent_id'] or self.agent_id
+
                     print(f"Voice: {self.voice_id} | Agent: {self.agent_id}")
                     
                     self.conversation_id = conversation_details.get("conversation_id")

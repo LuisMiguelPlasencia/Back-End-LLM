@@ -38,6 +38,3 @@ def user_clasiffier(prospection, empathy, technical_domain, negociation, resilie
     
     return best_profile
 
-if __name__ == "__main__":
-    profile = user_clasiffier(1, 1, 1, 1, 1)
-    print("profile detectado:", profile)

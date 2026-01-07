@@ -2,7 +2,7 @@
 import re 
 import subprocess
 import json
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 import sys
 import os 
 from dotenv import load_dotenv
@@ -43,8 +43,14 @@ BAJA (1 punto): El vendedor va directo al pitch sin fase de descubrimiento ni in
 TRANSCRIPCIÓN:
 {transcript}
 
-Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+INSTRUCCIONES DE FORMATO (IMPORTANTE):
+1. Responde ÚNICAMENTE con un JSON válido.
+2. NO uses bloques de código markdown (```json).
+3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
+El formato exacto es:
 {{
   "score": "numero entero indicando la puntuación segun la rubrica.",
   "justification": "Explicación específica con ejemplos de la transcripción"
@@ -78,7 +84,14 @@ Presta especial atención a:
 - ¿Valida las preocupaciones antes de responder?
 - ¿Usa un lenguaje empático y de comprensión?
 
-Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+INSTRUCCIONES DE FORMATO (IMPORTANTE):
+1. Responde ÚNICAMENTE con un JSON válido.
+2. NO uses bloques de código markdown (```json).
+3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+
+El formato exacto es:
 
 {{
   "score": "numero entero indicando la puntuación segun la rubrica.",
@@ -112,8 +125,14 @@ Evalúa si el vendedor:
 - Las conecta con beneficios específicos
 - Responde con confianza a preguntas técnicas
 
-Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+INSTRUCCIONES DE FORMATO (IMPORTANTE):
+1. Responde ÚNICAMENTE con un JSON válido.
+2. NO uses bloques de código markdown (```json).
+3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
+El formato exacto es:
 {{
   "score": "numero entero indicando la puntuación segun la rubrica.",
   "justification": "Explicación específica con ejemplos de la transcripción"
@@ -147,8 +166,14 @@ Evalúa:
 - ¿Justifica el valor o solo ofrece descuentos?
 - ¿Propone próximos pasos concretos?
 
-Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+INSTRUCCIONES DE FORMATO (IMPORTANTE):
+1. Responde ÚNICAMENTE con un JSON válido.
+2. NO uses bloques de código markdown (```json).
+3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
+El formato exacto es:
 {{
   "score": "numero entero indicando la puntuación segun la rubrica.",
   "justification": "Explicación específica con ejemplos de la transcripción"
@@ -184,8 +209,14 @@ Presta atención a:
 - ¿Se detectan cambios de energía o frustración?
 - ¿Termina la llamada con próximos pasos o se rinde?
 
-Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markdown y sin explicaciones fuera del JSON, con el siguiente formato exacto:
+INSTRUCCIONES DE FORMATO (IMPORTANTE):
+1. Responde ÚNICAMENTE con un JSON válido.
+2. NO uses bloques de código markdown (```json).
+3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
+El formato exacto es:
 {{
   "score": "numero entero indicando la puntuación segun la rubrica.",
   "justification": "Explicación específica con ejemplos de la transcripción"
@@ -195,44 +226,46 @@ Responde ÚNICAMENTE devolviendo un JSON válido, sin texto adicional, sin markd
     
     return output
 
-async def get_conver_skills(transcript: str) -> Dict[str, Dict[str, str]]:
+async def get_conver_skills(transcript: str) -> Dict[str, Dict[str, Any]]:
     """
-    Evalúa un transcript en todas las skills definidas.
-    Devuelve un diccionario con las puntuaciones y justificaciones.
+    Evaluates a transcript across all defined skills.
+    Returns a dictionary structured by skill containing score and justification.
+    
+    Return format:
+    {
+        "skill_name": { "score": int, "justification": str },
+        ...
+    }
     """
 
-    prospection = json.loads(evaluate_prospection(transcript))
-    empathy = json.loads(evaluate_empathy(transcript))
-    technical_domain = json.loads(evaluate_technical_domain(transcript))
-    negociation = json.loads(evaluate_negociation(transcript))
-    resilience = json.loads(evaluate_resilience(transcript))
+    # Helper function to prevent JSON errors from crashing the app
+    def safe_parse_json(json_str: str, skill_name: str) -> Dict[str, Any]:
+        try:
+            if not json_str:
+                raise ValueError("Empty response from AI")
+            return json.loads(json_str)
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            print(f"⚠️ Error decoding JSON for {skill_name}: {e}")
+            # Return default values so the code doesn't break downstream
+            return {"score": 0, "justification": "Error during AI evaluation"}
 
-    scores = {
-        "prospection": prospection["score"], 
-        "empathy": empathy["score"],
-        "technical_domain": technical_domain["score"],
-        "negociation": negociation["score"],
-        "resilience": resilience["score"],
-    }
+    # Note: If your evaluate functions are async, remember to add 'await'
+    # e.g., await evaluate_prospection(transcript)
+    
+    # We parse each result safely
+    prospection_data = safe_parse_json(evaluate_prospection(transcript), "prospection")
+    empathy_data = safe_parse_json(evaluate_empathy(transcript), "empathy")
+    technical_domain_data = safe_parse_json(evaluate_technical_domain(transcript), "technical_domain")
+    negociation_data = safe_parse_json(evaluate_negociation(transcript), "negociation")
+    resilience_data = safe_parse_json(evaluate_resilience(transcript), "resilience")
 
-    feedback = {
-        "prospection": prospection["justification"],
-        "empathy": empathy["justification"],
-        "technical_domain": technical_domain["justification"],
-        "negociation": negociation["justification"],
-        "resilience": resilience["justification"],
-    }
-
+    # We return the structure exactly as the consumer function expects it
+    # (Keys are the skill names, containing both score and justification)
     return {
-        "scores": scores, 
-        "feedback": feedback
+        "prospection": prospection_data,
+        "empathy": empathy_data,
+        "technical_domain": technical_domain_data,
+        "negociation": negociation_data,
+        "resilience": resilience_data,
     }
 
-if __name__ == "__main__":
-    transcript_demo = """
-    V: Hola, ¿eh? Soy Ricardo. Mira, mi empresa ayuda a reducir el error de hemólisis en un 60%...
-    C: Es una buena pregunta. El reprocesamiento nos cuesta tiempo y reactivos, calculo unos 50€ por caso...
-    """
-
-    resultados = get_conver_skills(transcript_demo)
-    print(resultados)

@@ -65,7 +65,7 @@ async def profiling(conv_id, course_id, stage_id):
     if not transcript:
         print(f"No messages found for conversation_id: {conv_id}")
         return
-    profiling = await get_conver_skills(transcript, course_id, stage_id)
+    profiling = await get_conver_skills(transcript)
 
     # Get scores
     prospection_scoring = profiling.get("prospection")['score']
@@ -103,26 +103,4 @@ async def profiling(conv_id, course_id, stage_id):
         resilience_feedback,
         conv_id,  # UUID ok
     )
-
-
-if __name__ == "__main__":
-    import sys
-    import uuid
-    
-    print("=" * 60)
-    print("Scoring Service - Test Mode")
-    print("=" * 60)
-    
-    conv_id = '5f3ab585-9269-4779-aec4-a31d6ec9d559'
-    course_id = 'f5950497-103a-47b9-bd76-566da96ac030'
-    stage_id  = 'fb3b890c-2255-438c-b49a-d1a81cd68eff'
-    try:
-        # Validate UUID format
-        uuid.UUID(conv_id)
-        print(f"\n🚀 Running scoring for conversation_id: {conv_id}\n")
-        import asyncio
-        asyncio.run(profiling(conv_id, course_id, stage_id))
-    except ValueError:
-        print(f"❌ Error: '{conv_id}' is not a valid UUID")
-        sys.exit(1)
 
