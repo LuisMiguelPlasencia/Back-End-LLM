@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_conversation_messages, get_all_user_scoring_by_company
+from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling
 from ..utils.responses import error
 
 router = APIRouter(prefix="/read", tags=["read"])
@@ -71,6 +71,25 @@ async def get_messages(conversation_id: UUID = Query(..., description="Conversat
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")
 
+@router.get("/userProfiling")
+async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID to get profiling for")):
+    """Get the user profiling score"""
+    try:
+        profiling = await get_user_profiling(user_id)
+        result = {
+            "name": profiling.get('name') or None,
+            "user_id": profiling.get('user_id') or None,
+            "general_score": profiling.get('general_score') or None,
+            "empathy_scoring": profiling.get('empathy_scoring') or None,
+            "negotiation_scoring": profiling.get('negotiation_scoring') or None,
+            "prospection_scoring": profiling.get('prospection_scoring') or None,
+            "resilience_scoring": profiling.get('resilience_scoring') or None,
+            "technical_domain_scoring": profiling.get('technical_domain_scoring') or None
+        }
+        return result
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")
+
 ## Advanced Routes
 ##-------------------------------------------------------------
 @router.get("/allUserScoreByCompany")
@@ -97,5 +116,14 @@ async def get_all_user_conversation_average_scores_by_stage_company(stage_id: st
     try:
         user_scores_list = await get_all_user_conversation_average_scoring_by_stage_company(stage_id, company_id)
         return user_scores_list
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")
+
+@router.get("/allUserProfilingByCompany")
+async def get_all_user_profiling_by_companyAPI(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
+    """Get all user profiling scores for a company"""
+    try:
+        user_profiling_list = await get_all_user_profiling_by_company(company_id)
+        return user_profiling_list
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")

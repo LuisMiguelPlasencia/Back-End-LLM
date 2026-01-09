@@ -142,3 +142,63 @@ async def get_all_user_conversation_average_scoring_by_stage_company(stage_id: s
     except Exception as e:
         print(f"Error fetching user scores for stage_id {stage_id} and company_id {company_id}: {str(e)}")
         return []
+
+async def get_all_user_profiling_by_company(company_id: str) -> List[Dict]:
+    """Get all user profiling scores for a company"""
+    try:
+        query = """
+            SELECT
+                ui."name",
+                ui.user_id,
+                AVG(pbc.empathy_scoring)          AS empathy_scoring,
+                AVG(pbc.negotiation_scoring)      AS negotiation_scoring,
+                AVG(pbc.prospection_scoring)      AS prospection_scoring,
+                AVG(pbc.resilience_scoring)       AS resilience_scoring,
+                AVG(pbc.technical_domain_scoring) AS technical_domain_scoring
+            FROM conversaConfig.user_info ui
+            LEFT JOIN conversaApp.conversations c
+                ON ui.user_id = c.user_id
+            LEFT JOIN conversaApp.profiling_by_conversation pbc
+                ON c.conversation_id = pbc.conversation_id
+            WHERE ui.company_id = $1
+                AND c.status = 'FINISHED'
+            GROUP BY ui.user_id;
+        """
+
+        results = await execute_query(query, company_id)
+        return [dict(row) for row in results]
+    except Exception as e:
+        print(f"Error fetching user profiling scores for company_id {company_id}: {str(e)}")
+        return []
+    
+async def get_user_profiling(user_id: str) -> Dict:
+    """Get all user profiling scores for a company"""
+    try:
+        query = """
+            SELECT
+                ui."name",
+                ui.user_id,
+                up.general_score,
+                AVG(pbc.empathy_scoring)          AS empathy_scoring,
+                AVG(pbc.negotiation_scoring)      AS negotiation_scoring,
+                AVG(pbc.prospection_scoring)      AS prospection_scoring,
+                AVG(pbc.resilience_scoring)       AS resilience_scoring,
+                AVG(pbc.technical_domain_scoring) AS technical_domain_scoring
+            FROM conversaConfig.user_info ui
+            left join conversascoring.user_profile up 
+                on ui.user_id = up.user_id 
+            LEFT JOIN conversaApp.conversations c
+                ON ui.user_id = c.user_id
+            LEFT JOIN conversaApp.profiling_by_conversation pbc
+                ON c.conversation_id = pbc.conversation_id
+            WHERE ui.user_id = $1
+                AND c.status = 'FINISHED'
+            GROUP BY ui.user_id, up.general_score;
+        """
+
+        results = await execute_query(query, user_id)
+        return dict(results[0] if len(results) > 0 else {} )
+    except Exception as e:
+        print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
+        return []
+
