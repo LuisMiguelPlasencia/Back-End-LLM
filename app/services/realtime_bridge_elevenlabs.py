@@ -184,9 +184,10 @@ class RealtimeBridge:
                     await self.frontend_ws.send_text(json.dumps(openai_fmt))
 
                 # --- D. INTERRUPCIÓN ---
-                # ElevenLabs manda "clear_audio" cuando el usuario interrumpe
-                elif el_type == "clear_audio":
+                # ElevenLabs manda "interruption" cuando el usuario interrumpe
+                elif el_type == "interruption":
                     # Enviamos señal equivalente al frontend para limpiar buffer
+                    print("🛑 [Interruption]: Usuario interrumpió, limpiando buffer...")
                     await self.frontend_ws.send_text(json.dumps({"type": "response.audio.clear"}))
 
                 # --- E. DETECCIÓN DE COLGAR (Client Tool) ---
