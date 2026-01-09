@@ -10,18 +10,20 @@ from typing import List, Dict, Optional
 async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
     """Get conversation details for a conversation ID"""
     query = """
-    SELECT conversation_id, start_timestamp, end_timestamp, status, created_at
-    , updated_at, course_id, general_score, fillerwords_scoring, clarity_scoring
-    , participation_scoring, keythemes_scoring, indexofquestions_scoring
-    , rhythm_scoring, fillerwords_feedback, clarity_feedback, participation_feedback
-    , keythemes_feedback, indexofquestions_feedback, rhythm_feedback, is_accomplished
-    FROM conversaApp.conversations
-    WHERE conversation_id = $1
+    SELECT c.conversation_id, c.start_timestamp, c.end_timestamp, c.status, c.created_at
+    , c.updated_at, c.course_id, sbc.general_score, sbc.fillerwords_scoring, sbc.clarity_scoring
+    , sbc.participation_scoring, sbc.keythemes_scoring, sbc.indexofquestions_scoring
+    , sbc.rhythm_scoring, sbc.fillerwords_feedback, sbc.clarity_feedback, sbc.participation_feedback
+    , sbc.keythemes_feedback, sbc.indexofquestions_feedback, sbc.rhythm_feedback, sbc.is_accomplished
+    FROM conversaApp.conversations c
+    LEFT JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+    WHERE c.conversation_id = $1
     ORDER BY start_timestamp DESC
     """
     
     results = await execute_query(query, conversation_id)
     return [dict(row) for row in results]
+
 
 async def get_user_conversations(user_id: UUID) -> List[Dict]:
     """Get all conversations for a user, ordered by start time (newest first)"""
@@ -31,19 +33,19 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
         c.updated_at, c.course_id, 
         mc.name,
         mc.image_src,
-        c.general_score,
-        c.fillerwords_scoring, 
-        c.clarity_scoring, 
-        c.participation_scoring, 
-        c.keythemes_scoring, 
-        c.indexofquestions_scoring, 
-        c.rhythm_scoring, 
+        sbc.general_score,
+        sbc.fillerwords_scoring, 
+        sbc.clarity_scoring, 
+        sbc.participation_scoring, 
+        sbc.keythemes_scoring, 
+        sbc.indexofquestions_scoring, 
+        sbc.rhythm_scoring, 
         c.fillerwords_feedback, 
-        c.clarity_feedback, 
-        c.participation_feedback, 
-        c.keythemes_feedback, 
-        c.indexofquestions_feedback, 
-        c.rhythm_feedback,
+        sbc.clarity_feedback, 
+        sbc.participation_feedback, 
+        sbc.keythemes_feedback, 
+        sbc.indexofquestions_feedback, 
+        sbc.rhythm_feedback,
         m.message_count
     FROM conversaApp.conversations c
     left join conversaconfig.master_courses mc 
@@ -53,6 +55,7 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
         FROM conversaapp.messages
         GROUP BY conversation_id
     ) m ON c.conversation_id = m.conversation_id
+    LEFT JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
     WHERE user_id = $1
     ORDER BY start_timestamp DESC
     """
@@ -66,10 +69,9 @@ async def get_voice_agent(stage_id: UUID) -> Optional[Dict]:
     SELECT voice_id, agent_id
     FROM conversaconfig.course_stages WHERE stage_id = $1
     """
-    results = await execute_query(query, stage_id)
-    if results:
-        return dict(results)
-    return None
+    result = await execute_query(query, stage_id)
+    
+    return result[0] if result else None
 
 async def create_conversation(user_id: UUID, course_id: UUID, stage_id: UUID) -> Optional[Dict]:
     """
@@ -127,24 +129,12 @@ async def set_conversation_scoring(
     conv_id: UUID) -> Optional[str]:
     print('Setting conversation scoring')
     query = """
-    UPDATE conversaapp.conversations
-    SET
-        fillerwords_scoring=$1,
-        clarity_scoring=$2,
-        participation_scoring=$3,
-        keythemes_scoring=$4,
-        indexofquestions_scoring=$5,
-        rhythm_scoring=$6,
-        fillerwords_feedback=$7,
-        clarity_feedback=$8,
-        participation_feedback=$9,
-        keythemes_feedback=$10,
-        indexofquestions_feedback=$11,
-        rhythm_feedback=$12,
-        updated_at=now(),
-        general_score=$13,
-        is_accomplished=$14
-    WHERE conversation_id=$15
+    INSERT INTO conversaapp.scoring_by_conversation
+    (scoring_id, conversation_id, fillerwords_scoring, clarity_scoring, participation_scoring
+    , keythemes_scoring, indexofquestions_scoring, rhythm_scoring, fillerwords_feedback
+    , clarity_feedback, indexofquestions_feedback, participation_feedback, keythemes_feedback,
+     rhythm_feedback, general_score, is_accomplished)
+    VALUES (gen_random_uuid(), $15,$1, $2, $3, $4, $5, $6, $7, $8, $11, $9, $10,  $12, $13, $14)
     """
     row = await execute_query_one(
         query,
@@ -179,20 +169,11 @@ async def set_conversation_profiling(
     conv_id: UUID) -> Optional[str]:
     print('Setting conversation profiling')
     query = """
-    UPDATE conversaapp.conversations
-    SET
-        prospection_scoring=$1,
-        empathy_scoring=$2,
-        technical_domain_scoring=$3,
-        negociation_scoring=$4,
-        resilience_scoring=$5,
-        prospection_feedback=$6,
-        empathy_feedback=$7,
-        technical_domain_feedback=$8,
-        negociation_feedback=$9,
-        resilience_feedback=$10,
-        updated_at=now(),
-    WHERE conversation_id=$11
+    INSERT INTO conversaapp.profiling_by_conversation
+    (profiling_id, conversation_id, prospection_scoring, empathy_scoring, technical_domain_scoring
+    , negotiation_scoring, resilience_scoring, prospection_feedback, empathy_feedback, technical_domain_feedback
+    , negotiation_feedback, resilience_feedback)
+    VALUES (gen_random_uuid(), $11,$1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     """
     row = await execute_query_one(
         query,

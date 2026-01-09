@@ -44,11 +44,12 @@ TRANSCRIPCIÓN:
 {transcript}
 
 INSTRUCCIONES DE FORMATO (IMPORTANTE):
-1. Responde ÚNICAMENTE con un JSON válido.
-2. NO uses bloques de código markdown (```json).
-3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
-4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
-5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+1. Responde en español empleando la segunda persona del singular.
+2. Responde ÚNICAMENTE con un JSON válido.
+3. NO uses bloques de código markdown (```json).
+4. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+5. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+6. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
 El formato exacto es:
 {{
@@ -85,11 +86,12 @@ Presta especial atención a:
 - ¿Usa un lenguaje empático y de comprensión?
 
 INSTRUCCIONES DE FORMATO (IMPORTANTE):
-1. Responde ÚNICAMENTE con un JSON válido.
-2. NO uses bloques de código markdown (```json).
-3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
-4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
-5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+1. Responde en español empleando la segunda persona del singular.
+2. Responde ÚNICAMENTE con un JSON válido.
+3. NO uses bloques de código markdown (```json).
+4. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+5. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+6. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
 El formato exacto es:
 
@@ -126,11 +128,12 @@ Evalúa si el vendedor:
 - Responde con confianza a preguntas técnicas
 
 INSTRUCCIONES DE FORMATO (IMPORTANTE):
-1. Responde ÚNICAMENTE con un JSON válido.
-2. NO uses bloques de código markdown (```json).
-3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
-4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
-5. LONGITUD Y ESTILO: La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+1. Responde en español empleando la segunda persona del singular.
+2. Responde ÚNICAMENTE con un JSON válido.
+3. NO uses bloques de código markdown (```json).
+4. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+5. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+6. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
 El formato exacto es:
 {{

@@ -39,16 +39,32 @@ async def get_key_themes(course_id, stage_id):
     return results['key_themes'] if results else None
 
 def escucha_activa(transcript):
-
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que contar el número de veces en las que el vendedor ha realizado una escucha activa sobre lo que menciona el cliente. Se exigente, puede no haber escuchas activas en una conversacion. Una escucha activa se caracteriza por la repetición o parafraseo de la intervención del otro interlocutor. 
+    Actúa como un "Sales Coach" experto en comunicación. Analiza la interacción para medir la calidad de la escucha del vendedor.
+
+    TU OBJETIVO:
+    Contar cuántas veces el vendedor (tú) demuestra ESCUCHA ACTIVA genuina.
+    
+    CRITERIO DE EXIGENCIA:
+    - NO cuentes simples confirmaciones o muletillas como "sí", "ajá", "vale", "correcto". Eso es escucha pasiva.
+    - Para contar como punto, tuviste que haber REPETIDO o PARAFRASEADO lo que dijo el cliente para confirmar que lo entendiste (ej: "Si te he entendido bien, lo que te preocupa es...").
 
     TRANSCRIPCIÓN:
     {transcript}
 
-    Responde ÚNICAMENTE devolviendo: 
-    - Número de veces que ha habido escucha activa (devuelve un numero entero)
-    - Señales de escucha activa
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde SIEMPRE en español usando la segunda persona del singular (ej: "parafraseaste", "validaste", "repetiste").
+    2. Responde ÚNICAMENTE con un JSON válido.
+    3. NO uses bloques de código markdown.
+    4. Usa COMILLAS SIMPLES para citar texto de la transcripción.
+    5. Escapa comillas dobles internas si es necesario.
+    6. LONGITUD: Máximo 40 palabras. Sé directo.
+
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+    {{
+     "n": "número entero con la cantidad de veces que hiciste escucha activa (parafraseo/validación)",
+     "señales": "Justifica brevemente. Si hubo escucha activa, cita el momento (ej: 'Parafraseaste su queja sobre el precio'). Si la cuenta es 0, explica por qué (ej: 'Solo respondiste con monosílabos sin validar la información')."
+    }}
     """
     output = call_gpt(prompt)
     
@@ -56,13 +72,29 @@ def escucha_activa(transcript):
 
 def proximos_pasos(transcript):
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor al final de la conversación ha establecido o hablado de unos próximos pasos en la interacción con el cliente. Por ejemplo, el vendedor puede intentar agendar una segunda llamada, una prueba del producto o un futuro contacto. Se exigente, puede que el vendedor no mencione nada acerca de próximos pasos. 
+    Actúa como un "Sales Coach" experto en cierres de venta. Analiza el desenlace de esta conversación.
+    
+    TU OBJETIVO:
+    Determinar si el vendedor (al que te dirigirás como "tú") estableció "Próximos Pasos" CONCRETOS antes de colgar.
+    
+    CRITERIO DE EXIGENCIA:
+    Para marcar "true", NO basta con una despedida educada o un vago "ya vamos hablando". 
+    Tuviste que haber propuesto una acción específica: agendar fecha/hora, enviar un presupuesto, programar una demo o definir quién contactará a quién y cuándo. Si no hay compromiso claro, es "false".
+
     TRANSCRIPCIÓN:
     {transcript}
 
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde SIEMPRE en español usando la segunda persona del singular (ej: "propusiste", "agendaste", "olvidaste").
+    2. Responde ÚNICAMENTE con un JSON válido.
+    3. NO uses bloques de código markdown.
+    4. Usa COMILLAS SIMPLES para citar texto de la transcripción.
+    5. "indicador" debe ser un booleano puro (true/false) sin comillas.
+
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
-    {{"indicador": true/false, 
-     "señales": "Indica la intervención en la que el vendedor habla de proximos pasos. Se lo más breve y conciso posible"
+    {{
+     "indicador": true/false, 
+     "señales": "Si es TRUE: Resume qué paso concreto propusiste (ej: 'Propusiste una reunión para el martes'). Si es FALSE: Indica brevemente qué faltó (ej: 'Te despediste sin concretar fecha para el siguiente contacto'). Máximo 40 palabras."
     }}
     """
     output = call_gpt(prompt)
@@ -72,7 +104,13 @@ async def temas_clave(transcript, course_id, stage_id):
     # Fetch key themes for the course/stage; returns a string or None
     key_themes = await get_key_themes(course_id, stage_id)
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, haz lo siguiente: Tienes que identificar si el vendedor habla acerca de los temas clave que te voy a mandar. Se exigente, hablar de un tema clave no implica solamente mencionar dicha palabra, debe haber un pequeño desarrollo. 
+    Actúa como un "Sales Coach" estricto. Estás evaluando el desempeño de un vendedor basándote en la transcripción de su llamada.
+    
+    TU OBJETIVO:
+    Determinar si el vendedor (al que te dirigirás como "tú") cubrió los TEMAS CLAVE obligatorios.
+    
+    CRITERIO DE EXIGENCIA: 
+    Para considerar un tema como "abordado", NO basta con mencionar la palabra clave. Tuviste que haber desarrollado un mínimo argumento sobre ello. Si solo lo mencionaste de pasada, NO cuenta.
 
     TRANSCRIPCIÓN:
     {transcript}
@@ -92,19 +130,31 @@ async def temas_clave(transcript, course_id, stage_id):
 
 def index_of_questions(transcript):
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, haz lo siguiente: Tienes que identificar las preguntas que realiza el vendedor y detectar las preguntas cerradas, preguntas de sondeo/impacto y preguntas irrelevantes. 
+    Actúa como un "Sales Coach" (Entrenador de Ventas) experto. Estás analizando una llamada para darle feedback DIRECTO al vendedor.
+    
+    TU OBJETIVO:
+    Analiza la transcripción adjunta donde participan un "Vendedor" y un cliente. Debes dirigirte al "Vendedor" como "tú". Identifica tus preguntas (las del vendedor) y clasifícalas.
 
     TRANSCRIPCIÓN:
     {transcript}
 
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde SIEMPRE en español empleando la segunda persona del singular (ej: "hiciste", "preguntaste", "deberías").
+    2. NUNCA te refieras al usuario como "el vendedor", refiérete a él como "tú".
+    3. Responde ÚNICAMENTE con un JSON válido.
+    4. NO uses bloques de código markdown (```json).
+    5. Si citas palabras de la transcripción, USA COMILLAS SIMPLES ('ejemplo') para no romper el JSON.
+    6. LONGITUD: Feedback máximo de 2 oraciones o 40 palabras. Directo y al grano.
+
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
     {{
-     "n_total": "numero entero mencionando el numero total de preguntas que hace el vendedor",
-     "n_cerradas": "numero entero mencionando el numero preguntas cerradas que hace el vendedor",
-     "n_sondeo": "numero entero mencionando el numero de preguntas de sondeo que hace el vendedor", 
-     "n_irrelevantes": "numero entero mencionando el numero de preguntas irrelevantes que hace el vendedor"
-     "señales": "Señales donde se identifican los distintos tipos de preguntas que hace el vendedor",
-     "feedback": "Explica como se podrían formular mejores preguntas"}}
+     "n_total": "número entero con el total de preguntas que hiciste (tú, el vendedor)",
+     "n_cerradas": "número entero con tus preguntas cerradas",
+     "n_sondeo": "número entero con tus preguntas de sondeo", 
+     "n_irrelevantes": "número entero con tus preguntas irrelevantes",
+     "señales": "Lista breve de momentos clave donde identificas estos tipos de preguntas",
+     "feedback": "Háblale directamente al vendedor (tú) y explícale qué preguntas sobraron o cómo formular mejor las siguientes para tener más impacto. Sé crítico pero constructivo."
+    }}
     """
     output = call_gpt(prompt)
     
@@ -130,6 +180,13 @@ def objetivo(transcript, objetivo):
     OBJETIVO PRINCIPAL: 
     {objetivo} 
 
+INSTRUCCIONES DE FORMATO (IMPORTANTE):
+1. Responde ÚNICAMENTE con un JSON válido.
+2. NO uses bloques de código markdown (```json).
+3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+5. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+
     RESPONDE ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{"indicador": true/false, 
      "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo... . Se lo más breve y conciso posible'" 
@@ -142,32 +199,73 @@ def objetivo(transcript, objetivo):
     return output
 
 def feedback_muletillas(transcript, ratio_muletilla):
+    # 1. Calculamos la lógica en Python (100% fiable) antes de llamar a la IA
+    if ratio_muletilla > 0.10:
+        nivel = "EXCESIVO"
+        tono = "crítico pero constructivo"
+    elif ratio_muletilla > 0.05:
+        nivel = "MODERADO"
+        tono = "informativo"
+    else:
+        nivel = "BAJO (excelente)"
+        tono = "de felicitación"
+
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor utiliza muletillas 
+    Actúa como un "Speech Coach" experto en oratoria. Estás analizando la fluidez verbal del vendedor.
+    
+    DATOS DEL ANÁLISIS:
+    - Ratio de muletillas medido: {ratio_muletilla:.2f}
+    - Nivel diagnosticado: {nivel}
+    
+    TU OBJETIVO:
+    Identificar en el texto QUÉ muletillas específicas está usando el vendedor (ej: "ehh", "mmm", "estee", "¿vale?", "¿sabes?").
 
     TRANSCRIPCIÓN:
     {transcript}
 
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde SIEMPRE en español usando la segunda persona del singular ("usas", "dices").
+    2. Responde ÚNICAMENTE con un JSON válido.
+    3. NO uses bloques de código markdown.
+    4. Usa COMILLAS SIMPLES para citar las muletillas.
+    5. LONGITUD: Máximo 40 palabras.
+    
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
-     "señales": "Indica la intervención en la que el vendedor usa muletillas. Ejemplo: Ehh, digamos que, mmmm ..."
-     "feedback": "Has utilizado las siguientes muletillas: "señales". El ratio de muletillas respecto al total de palabras es {ratio_muletilla:.2f}, lo cual indica un uso si {ratio_muletilla} > 0.1 'excesivo', 'moderado' si {ratio_muletilla} > 0.05 y < 0.1, 'bajo' si {ratio_muletilla} < 0.05."
+     "señales": "Lista las muletillas literales que encontraste en el texto (ej: 'ehh, mmm, esteee'). Si no hay, pon 'Ninguna'.",
+     "feedback": "Redacta un comentario con tono {tono}. Menciona que su nivel es {nivel} y cita las muletillas encontradas en 'señales'. Recomienda hacer pausas en lugar de emitir sonidos."
     }}
     """
     output = call_gpt(prompt)
     
     return output
-
 def feedback_claridad(transcript):
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar momentos en los que el vendedor no es claro en sus propuestas.
+    Actúa como un "Communication Coach" experto. Estás auditando la claridad del mensaje del vendedor.
+
+    TU OBJETIVO:
+    Detectar si el vendedor (tú) fuiste ambiguo, contradictorio, excesivamente técnico o diste demasiados rodeos al presentar la propuesta.
+
+    CRITERIO DE EXIGENCIA:
+    - Busca momentos donde la explicación se vuelva enredada o circular.
+    - Busca uso de jerga técnica que no se le explica al cliente.
+    - IMPORTANTE: Si la conversación fue clara y directa, NO inventes fallos.
 
     TRANSCRIPCIÓN:
     {transcript}
 
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde SIEMPRE en español usando la segunda persona del singular (ej: "fuiste ambiguo", "explicaste bien").
+    2. Responde ÚNICAMENTE con un JSON válido.
+    3. NO uses bloques de código markdown.
+    4. Usa COMILLAS SIMPLES para citar texto de la transcripción.
+    5. "es_confuso" debe ser un valor booleano (true/false) sin comillas.
+
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
-     "señales": "Indica la intervención en la que el vendedor no es claro en su propuesta. Se lo más breve y conciso posible"
+     "es_confuso": true/false, 
+     "señales": "Si es TRUE: Cita la frase exacta o resume el momento donde se perdió la claridad. Si es FALSE: Pon 'Ninguna'.",
+     "feedback": "Si es TRUE: Explica brevemente cómo simplificar el mensaje (ej: 'Evita tecnicismos y ve al grano'). Si es FALSE: Felicita por la claridad del mensaje."
     }}
     """
     output = call_gpt(prompt)
@@ -176,14 +274,31 @@ def feedback_claridad(transcript):
 
 def feedback_participacion(transcript):
     prompt = f"""
-    Te voy a pasar la transcripcion de una conversación, presta atención a lo siguiente: Tienes que identificar si el vendedor interrumpe al cliente o presenta heuristicas de escucha activa. 
+    Actúa como un "Sales Coach" experto en etiqueta conversacional. 
+    
+    TU OBJETIVO:
+    Detectar si el vendedor (tú) INTERRUMPIÓ al cliente de forma abrupta, cortando su flujo de pensamiento.
+    
+    CRITERIO DE EXIGENCIA:
+    - Diferencia entre un "asentimiento" (cooperativo) y una INTERRUPCIÓN (negativo).
+    - Marca como falta si el cliente estaba hablando y tú entraste a hablar antes de que terminara su idea, pisando su audio.
+    - Si la conversación fue fluida y respetuosa, no inventes interrupciones.
 
     TRANSCRIPCIÓN:
     {transcript}
 
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde SIEMPRE en español usando la segunda persona del singular (ej: "interrumpiste", "cortaste", "respetaste").
+    2. Responde ÚNICAMENTE con un JSON válido.
+    3. NO uses bloques de código markdown.
+    4. Usa COMILLAS SIMPLES para citar texto de la transcripción.
+    5. "hubo_interrupcion" debe ser un booleano (true/false) sin comillas.
+
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
-     "señales": "Indica las señales en la que el vendedor interrumpe al cliente o presenta heuristicas de escucha activa. Se breve"
+     "hubo_interrupcion": true/false,
+     "señales": "Si es TRUE: Cita el momento exacto donde cortaste al cliente (ej: 'El cliente decía X y lo cortaste diciendo Y'). Si es FALSE: Pon 'Ninguna'.",
+     "feedback": "Si es TRUE: Aconseja dejar terminar las frases (ej: 'Deja que el cliente termine antes de rebatir'). Si es FALSE: Felicita por respetar los turnos de palabra."
     }}
     """
     output = call_gpt(prompt)
