@@ -13,7 +13,9 @@ from wordfreq import zipf_frequency
 import pandas as pd
 import time
 from app.services.courses_service import get_courses_details
+from app.services.db import execute_query, execute_query_one
 import json
+import asyncio
 
 sys.path.insert(0, "../../src")
 load_dotenv()
@@ -28,6 +30,13 @@ def call_gpt(prompt: str, model="gpt-4.1-nano-2025-04-14") -> str:
         
     )
     return response.output_text
+
+async def get_key_themes(course_id, stage_id):
+    query = """ 
+    SELECT key_themes FROM conversaconfig.course_stages WHERE course_id = $1 AND stage_id = $2
+    """
+    results = await execute_query_one(query, course_id, stage_id)
+    return results['key_themes'] if results else None
 
 def escucha_activa(transcript):
 
@@ -59,7 +68,9 @@ def proximos_pasos(transcript):
     output = call_gpt(prompt)
     return output
 
-def temas_clave(transcript, temas_clave="Precio, Seguridad, capacidad maletero, plazas, combustible y llantas"): #"Precio (que nuestro precio está por debajo de la competencia), Seguridad (Hemos ganado premios de seguridad), Espacio (somos el único vehículo con 5 asientos), combustible (hablar de que consume menos de 5L por cada 100km), capacidad maletero (mayor que la media de la competencia), llantas (modelo muy atractivo)"
+async def temas_clave(transcript, course_id, stage_id):
+    # Fetch key themes for the course/stage; returns a string or None
+    key_themes = await get_key_themes(course_id, stage_id)
     prompt = f"""
     Te voy a pasar la transcripcion de una conversación, haz lo siguiente: Tienes que identificar si el vendedor habla acerca de los temas clave que te voy a mandar. Se exigente, hablar de un tema clave no implica solamente mencionar dicha palabra, debe haber un pequeño desarrollo. 
 
@@ -67,10 +78,11 @@ def temas_clave(transcript, temas_clave="Precio, Seguridad, capacidad maletero, 
     {transcript}
 
     TEMAS CLAVE: 
-    {temas_clave}
+    {key_themes}
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
-    {{"n": "numero entero mencionando el numero de temas clave abordados", 
+    {{"n_temas_abordados": "numero entero mencionando el numero de temas clave abordados",
+      "n_temas_olvidados": "numero entero mencionando el numero de temas clave olvidados",
      "señales": "Señales donde se identifican temas claves abordados. Se lo más breve y conciso posible",
      "feedback": "Temas claves que no se han abordado. Se lo más breve y conciso posible"}}
     """
@@ -397,21 +409,20 @@ def calcular_participacion_dinamica(transcript):
     }
 
 ### Cobertura de temas y palabras clave
-def calcular_cobertura_temas_json(transcript,num_temas=6):
+async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
 
     penalizacion = 0
     bonificacion = 0
 
     ## Detector de palabras clave con GPT
     # INSERT_YOUR_CODE
-    gpt_temas_clave = json.loads(temas_clave(transcript))
+    gpt_temas_clave = json.loads(await temas_clave(transcript, course_id, stage_id))
 
-    num_temas_abordados = gpt_temas_clave['n']
+    num_temas_olvidados = gpt_temas_clave['n_temas_olvidados']
     señales_temas = gpt_temas_clave['señales']
     feedback_temas_clave = gpt_temas_clave.get('feedback')
 
     # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
-    num_temas_olvidados = num_temas - num_temas_abordados
     penalizacion += num_temas_olvidados*20
 
     ## Detector de proximos pasos con GPT
@@ -670,7 +681,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
         res_muletillas = calcular_muletillas(transcript)
         res_claridad = calcular_claridad(transcript)
         res_participacion = calcular_participacion_dinamica(transcript)
-        res_cobertura = calcular_cobertura_temas_json(transcript)
+        res_cobertura = await calcular_cobertura_temas_json(transcript, course_id, stage_id)
         res_preguntas = calcular_indice_preguntas(transcript)
         res_ppm = calcular_ppm_variabilidad(transcript) 
 
@@ -717,7 +728,8 @@ async def get_conver_scores(transcript, course_id, stage_id):
     }
 
 if __name__ == "__main__":
-    transcript_demo = [
+    async def main():
+        transcript_demo = [
     {
         "speaker": "vendedor", 
         "text": "Hola, buenas tardes. Bienvenido a nuestra exposición virtual, eh... mi nombre es Carlos. Veo que se ha interesado justo por el nuevo Conversa XL a través de la web. Tiene buen ojo, es la unidad que acabamos de recibir esta misma mañana y ya está disponible para reserva inmediata.", 
@@ -802,44 +814,51 @@ if __name__ == "__main__":
         "speaker": "vendedor", 
         "text": "¡Fantástico! Le acabo de enviar un enlace seguro a su correo. Solo tiene que subir una foto de su DNI y completar el formulario de la financiera. En cuanto lo reciba, bloqueamos el coche para usted y empezamos con la gestión del envío.", 
         "duracion": 25
-    }]
+        }]
+        key_themes = await get_key_themes('3eeeda53-7dff-40bc-b036-b608acb89e6f', '1cbbf136-4e7e-49d9-9dec-402d4179bd66')
+        print(key_themes)
+        # Evaluaciones individuales
 
-    # Evaluaciones individuales
+        res_muletillas = calcular_muletillas(transcript_demo)
+        print("\n" + "="*50)
+        print("MULETILLAS Y PAUSAS")
+        print("="*50)
+        print(res_muletillas)
 
-    res_muletillas = calcular_muletillas(transcript_demo)
-    print("\n" + "="*50)
-    print("MULETILLAS Y PAUSAS")
-    print("="*50)
-    print(res_muletillas)
+        res_claridad = calcular_claridad(transcript_demo)
+        print("\n" + "="*50)
+        print("CLARIDAD")
+        print("="*50)
+        print(res_claridad)
 
-    res_claridad = calcular_claridad(transcript_demo)
-    print("\n" + "="*50)
-    print("CLARIDAD")
-    print("="*50)
-    print(res_claridad)
+        res_participacion = calcular_participacion_dinamica(transcript_demo)
+        print("\n" + "="*50)
+        print("PARTICIPACIÓN Y DINÁMICA")
+        print("="*50)
+        print(res_participacion)
 
-    res_participacion = calcular_participacion_dinamica(transcript_demo)
-    print("\n" + "="*50)
-    print("PARTICIPACIÓN Y DINÁMICA")
-    print("="*50)
-    print(res_participacion)
+        res_cobertura = await calcular_cobertura_temas_json(
+            transcript_demo,
+            '3eeeda53-7dff-40bc-b036-b608acb89e6f',
+            '1cbbf136-4e7e-49d9-9dec-402d4179bd66'
+        )
+        print("\n" + "="*50)
+        print("COBERTURA DE TEMAS")
+        print("="*50)
+        print(res_cobertura)
 
-    res_cobertura = calcular_cobertura_temas_json(transcript_demo)
-    print("\n" + "="*50)
-    print("COBERTURA DE TEMAS")
-    print("="*50)
-    print(res_cobertura)
+        res_preguntas = calcular_indice_preguntas(transcript_demo)
+        print("\n" + "="*50)
+        print("ÍNDICE DE PREGUNTAS")
+        print("="*50)
+        print(res_preguntas)
 
-    res_preguntas = calcular_indice_preguntas(transcript_demo)
-    print("\n" + "="*50)
-    print("ÍNDICE DE PREGUNTAS")
-    print("="*50)
-    print(res_preguntas)
+        res_ppm = calcular_ppm_variabilidad(transcript_demo)
+        print("\n" + "="*50)
+        print("PPM Y VARIABILIDAD")
+        print("="*50)
+        print(res_ppm)
+        
+        print("\n" + "="*50)
 
-    res_ppm = calcular_ppm_variabilidad(transcript_demo)
-    print("\n" + "="*50)
-    print("PPM Y VARIABILIDAD")
-    print("="*50)
-    print(res_ppm)
-    
-    print("\n" + "="*50)
+    asyncio.run(main())
