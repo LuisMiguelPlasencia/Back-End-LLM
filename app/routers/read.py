@@ -85,22 +85,17 @@ async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID 
         if isinstance(profiling, list):
             profiling = {}
         
-        MULTIPLIER = 20  
-        def apply_multiplier(value):
-            if value is not None:
-                return round(float(value) * MULTIPLIER, 2)
-            return None
         # 3. Now 'profiling' is guaranteed to be a dictionary, so .get() will work
         result = {
             "name": profiling.get('name') or None,
             "user_id": profiling.get('user_id') or user_id, # Fallback to input user_id
-            "general_score": apply_multiplier(profiling.get('general_score')),
+            "general_score": profiling.get('general_score') or None,
             "profile_type": profiling.get('profile_type') or None,
-            "empathy_scoring": apply_multiplier(profiling.get('empathy_scoring')),
-            "negotiation_scoring": apply_multiplier(profiling.get('negotiation_scoring')),
-            "prospection_scoring": apply_multiplier(profiling.get('prospection_scoring')),
-            "resilience_scoring": apply_multiplier(profiling.get('resilience_scoring')),
-            "technical_domain_scoring": apply_multiplier(profiling.get('technical_domain_scoring'))
+            "empathy_scoring": profiling.get('empathy_scoring') or None,
+            "negotiation_scoring": profiling.get('negotiation_scoring') or None,
+            "prospection_scoring": profiling.get('prospection_scoring') or None,
+            "resilience_scoring": profiling.get('resilience_scoring') or None,
+            "technical_domain_scoring": profiling.get('technical_domain_scoring') or None
         }
         return result
         

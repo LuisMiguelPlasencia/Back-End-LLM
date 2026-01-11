@@ -151,11 +151,11 @@ async def get_all_user_profiling_by_company(company_id: str) -> List[Dict]:
             SELECT
                 ui."name",
                 ui.user_id,
-                20*ROUND(AVG(pbc.empathy_scoring),2)          AS empathy_scoring,
-                20*ROUND(AVG(pbc.negotiation_scoring),2)      AS negotiation_scoring,
-                20*ROUND(AVG(pbc.prospection_scoring),2)      AS prospection_scoring,
-                20*ROUND(AVG(pbc.resilience_scoring),2)       AS resilience_scoring,
-                20*ROUND(AVG(pbc.technical_domain_scoring),2) AS technical_domain_scoring
+                ROUND(AVG(pbc.empathy_scoring),2)          AS empathy_scoring,
+                ROUND(AVG(pbc.negotiation_scoring),2)      AS negotiation_scoring,
+                ROUND(AVG(pbc.prospection_scoring),2)      AS prospection_scoring,
+                ROUND(AVG(pbc.resilience_scoring),2)       AS resilience_scoring,
+                ROUND(AVG(pbc.technical_domain_scoring),2) AS technical_domain_scoring
             FROM conversaConfig.user_info ui
             LEFT JOIN conversaApp.conversations c
                 ON ui.user_id = c.user_id
