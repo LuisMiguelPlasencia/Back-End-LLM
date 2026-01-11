@@ -130,7 +130,7 @@ class RealtimeBridge:
                 elif msg_type == "input_audio_session.end":
                     print("🔴 Session ended by user")
                     await self.stop()
-                    continue
+                    return
 
                 # --- 3. AUDIO DEL USUARIO ---
                 # OpenAI envía: { "type": "input_audio_buffer.append", "audio": "BASE64..." }
@@ -233,6 +233,11 @@ class RealtimeBridge:
                     # Avisar al frontend que la llamada terminó
                     await self.frontend_ws.send_text(json.dumps({"type": "call.end"}))
                     await self.stop()
+            print("📞 [End Call]: La conexión fue cerrada por ElevenLabs (Agent Hangup).")
+            # Avisar al frontend que la llamada terminó
+            await self.frontend_ws.send_text(json.dumps({"type": "call.end"}))
+            
+            await self.stop()
         
         except Exception as e:
             print(f"⚠️ WebSocket information Elevenlabs to Front: {e}")
@@ -267,7 +272,7 @@ class RealtimeBridge:
             if self.eleven_ws:
                 await self.eleven_ws.close()
             if self.frontend_ws:
-                # Opcional: Cerrar socket del front o dejar que el cliente lo maneje
-                pass
+                await self.frontend_ws.close()
+
         except Exception as e:
             print(f"Error closing sockets: {e}")
