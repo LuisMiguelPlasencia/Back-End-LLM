@@ -5,6 +5,7 @@ import json
 from app.services.conversations_service import close_conversation, get_conversation_status
 from app.services.scoring_service import scoring
 from app.services.profiling_service import profiling
+from scoring_scripts.get_user_profile import user_clasiffier
 
 async def stop_process(user_id, conversation_id, frontend_ws, course_id, stage_id, conversation_id_elevenlabs, agent_id):
 
@@ -12,6 +13,7 @@ async def stop_process(user_id, conversation_id, frontend_ws, course_id, stage_i
     ## scoring conversation if conver finished
     await scoring(conversation_id, course_id, stage_id)
     await profiling(conversation_id, course_id, stage_id)
+    await user_clasiffier(user_id)
     # notify frontend that conversation is closed and scored
     await frontend_ws.send_text(json.dumps({"type": "conversation.scoring.completed", "conversation_id": str(conversation_id)}))
 

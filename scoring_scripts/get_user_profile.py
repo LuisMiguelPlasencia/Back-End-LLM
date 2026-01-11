@@ -1,5 +1,6 @@
 import math
-
+from app.services.conversations_service import set_user_profile
+from app.services.messages_service import get_user_profiling
 # 1. Definimos los profilees base con sus "notas numéricas"
 # (usamos escala: Bajo=1, Medio-Bajo=2, Medio=3, Medio-Alto=4, Alto=5)
 profiles = {
@@ -15,15 +16,26 @@ profiles = {
     "Emprendedor": {"prospection": 5, "empathy": 3, "technical_domain": 2, "negociation": 3, "resilience": 3}
 }
 
-def user_clasiffier(prospection, empathy, technical_domain, negociation, resilience):
+async def user_clasiffier(user_id):
     """Clasifica un vendedor al profile más cercano basado en distancia euclidiana."""
+    
+    profiling = await get_user_profiling(user_id)
     input_vector = {
-        "prospection": prospection,
-        "empathy": empathy,
-        "technical_domain": technical_domain,
-        "negociation": negociation,
-        "resilience": resilience
-    }
+            "prospection": profiling.get('prospection_scoring') or None,
+            "empathy": profiling.get('empathy_scoring') or None,
+            "technical_domain": profiling.get('technical_domain_scoring') or None,
+            "negociation": profiling.get('negotiation_scoring') or None,
+            "resilience": profiling.get('resilience_scoring') or None,
+        }
+    # Obtenemos los valores numéricos del vector
+    valores_scores = list(input_vector.values())
+    
+    if len(valores_scores) > 0:
+        general_score = sum(valores_scores) / len(valores_scores)
+    else:
+        general_score = 0
+     
+    general_score = round(general_score, 2)
     
     best_profile = None
     menor_distancia = float("inf")
@@ -35,6 +47,6 @@ def user_clasiffier(prospection, empathy, technical_domain, negociation, resilie
         if dist < menor_distancia:
             menor_distancia = dist
             best_profile = profile
-    
-    return best_profile
+
+    await set_user_profile(profiling.get('user_id'), general_score, best_profile)
 

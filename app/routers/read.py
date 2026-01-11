@@ -5,7 +5,7 @@
 # curl "http://localhost:8000/read/conversation?user_id=123e4567-e89b-12d3-a456-426614174000"
 # curl "http://localhost:8000/read/messages?conversation_id=123e4567-e89b-12d3-a456-426614174000"
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
@@ -75,11 +75,22 @@ async def get_messages(conversation_id: UUID = Query(..., description="Conversat
 async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID to get profiling for")):
     """Get the user profiling score"""
     try:
+        # 1. Get the data. Based on your function:
+        # - Success (found): returns a dict {...}
+        # - Success (not found): returns empty dict {}
+        # - Error (exception): returns empty list []
         profiling = await get_user_profiling(user_id)
+        
+        # 2. Safety check: Handle the case where the DB function returned a list (the error case)
+        if isinstance(profiling, list):
+            profiling = {}
+            
+        # 3. Now 'profiling' is guaranteed to be a dictionary, so .get() will work
         result = {
             "name": profiling.get('name') or None,
-            "user_id": profiling.get('user_id') or None,
+            "user_id": profiling.get('user_id') or user_id, # Fallback to input user_id
             "general_score": profiling.get('general_score') or None,
+            "profile_type": profiling.get('profile_type') or None,
             "empathy_scoring": profiling.get('empathy_scoring') or None,
             "negotiation_scoring": profiling.get('negotiation_scoring') or None,
             "prospection_scoring": profiling.get('prospection_scoring') or None,
@@ -87,9 +98,11 @@ async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID 
             "technical_domain_scoring": profiling.get('technical_domain_scoring') or None
         }
         return result
+        
     except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
+        # Log the error and return a 500 response
+        print(f"API Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling: {str(e)}")
 ## Advanced Routes
 ##-------------------------------------------------------------
 @router.get("/allUserScoreByCompany")

@@ -6,6 +6,7 @@ from .db import execute_query, execute_query_one
 from uuid import UUID
 from typing import List, Dict, Optional, Tuple
 
+
 async def get_conversation_messages(conversation_id: UUID) -> List[Dict]:
     """Get all messages for a conversation, ordered by creation time"""
     query = """
@@ -179,6 +180,7 @@ async def get_user_profiling(user_id: str) -> Dict:
                 ui."name",
                 ui.user_id,
                 up.general_score,
+                up.profile_type,
                 AVG(pbc.empathy_scoring)          AS empathy_scoring,
                 AVG(pbc.negotiation_scoring)      AS negotiation_scoring,
                 AVG(pbc.prospection_scoring)      AS prospection_scoring,
@@ -193,7 +195,7 @@ async def get_user_profiling(user_id: str) -> Dict:
                 ON c.conversation_id = pbc.conversation_id
             WHERE ui.user_id = $1
                 AND c.status = 'FINISHED'
-            GROUP BY ui.user_id, up.general_score;
+            GROUP BY ui.user_id, up.general_score, up.profile_type;
         """
 
         results = await execute_query(query, user_id)

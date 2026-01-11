@@ -189,3 +189,28 @@ async def set_conversation_profiling(
         resilience_feedback,
         conv_id,  # UUID ok
     )
+
+async def set_user_profile(
+    user_id: UUID, 
+    general_score: float,  
+    profile_type: str
+) -> Optional[str]:
+    print(f'Setting user profile for user {user_id}')
+    
+    query = """
+    INSERT INTO conversascoring.user_profile
+    (user_id, event_timestamp, general_score, profile_type)
+    VALUES ($1, NOW(), $2, $3)
+    ON CONFLICT (user_id) 
+    DO UPDATE SET
+        event_timestamp = NOW(),
+        general_score = EXCLUDED.general_score,
+        profile_type = EXCLUDED.profile_type;
+    """
+
+    row = await execute_query_one(
+        query,
+        user_id,
+        general_score,
+        profile_type
+    )
