@@ -48,11 +48,13 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             ui.company_id,
             ui.user_type,
             ui.avatar,
-            COALESCE(AVG(c.general_score), 0) AS score
+            COALESCE(AVG(sbc.general_score), 0) AS score
         FROM 
             conversaconfig.user_info ui
             LEFT JOIN conversaapp.conversations c
                 ON c.user_id = ui.user_id and c.status = 'FINISHED'
+            LEFT JOIN conversaapp.scoring_by_conversation sbc 
+                ON c.conversation_id = sbc.conversation_id
         WHERE 
             ui.company_id = $1 AND ui.is_active = true
         GROUP BY 
@@ -79,27 +81,29 @@ async def get_all_user_conversation_scoring_by_stage_company(stage_id: str, comp
                 ui.avatar,
                 c.stage_id,
                 c.status,
-                c.general_score,
-                c.fillerwords_scoring,
-                c.clarity_scoring,
-                c.participation_scoring,
-                c.keythemes_scoring,
-                c.indexofquestions_scoring,
-                c.rhythm_scoring,
-                c.fillerwords_feedback,
-                c.clarity_feedback,
-                c.participation_feedback,
-                c.keythemes_feedback,
-                c.indexofquestions_feedback,
-                c.rhythm_feedback
+                sbc.general_score,
+                sbc.fillerwords_scoring,
+                sbc.clarity_scoring,
+                sbc.participation_scoring,
+                sbc.keythemes_scoring,
+                sbc.indexofquestions_scoring,
+                sbc.rhythm_scoring,
+                sbc.fillerwords_feedback,
+                sbc.clarity_feedback,
+                sbc.participation_feedback,
+                sbc.keythemes_feedback,
+                sbc.indexofquestions_feedback,
+                sbc.rhythm_feedback
             FROM conversaconfig.user_info ui
             LEFT JOIN conversaapp.conversations c
                 ON c.user_id = ui.user_id
+            LEFT JOIN conversaapp.scoring_by_conversation sbc 
+                ON c.conversation_id = sbc.conversation_id
             AND c.status = 'FINISHED'
             AND c.stage_id = $1
             WHERE ui.company_id = $2
             AND ui.is_active = true
-            ORDER BY ui.user_id, c.general_score DESC NULLS LAST;
+            ORDER BY ui.user_id, sbc.general_score DESC NULLS LAST;
         """
 
         results = await execute_query(query, stage_id, company_id)
