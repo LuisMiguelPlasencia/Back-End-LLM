@@ -154,7 +154,7 @@ class RealtimeBridge:
                     pass
 
         except Exception as e:
-            print(f"⚠️ Frontend WebSocket loop error: {e}")
+            print(f"⚠️ WebSocket information Front to Elevenlabs: {e}")
             await self.stop()
 
     async def forward_elevenlabs_to_frontend(self):
@@ -169,18 +169,6 @@ class RealtimeBridge:
                 if el_type == "audio":
                     chunk = data["audio_event"]["audio_base_64"]
                     if chunk:
-                        # now = time.time()
-
-                        # if self.bot_turn_start_ts is None:
-                        #     self.bot_turn_start_ts = now
-                        #     print("🤖 Bot turn START")
-
-                        #     # response latency (optional)
-                        #     if self.user_turn_end_ts:
-                        #         latency = self.bot_turn_start_ts - self.user_turn_end_ts
-                        #         print(f"⚡ Response latency: {latency:.2f}s")
-
-                        # self.last_bot_audio_ts = now
 
                         # Simulamos el paquete de OpenAI "response.audio.delta"
                         openai_fmt = {
@@ -223,19 +211,7 @@ class RealtimeBridge:
                 elif el_type == "agent_response":
                     text = data["agent_response_event"]["agent_response"]
                     print(f"🤖 [AI]: {text}")
-
-                    # now = time.time()
-                    # self.bot_turn_end_ts = now
                     duration = None
-
-                    # if self.bot_turn_start_ts:
-                    #     duration = self.bot_turn_end_ts - self.bot_turn_start_ts
-                    #     print(f"🤖 Bot turn END | duration={duration:.2f}s")
-
-                    # # reset
-                    # self.bot_turn_start_ts = None
-                    # self.last_bot_audio_ts = None
-                    
                     # Guardar en DB
                     await send_message(self.user_id, self.conversation_id, text, "assistant", duration)
                     
@@ -245,7 +221,6 @@ class RealtimeBridge:
                         "transcript": text
                     }
                     await self.frontend_ws.send_text(json.dumps(openai_fmt))
-
                 # --- D. INTERRUPCIÓN ---
                 # ElevenLabs manda "interruption" cuando el usuario interrumpe
                 elif el_type == "interruption":
@@ -253,17 +228,14 @@ class RealtimeBridge:
                     print("🛑 [Interruption]: Usuario interrumpió, limpiando buffer...")
                     await self.frontend_ws.send_text(json.dumps({"type": "response.audio.clear"}))
 
-                # --- E. DETECCIÓN DE COLGAR (Client Tool) ---
-                elif el_type == "client_tool_call":
-                    tool_name = data.get("client_tool_call", {}).get("tool_name")
-                    if tool_name == "end_call":
-                        print("📞 ElevenLabs requested end call.")
-                        # Esperamos un poco para que termine de hablar antes de cortar
-                        await asyncio.sleep(2)
-                        await self.stop()
-
+                elif el_type == "end_call":
+                    print("📞 [End Call]: La conexión fue cerrada por ElevenLabs (Agent Hangup).")
+                    # Avisar al frontend que la llamada terminó
+                    await self.frontend_ws.send_text(json.dumps({"type": "call.end"}))
+                    await self.stop()
+        
         except Exception as e:
-            print(f"⚠️ ElevenLabs stream loop error: {e}")
+            print(f"⚠️ WebSocket information Elevenlabs to Front: {e}")
             await self.stop()
 
     async def run(self):
