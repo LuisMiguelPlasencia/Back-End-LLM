@@ -151,11 +151,11 @@ async def get_all_user_profiling_by_company(company_id: str) -> List[Dict]:
             SELECT
                 ui."name",
                 ui.user_id,
-                AVG(pbc.empathy_scoring)          AS empathy_scoring,
-                AVG(pbc.negotiation_scoring)      AS negotiation_scoring,
-                AVG(pbc.prospection_scoring)      AS prospection_scoring,
-                AVG(pbc.resilience_scoring)       AS resilience_scoring,
-                AVG(pbc.technical_domain_scoring) AS technical_domain_scoring
+                ROUND(AVG(pbc.empathy_scoring),2)          AS empathy_scoring,
+                ROUND(AVG(pbc.negotiation_scoring),2)      AS negotiation_scoring,
+                ROUND(AVG(pbc.prospection_scoring),2)      AS prospection_scoring,
+                ROUND(AVG(pbc.resilience_scoring),2)       AS resilience_scoring,
+                ROUND(AVG(pbc.technical_domain_scoring),2) AS technical_domain_scoring
             FROM conversaConfig.user_info ui
             LEFT JOIN conversaApp.conversations c
                 ON ui.user_id = c.user_id
@@ -181,11 +181,11 @@ async def get_user_profiling(user_id: str) -> Dict:
                 ui.user_id,
                 up.general_score,
                 up.profile_type,
-                AVG(pbc.empathy_scoring)          AS empathy_scoring,
-                AVG(pbc.negotiation_scoring)      AS negotiation_scoring,
-                AVG(pbc.prospection_scoring)      AS prospection_scoring,
-                AVG(pbc.resilience_scoring)       AS resilience_scoring,
-                AVG(pbc.technical_domain_scoring) AS technical_domain_scoring
+                ROUND(AVG(pbc.empathy_scoring),2)          AS empathy_scoring,
+                ROUND(AVG(pbc.negotiation_scoring),2)      AS negotiation_scoring,
+                ROUND(AVG(pbc.prospection_scoring),2)      AS prospection_scoring,
+                ROUND(AVG(pbc.resilience_scoring),2)       AS resilience_scoring,
+                ROUND(AVG(pbc.technical_domain_scoring),2) AS technical_domain_scoring
             FROM conversaConfig.user_info ui
             left join conversascoring.user_profile up 
                 on ui.user_id = up.user_id 
