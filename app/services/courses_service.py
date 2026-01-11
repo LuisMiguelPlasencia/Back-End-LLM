@@ -26,46 +26,46 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
     # Ordering by course_id first is crucial for efficient grouping.
     query = """
         SELECT 
-            mc.course_id,
-            mc.name,
-            mc.description,
-            mc.image_src,
-            mc.created_on,
-            cs.stage_id,
-            cs.stage_name,
-            cs.stage_description,
-            cs.stage_order,
-            cs.stage_objectives,
-            CASE 
-                WHEN (c.conversation_id IS NOT NULL AND c.status = 'FINISHED') 
-                THEN cs.stage_order 
-                ELSE 0 
-            END AS stage_progress
-        FROM conversaconfig.master_courses mc
-        JOIN conversaConfig.user_type_relations utr ON mc.course_id = utr.course_id
-        LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
-        LEFT JOIN (
-            SELECT 
-                course_id,
-                stage_id,
-                status,
-                conversation_id,
-                ROW_NUMBER() OVER (
-                    PARTITION BY course_id, stage_id 
-                    ORDER BY 
-                        -- 1. Prioridad: Estado FINISHED primero
-                        CASE WHEN status = 'FINISHED' THEN 0 ELSE 1 END ASC, 
-                        -- 2. Prioridad: Fecha más reciente 
-                        created_at DESC
-                ) as rn
-            FROM conversaapp.conversations
-            WHERE user_id = $1
-        ) c ON c.course_id = mc.course_id 
-        AND c.stage_id = cs.stage_id 
-        AND c.rn = 1 
-        WHERE mc.is_active 
-        AND utr.user_type = (SELECT user_type FROM conversaConfig.user_info WHERE user_id = $1)
-        ORDER BY mc.created_on DESC, cs.stage_order ASC;
+    mc.course_id,
+    mc.name,
+    mc.description,
+    mc.image_src,
+    mc.created_on,
+    uca.estimated_completion_date,
+    uca.is_mandatory, 
+    cs.stage_id,
+    cs.stage_name,
+    cs.stage_description,
+    cs.stage_order,
+    cs.stage_objectives,
+    CASE 
+        WHEN (c.conversation_id IS NOT NULL AND c.status = 'FINISHED') 
+        THEN cs.stage_order 
+        ELSE 0 
+    END AS stage_progress
+FROM conversaconfig.user_course_assignments uca 
+JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
+LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
+LEFT JOIN (
+    SELECT 
+        course_id,
+        stage_id,
+        status,
+        conversation_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY course_id, stage_id 
+            ORDER BY 
+                CASE WHEN status = 'FINISHED' THEN 0 ELSE 1 END ASC, 
+                created_at DESC
+        ) as rn
+    FROM conversaapp.conversations
+    WHERE user_id = $1
+) c ON c.course_id = mc.course_id 
+   AND c.stage_id = cs.stage_id 
+   AND c.rn = 1 
+WHERE uca.user_id = $1  
+  AND mc.is_active 
+ORDER BY uca.estimated_completion_date ASC, cs.stage_order ASC;
     """
     
     results = await execute_query(query, user_id)
@@ -83,6 +83,8 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "description": row['description'],
                 "image_src": row['image_src'],
                 "created_on":row['created_on'],
+                "is_mandatory": row['is_mandatory'],
+                "estimated_completion_date":row['estimated_completion_date'],
                 "progress": 0, # Default value, updated below
                 "stages": []
             }
@@ -97,7 +99,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "stage_id": row['stage_id'],
                 "stage_name": row['stage_name'],
                 "stage_description": row['stage_description'],
-                "stage_order": row['stage_order']
+                "stage_order": row['stage_order'],
             })
 
     return list(courses_map.values())
