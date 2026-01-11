@@ -1,6 +1,8 @@
 # this program will be imported in realtime_bridge and added to the stop() method (????)
 
 import asyncio
+import base64
+import numpy as np
 import json
 from app.services.conversations_service import close_conversation, get_conversation_status
 from app.services.scoring_service import scoring
@@ -25,4 +27,7 @@ async def user_msg_processed(user_id, conversation_id):
     # placeholder for any processing needed when user message is sent to OpenAI
     pass
 
-
+def is_non_silent(audio_b64, threshold=0.01):
+    pcm = np.frombuffer(base64.b64decode(audio_b64), dtype=np.int16)
+    rms = np.sqrt(np.mean((pcm / 32768.0) ** 2))
+    return rms > threshold

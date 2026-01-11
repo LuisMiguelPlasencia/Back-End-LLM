@@ -122,7 +122,7 @@ async def temas_clave(transcript, course_id, stage_id):
     {{"n_temas_abordados": "numero entero mencionando el numero de temas clave abordados",
       "n_temas_olvidados": "numero entero mencionando el numero de temas clave olvidados",
      "señales": "Señales donde se identifican temas claves abordados. Se lo más breve y conciso posible",
-     "feedback": "Temas claves que no se han abordado. Se lo más breve y conciso posible"}}
+     "feedback": "Temas claves que no se han abordado. Se lo más breve y conciso posible. Habla en segunda persona."}}
     """
     output = call_gpt(prompt)
     
@@ -153,7 +153,7 @@ def index_of_questions(transcript):
      "n_sondeo": "número entero con tus preguntas de sondeo", 
      "n_irrelevantes": "número entero con tus preguntas irrelevantes",
      "señales": "Lista breve de momentos clave donde identificas estos tipos de preguntas",
-     "feedback": "Háblale directamente al vendedor (tú) y explícale qué preguntas sobraron o cómo formular mejor las siguientes para tener más impacto. Sé crítico pero constructivo."
+     "feedback": "Háblale directamente al vendedor (tú) y explícale qué preguntas sobraron o cómo formular mejor las siguientes para tener más impacto. Sé crítico pero constructivo. Usa ejemplos concretos."
     }}
     """
     output = call_gpt(prompt)
@@ -161,8 +161,6 @@ def index_of_questions(transcript):
     return output
 
 def objetivo(transcript, objetivo):
-
-
     prompt = f"""
     Vas a analizar la transcripción de una conversación comercial entre un vendedor y un cliente.
     Tu tarea es evaluar exclusivamente si el vendedor logra cumplir el OBJETIVO PRINCIPAL, basándote únicamente en lo que está explícitamente dicho en la transcripción.
@@ -180,25 +178,27 @@ def objetivo(transcript, objetivo):
     OBJETIVO PRINCIPAL: 
     {objetivo} 
 
-INSTRUCCIONES DE FORMATO (IMPORTANTE):
-1. Responde ÚNICAMENTE con un JSON válido.
-2. NO uses bloques de código markdown (```json).
-3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
-4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
-5. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    1. Responde ÚNICAMENTE con un JSON válido.
+    2. NO uses bloques de código markdown (```json).
+    3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
+    4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
+    5. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
 
-    RESPONDE ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
-    {{"indicador": true/false, 
-     "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo... . Se lo más breve y conciso posible'" 
-    }}
-    """
+        RESPONDE ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
+        {{"indicador": true/false, 
+        "señales": "Indica la intervención en la que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo... . Se lo más breve y conciso posible'. Habla en segunda persona." 
+        }}
+        """
 
     #print(prompt)
     output = call_gpt(prompt)
     
     return output
 
-def feedback_muletillas(transcript, ratio_muletilla):
+def feedback_muletillas(transcript, ratio_muletilla): 
+
+
     # 1. Calculamos la lógica en Python (100% fiable) antes de llamar a la IA
     if ratio_muletilla > 0.10:
         nivel = "EXCESIVO"
@@ -233,12 +233,13 @@ def feedback_muletillas(transcript, ratio_muletilla):
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
      "señales": "Lista las muletillas literales que encontraste en el texto (ej: 'ehh, mmm, esteee'). Si no hay, pon 'Ninguna'.",
-     "feedback": "Redacta un comentario con tono {tono}. Menciona que su nivel es {nivel} y cita las muletillas encontradas en 'señales'. Recomienda hacer pausas en lugar de emitir sonidos."
+     "feedback": "Redacta un comentario con tono {tono}. Menciona que su nivel es {nivel} y cita las muletillas encontradas en 'señales'. Recomienda hacer pausas en lugar de emitir sonidos. Habla en segunda persona."
     }}
     """
     output = call_gpt(prompt)
     
     return output
+
 def feedback_claridad(transcript):
     prompt = f"""
     Actúa como un "Communication Coach" experto. Estás auditando la claridad del mensaje del vendedor.
@@ -265,7 +266,7 @@ def feedback_claridad(transcript):
     {{
      "es_confuso": true/false, 
      "señales": "Si es TRUE: Cita la frase exacta o resume el momento donde se perdió la claridad. Si es FALSE: Pon 'Ninguna'.",
-     "feedback": "Si es TRUE: Explica brevemente cómo simplificar el mensaje (ej: 'Evita tecnicismos y ve al grano'). Si es FALSE: Felicita por la claridad del mensaje."
+     "feedback": "Si es TRUE: Explica brevemente cómo simplificar el mensaje (ej: 'Evita tecnicismos y ve al grano'). Si es FALSE: Felicita por la claridad del mensaje. Habla en segunda persona."
     }}
     """
     output = call_gpt(prompt)
@@ -297,8 +298,8 @@ def feedback_participacion(transcript):
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
      "hubo_interrupcion": true/false,
-     "señales": "Si es TRUE: Cita el momento exacto donde cortaste al cliente (ej: 'El cliente decía X y lo cortaste diciendo Y'). Si es FALSE: Pon 'Ninguna'.",
-     "feedback": "Si es TRUE: Aconseja dejar terminar las frases (ej: 'Deja que el cliente termine antes de rebatir'). Si es FALSE: Felicita por respetar los turnos de palabra."
+     "señales": "Si es TRUE: Cita el momento exacto donde cortaste al cliente (ej: 'El cliente decía X y lo cortaste diciendo Y'). Si es FALSE: Pon 'Ninguna'. Habla en segunda persona.",
+     "feedback": "Si es TRUE: Aconseja dejar terminar las frases (ej: 'Deja que el cliente termine antes de rebatir'). Si es FALSE: Felicita por respetar los turnos de palabra. Habla en segunda persona."
     }}
     """
     output = call_gpt(prompt)
@@ -444,7 +445,7 @@ def calcular_claridad(transcript):
         "negativas": negativas_texto, 
         "anglicismos": anglicismos_texto,
         "frases_largas": frases_largas_texto, 
-        "feedback": feedback['señales']
+        "feedback": feedback['feedback']
     }
 
 ### Participación y dinámica
@@ -520,7 +521,7 @@ def calcular_participacion_dinamica(transcript):
         "bonificacion": bonificacion,
         "escucha_activa": gpt_escucha_activa,
         "n_escuchas": num_escucha,
-        "feedback": f"El porcentaje de participación del vendedor es del {ratio*100:.2f}%. Interrupciones: {feedback['señales']}"
+        "feedback": f"Tu porcentaje de participación ha sido del {ratio*100:.2f}%. Interrupciones: {feedback['señales']}"
     }
 
 ### Cobertura de temas y palabras clave
@@ -673,13 +674,13 @@ def calcular_indice_preguntas(transcript):
         penalizacion += 15
     
     # Penalización por irrelevantes
-    penalizacion += count_irrelevantes * 10
+    penalizacion += count_irrelevantes * 15
     
     # Bonificación por sondeo
     bonificacion = min(count_sondeo * 10,40)
     
     # Score final
-    puntuacion = max(0, min(100,  70 - penalizacion + bonificacion))
+    puntuacion = max(0, min(100,  60 - penalizacion + bonificacion))
 
     # Feedback
     feedback = gpt_index_of_questions['feedback']
@@ -810,12 +811,12 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "ppm": res_ppm["puntuacion"]
         }
         feedback = { 
-            "muletillas_pausas": res_muletillas["feedback"],
-            "claridad": res_claridad["feedback"],
-            "participacion": res_participacion["feedback"],
-            "cobertura": res_cobertura["feedback"],
-            "preguntas": res_preguntas["feedback"],
-            "ppm": res_ppm["feedback"]
+            "muletillas_pausas": res_muletillas["feedback"][:499],
+            "claridad": res_claridad["feedback"][:499],
+            "participacion": res_participacion["feedback"][:499],
+            "cobertura": res_cobertura["feedback"][:499],
+            "preguntas": res_preguntas["feedback"][:499],
+            "ppm": res_ppm["feedback"][:499]
         }
         objetivo = await calcular_objetivo_principal(transcript, course_id, stage_id)
     else: 

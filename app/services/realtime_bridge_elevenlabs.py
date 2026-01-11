@@ -2,6 +2,10 @@ import asyncio
 import json
 import os
 import websockets
+import time
+import base64
+import numpy as np
+
 from dotenv import load_dotenv
 
 # Services imports
@@ -9,6 +13,7 @@ from app.services.conversations_service import get_voice_agent, create_conversat
 from app.services.realtime_service import stop_process, user_msg_processed
 from ..services.messages_service import send_message
 from ..services.prompting_service import master_prompt_generator
+from app.services.realtime_service import is_non_silent
 
 load_dotenv()
 
@@ -34,6 +39,19 @@ class RealtimeBridge:
         self.stage_id = None
         self.voice_id = None
         self.agent_id = None
+
+        # Turn tracking variables
+        self.user_turn_start_ts = None
+        self.user_turn_end_ts = None
+        self.bot_turn_start_ts = None
+        self.bot_turn_end_ts = None
+
+        self.last_user_audio_ts = None
+        self.last_bot_audio_ts = None
+
+        # silence thresholds (seconds)
+        self.USER_TURN_END_SILENCE = 0.8
+        self.BOT_TURN_END_SILENCE = 0.8
 
     async def connect_elevenlabs(self):
         """Establece conexión con ElevenLabs Conversational AI."""
@@ -120,6 +138,14 @@ class RealtimeBridge:
                 elif msg_type == "input_audio_buffer.append":
                     audio_b64 = parsed.get("audio")
                     if audio_b64:
+                        now = time.time()
+
+                        if self.user_turn_start_ts is None and is_non_silent(audio_b64):
+                            self.user_turn_start_ts = now
+                            print("🎤 User turn START")
+
+                        self.last_user_audio_ts = now
+
                         payload = {"user_audio_chunk": audio_b64}
                         await self.eleven_ws.send(json.dumps(payload))
                 
@@ -143,6 +169,19 @@ class RealtimeBridge:
                 if el_type == "audio":
                     chunk = data["audio_event"]["audio_base_64"]
                     if chunk:
+                        # now = time.time()
+
+                        # if self.bot_turn_start_ts is None:
+                        #     self.bot_turn_start_ts = now
+                        #     print("🤖 Bot turn START")
+
+                        #     # response latency (optional)
+                        #     if self.user_turn_end_ts:
+                        #         latency = self.bot_turn_start_ts - self.user_turn_end_ts
+                        #         print(f"⚡ Response latency: {latency:.2f}s")
+
+                        # self.last_bot_audio_ts = now
+
                         # Simulamos el paquete de OpenAI "response.audio.delta"
                         openai_fmt = {
                             "type": "response.audio.delta", 
@@ -157,9 +196,21 @@ class RealtimeBridge:
                 elif el_type == "user_transcript":
                     text = data["user_transcription_event"]["user_transcript"]
                     print(f"🎤 [User]: {text}")
+
+                    now = time.time()
+                    self.user_turn_end_ts = now
+                    duration = None
+
+                    if self.user_turn_start_ts:
+                        duration = self.user_turn_end_ts - self.user_turn_start_ts
+                        print(f"🎤 User turn END | duration={duration:.2f}s")
+
+                    # reset
+                    self.user_turn_start_ts = None
+                    self.last_user_audio_ts = None
                     
                     # Guardar en DB
-                    await send_message(self.user_id, self.conversation_id, text, "user")
+                    await send_message(self.user_id, self.conversation_id, text, "user", duration)
                     
                     # Avisar al front (para que pinte el texto del usuario)
                     openai_fmt = {
@@ -172,9 +223,21 @@ class RealtimeBridge:
                 elif el_type == "agent_response":
                     text = data["agent_response_event"]["agent_response"]
                     print(f"🤖 [AI]: {text}")
+
+                    # now = time.time()
+                    # self.bot_turn_end_ts = now
+                    duration = None
+
+                    # if self.bot_turn_start_ts:
+                    #     duration = self.bot_turn_end_ts - self.bot_turn_start_ts
+                    #     print(f"🤖 Bot turn END | duration={duration:.2f}s")
+
+                    # # reset
+                    # self.bot_turn_start_ts = None
+                    # self.last_bot_audio_ts = None
                     
                     # Guardar en DB
-                    await send_message(self.user_id, self.conversation_id, text, "assistant")
+                    await send_message(self.user_id, self.conversation_id, text, "assistant", duration)
                     
                     # Avisar al front (para que pinte el texto del bot)
                     openai_fmt = {
