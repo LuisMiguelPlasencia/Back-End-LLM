@@ -10,7 +10,7 @@ from typing import List, Dict, Optional, Tuple
 async def get_conversation_messages(conversation_id: UUID) -> List[Dict]:
     """Get all messages for a conversation, ordered by creation time"""
     query = """
-    SELECT id, user_id, conversation_id, role, content, created_at
+    SELECT id, user_id, conversation_id, role, content, created_at, duration
     FROM conversaApp.messages
     WHERE conversation_id = $1
     ORDER BY created_at ASC
