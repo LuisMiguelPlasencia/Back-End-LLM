@@ -228,11 +228,7 @@ class RealtimeBridge:
                     print("🛑 [Interruption]: Usuario interrumpió, limpiando buffer...")
                     await self.frontend_ws.send_text(json.dumps({"type": "response.audio.clear"}))
 
-                elif el_type == "end_call":
-                    print("📞 [End Call]: La conexión fue cerrada por ElevenLabs (Agent Hangup).")
-                    # Avisar al frontend que la llamada terminó
-                    await self.frontend_ws.send_text(json.dumps({"type": "call.end"}))
-                    await self.stop()
+
             print("📞 [End Call]: La conexión fue cerrada por ElevenLabs (Agent Hangup).")
             # Avisar al frontend que la llamada terminó
             await self.frontend_ws.send_text(json.dumps({"type": "call.end"}))
