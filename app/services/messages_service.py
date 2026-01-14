@@ -61,6 +61,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             ui.user_id, ui.name, ui.company_id, ui.user_type, ui.avatar
         ORDER BY 
             score DESC
+        LIMIT 5
         """
 
         results = await execute_query(query, company_id)

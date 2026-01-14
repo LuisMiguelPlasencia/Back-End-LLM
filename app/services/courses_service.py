@@ -26,46 +26,49 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
     # Ordering by course_id first is crucial for efficient grouping.
     query = """
         SELECT 
-    mc.course_id,
-    mc.name,
-    mc.description,
-    mc.image_src,
-    mc.created_on,
-    uca.estimated_completion_date,
-    uca.is_mandatory, 
-    cs.stage_id,
-    cs.stage_name,
-    cs.stage_description,
-    cs.stage_order,
-    cs.stage_objectives,
-    CASE 
-        WHEN (c.conversation_id IS NOT NULL AND c.status = 'FINISHED') 
-        THEN cs.stage_order 
-        ELSE 0 
-    END AS stage_progress
-FROM conversaconfig.user_course_assignments uca 
-JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
-LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
-LEFT JOIN (
-    SELECT 
-        course_id,
-        stage_id,
-        status,
-        conversation_id,
-        ROW_NUMBER() OVER (
-            PARTITION BY course_id, stage_id 
-            ORDER BY 
-                CASE WHEN status = 'FINISHED' THEN 0 ELSE 1 END ASC, 
-                created_at DESC
-        ) as rn
-    FROM conversaapp.conversations
-    WHERE user_id = $1
-) c ON c.course_id = mc.course_id 
-   AND c.stage_id = cs.stage_id 
-   AND c.rn = 1 
-WHERE uca.user_id = $1  
-  AND mc.is_active 
-ORDER BY uca.estimated_completion_date ASC, cs.stage_order ASC;
+            mc.course_id,
+            mc.name,
+            mc.description,
+            mc.image_src,
+            mc.created_on,
+            uca.estimated_completion_date,
+            uca.is_mandatory, 
+            cs.stage_id,
+            cs.stage_name,
+            cs.stage_description,
+            cs.stage_order,
+            cs.stage_objectives,
+            CASE 
+                WHEN c.status = 'FINISHED' AND c.is_accomplished = true
+                THEN cs.stage_order
+                ELSE 0
+            END AS stage_progress
+        FROM conversaconfig.user_course_assignments uca 
+        JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
+        LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
+        LEFT JOIN (
+            SELECT 
+                c.course_id,
+                c.stage_id,
+                c.status,
+                c.conversation_id,
+                sbc.is_accomplished,
+                ROW_NUMBER() OVER (
+                    PARTITION BY c.course_id, c.stage_id
+                    ORDER BY 
+                        CASE WHEN c.status = 'FINISHED' AND sbc.is_accomplished = true THEN 0 ELSE 1 END,
+                        c.created_at DESC
+                ) as rn
+            FROM conversaapp.conversations c
+            LEFT JOIN conversaapp.scoring_by_conversation sbc 
+                ON c.conversation_id = sbc.conversation_id
+            WHERE c.user_id = $1
+        ) c ON c.course_id = mc.course_id 
+            AND c.stage_id = cs.stage_id 
+            AND c.rn = 1
+        WHERE uca.user_id = $1  
+        AND mc.is_active 
+        ORDER BY uca.estimated_completion_date ASC, cs.stage_order ASC;
     """
     
     results = await execute_query(query, user_id)
