@@ -791,7 +791,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
-    if palabras_totales > 20:
+    if palabras_totales > 100:
 
         # Evaluaciones individuales
         res_muletillas = calcular_muletillas(transcript)
@@ -829,7 +829,14 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "ppm": 0
         } 
 
-        feedback = {"feedback": "No hay suficientes palabras para evaluar"}
+        feedback = {
+            "muletillas_pausas": "No hay suficientes palabras para evaluar",
+            "claridad": "No hay suficientes palabras para evaluar",
+            "participacion": "No hay suficientes palabras para evaluar",
+            "cobertura": "No hay suficientes palabras para evaluar",
+            "preguntas": "No hay suficientes palabras para evaluar",
+            "ppm": "No hay suficientes palabras para evaluar"
+        }
         objetivo = {
         "accompplished": False,
         "señales": "Objetivo no Cumplido"
