@@ -86,7 +86,7 @@ async def scoring(conv_id, course_id, stage_id):
     indexofquestions_feedback = feedback.get("preguntas")
     rhythm_feedback = feedback.get("ppm")
 
-    objetivo = objetivo_json.get("accompplished")
+    objetivo = objetivo_json.get("accomplished")
 
     print("\n📊 Computed Scores:")
     print(f"   Fillerwords: {fillerwords_scoring}")

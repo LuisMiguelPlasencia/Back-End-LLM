@@ -14,6 +14,7 @@ import pandas as pd
 import time
 from app.services.courses_service import get_courses_details
 from app.services.db import execute_query, execute_query_one
+
 import json
 import asyncio
 
@@ -773,7 +774,7 @@ async def calcular_objetivo_principal(transcript, course_id, stage_id):
     señales = gpt_objetivo["señales"]
 
     return {
-        "accompplished": indicador,
+        "accomplished": indicador,
         "señales": señales
     }
 
@@ -781,12 +782,14 @@ async def calcular_objetivo_principal(transcript, course_id, stage_id):
 async def get_conver_scores(transcript, course_id, stage_id):
     # Factores de ponderación
     pesos = {
-        "muletillas_pausas": 0.15,
-        "claridad": 0.15,
-        "participacion": 0.25,
-        "cobertura": 0.15,
-        "preguntas": 0.20,
-        "ppm": 0.10
+        "muletillas_pausas": 0.075,
+        "claridad": 0.075,
+        "participacion": 0.1,
+        "cobertura": 0.1,
+        "preguntas": 0.075,
+        "ppm": 0.075, 
+        "objetivo": 0.5
+
     }
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
@@ -801,6 +804,8 @@ async def get_conver_scores(transcript, course_id, stage_id):
         res_preguntas = calcular_indice_preguntas(transcript)
         res_ppm = calcular_ppm_variabilidad(transcript) 
 
+        objetivo = await calcular_objetivo_principal(transcript, course_id, stage_id)
+
         # Extraer puntuaciones
         scores = {
             "muletillas_pausas": res_muletillas["puntuacion"],
@@ -808,7 +813,8 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "participacion": res_participacion["puntuacion"],
             "cobertura": res_cobertura["puntuacion"],
             "preguntas": res_preguntas["puntuacion"],
-            "ppm": res_ppm["puntuacion"]
+            "ppm": res_ppm["puntuacion"], 
+            "objetivo": objetivo["accomplished"]
         }
         feedback = { 
             "muletillas_pausas": res_muletillas["feedback"][:499],
@@ -818,7 +824,6 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "preguntas": res_preguntas["feedback"][:499],
             "ppm": res_ppm["feedback"][:499]
         }
-        objetivo = await calcular_objetivo_principal(transcript, course_id, stage_id)
     else: 
         scores = {
             "muletillas_pausas": 0,
@@ -826,7 +831,8 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "participacion": 0,
             "cobertura": 0,
             "preguntas": 0,
-            "ppm": 0
+            "ppm": 0,
+            "objetivo": 0
         } 
 
         feedback = {
@@ -838,7 +844,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "ppm": "No hay suficientes palabras para evaluar"
         }
         objetivo = {
-        "accompplished": False,
+        "accomplished": False,
         "señales": "Objetivo no Cumplido"
     }
     # Calcular puntuación ponderada global
@@ -938,6 +944,7 @@ if __name__ == "__main__":
         "text": "¡Fantástico! Le acabo de enviar un enlace seguro a su correo. Solo tiene que subir una foto de su DNI y completar el formulario de la financiera. En cuanto lo reciba, bloqueamos el coche para usted y empezamos con la gestión del envío.", 
         "duracion": 25
         }]
+
         key_themes = await get_key_themes('3eeeda53-7dff-40bc-b036-b608acb89e6f', '1cbbf136-4e7e-49d9-9dec-402d4179bd66')
         print(key_themes)
         # Evaluaciones individuales
