@@ -99,18 +99,17 @@ def calcular_claridad(transcript):
    
     signals = gpt_clarity['señales']
     feedback = gpt_clarity['feedback']
-    penalty = gpt_clarity['veces_falta_claridad'] * 10
+
+    number_of_turns_seller = len([t for t in transcript if t["speaker"] == "vendedor"])
+    penalty = gpt_clarity['veces_falta_claridad'] / number_of_turns_seller
 
     # ---- Calcular puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalty))
-
-    # ---- Calcular feedback -----
-    feedback = json.loads(call_gpt(client, clarity(transcript)))
+    puntuacion = int(max(100 * (1-penalty), 0))
 
     return {
         "puntuacion": puntuacion,
         "penalizacion": penalty, 
-        "feedback": f" Señales: {signals}. Feedback: {feedback} "
+        "feedback": feedback #f" Señales: {signals}. Feedback: {feedback} "
     }
 
 ### Participación y dinámica
