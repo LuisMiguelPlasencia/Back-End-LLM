@@ -41,19 +41,22 @@ async def get_key_themes(course_id, stage_id):
 
 def escucha_activa(transcript):
     prompt = f"""
-    Actúa como un "Sales Coach" experto en comunicación. Analiza la interacción para medir la calidad de la escucha del vendedor.
+    # CONTEXTO
+    Eres un experto en comunicación y negociación. Tu tarea es analizar una conversación entre un vendedor y su potencial cliente para medir la calidad de la escucha del vendedor.
 
-    TU OBJETIVO:
-    Contar cuántas veces el vendedor (tú) demuestra ESCUCHA ACTIVA genuina.
+    ## TU OBJETIVO:
+    Detectar las interacciones, si las hay, en las que el vendedor demuestra ESCUCHA ACTIVA genuina.
     
-    CRITERIO DE EXIGENCIA:
+    ## CRITERIO DE EXIGENCIA:
     - NO cuentes simples confirmaciones o muletillas como "sí", "ajá", "vale", "correcto". Eso es escucha pasiva.
-    - Para contar como punto, tuviste que haber REPETIDO o PARAFRASEADO lo que dijo el cliente para confirmar que lo entendiste (ej: "Si te he entendido bien, lo que te preocupa es...").
+    - Para contar como punto, tuviste que haber REPETIDO o PARAFRASEADO lo que dijo el cliente para confirmar que lo entendiste (por ejemplo: "Si te he entendido bien, lo que te preocupa es...").
 
-    TRANSCRIPCIÓN:
+    # TRANSCRIPCIÓN (analízala atentamente en base a los criterios anteriores):
     {transcript}
 
-    INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    Ahora que la has analizado, debes dar una respuesta siguiendo las instrucciones a continuación:
+
+    # INSTRUCCIONES DE FORMATO (IMPORTANTE):
     1. Responde SIEMPRE en español usando la segunda persona del singular (ej: "parafraseaste", "validaste", "repetiste").
     2. Responde ÚNICAMENTE con un JSON válido.
     3. NO uses bloques de código markdown.
