@@ -95,8 +95,19 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
 # ### Claridad y complejidad
 def calcular_claridad(transcript):
 
-    gpt_clarity = json.loads(call_gpt(client, clarity(transcript)))
-   
+    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            gpt_clarity = json.loads(call_gpt(client, clarity(transcript)))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return gpt_clarity
+
+    gpt_clarity = llamar_gpt_hasta_que_este_bien()
+
     signals = gpt_clarity['señales']
     feedback = gpt_clarity['feedback']
 
@@ -117,7 +128,20 @@ def calcular_participacion_dinamica(transcript):
     # Heurísticas de interrupciones (puedes ampliar con más expresiones típicas)
     # patrones_interrupcion = ["sí", "claro", "vale", "déjame", "espera", "pero"]
 
-    gpt_escucha_activa = call_gpt(client, active_listening(transcript))
+    
+    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            gpt_escucha_activa = call_gpt(client, active_listening(transcript))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return gpt_escucha_activa
+
+    gpt_escucha_activa = llamar_gpt_hasta_que_este_bien()
+
     # Try to extract number from GPT response, default to 0 if pattern doesn't match
     match = re.search(r"escucha activa:\s*(\d+)", gpt_escucha_activa, re.IGNORECASE)
     if match:
@@ -174,7 +198,18 @@ def calcular_participacion_dinamica(transcript):
     puntuacion = max(0, min(100, 70 - penalizacion + bonificacion))
 
     # ---- Feedback ----
-    feedback = json.loads(call_gpt(client, participation(transcript)))
+    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            feedback = json.loads(call_gpt(client, participation(transcript)))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return feedback
+
+    feedback = llamar_gpt_hasta_que_este_bien()
     
     return {
         "palabras_cliente": palabras_cliente, 
@@ -197,7 +232,19 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
     ## Detector de palabras clave con GPT
     key_themes_list = await get_key_themes(course_id, stage_id)
     prompt = key_themes(transcript, key_themes_list)
-    gpt_key_themes = json.loads(call_gpt(client, prompt))
+
+    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            gpt_key_themes = json.loads(call_gpt(client, prompt))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return gpt_key_themes
+
+    gpt_key_themes = llamar_gpt_hasta_que_este_bien()
 
     num_temas_olvidados = gpt_key_themes['n_temas_olvidados']
     señales_temas = gpt_key_themes['señales']
@@ -207,7 +254,17 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
     penalizacion += num_temas_olvidados*20
 
     ## Detector de proximos pasos con GPT
-    gpt_next_steps = json.loads(call_gpt(client, next_steps(transcript)))
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            gpt_next_steps = json.loads(call_gpt(client, next_steps(transcript)))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return gpt_next_steps
+
+    gpt_next_steps = llamar_gpt_hasta_que_este_bien()
+    
     
     indicador = bool(gpt_next_steps["indicador"])
     señales_proximos_pasos = gpt_next_steps["señales"]
@@ -235,8 +292,19 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
 ### Indice de preguntas (Aquí hay que darle una pensadica)
 def calcular_indice_preguntas(transcript):
     # Definiciones de sets de preguntas
+    
+    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript)))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return gpt_index_of_questions
 
-    gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript)))
+    gpt_index_of_questions = llamar_gpt_hasta_que_este_bien()
     
     total_preguntas = gpt_index_of_questions['n_total']
     count_cerradas = gpt_index_of_questions['n_cerradas']
@@ -345,8 +413,21 @@ async def calcular_objetivo_principal(transcript, course_id, stage_id):
 
     stage_details = await get_courses_details(course_id, stage_id)
     goal_description = stage_details[0]["stage_objectives"]
-    gpt_objetivo = json.loads(call_gpt(client, goal(transcript, goal_description)))
+    
+    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+    def llamar_gpt_hasta_que_este_bien():
+        try:
+            gpt_objetivo = json.loads(call_gpt(client, goal(transcript, goal_description)))
+        except: 
+            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+            llamar_gpt_hasta_que_este_bien()
+            
+        return gpt_objetivo
 
+    gpt_objetivo = llamar_gpt_hasta_que_este_bien()
+    
+    
     indicador = bool(gpt_objetivo["indicador"])
     señales = gpt_objetivo["señales"]
 
