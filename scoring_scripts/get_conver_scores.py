@@ -40,7 +40,7 @@ async def get_key_themes(course_id, stage_id):
 # ### Muletillas
 def calcular_muletillas(transcript, duracion=None, muletillas=None):
     if muletillas is None:
-        muletillas = ["eh", "ehh", "ehhh", "ehhhh", "ehhhhh", "he", "hee", "ehm", "ehmm", "em", "emm", "emmm", "emmmm", "eeem", "eeemm", "e-eh", "hem", "hemm", "uh", "uhh", "uhhh", "uhhhh", "uhhhhh", "uhm", "uhmm", "umm", "ummm", "ummmm", "umh", "hum", "humm", "hummm", "humn", "mmm", "mmmm", "mmmmm", "mmmh", "mmmhh", "mmh", "mm-hm", "mhm", "m-hm", "mjm", "mjum", "m-jm", "ajá", "aja", "ahá", "aha", "aham", "ajam", "ah", "ahh", "ahhh", "ahhhh", "ahhhhh", "oh", "ohh", "ohhh", "ohhhh", "ooh", "oooh", "oho", "o-oh", "wow", "wooo", "wooow", "wou", "wow", "guau", "guaau", "ala", "alaaa", "hala", "halaaa", "uala", "wala", "huala", "anda", "andaa", "andaaa", "ostras", "ostra", "ostia", "ostias", "joder", "jo", "joo", "jooo", "jopé", "jope", "jolines", "jobar", "ay", "ayy", "ayyy", "ayyyy", "ayyyyy", "ayayay", "aiaiai", "uf", "uff", "ufff", "uffff", "buf", "buff", "bufff", "pff", "pfff", "pffff", "pffft", "psch", "pscht", "tch", "tsch", "tsk", "tsk-tsk", "ts", "bah", "bahh", "bahhh", "bua", "buaa", "buaaa", "buaaaa", "puaj", "puaaj", "iugh", "eww", "ewww", "yuck", "yak", "bueno", "bueeeno", "bueeenooo", "buenooo", "buenop", "bue", "bwe", "pues", "pueees", "puuues", "pos", "ps", "pssss", "pus", "este", "esteee", "esteeee", "estem", "estemm", "estep", "osea", "o sea", "osease", "osa", "en plan", "enplan", "enplaaan", "tipo", "tipooo", "es que", "esque", "esqueee", "a ver", "aver", "a veeer", "averrr", "haber", "total", "en fin", "enfiin", "sabes", "saes", "viste", "visteee", "cierto", "claro", "claroo", "clarooo", "ya", "yaa", "yaaa", "yaaaa", "vale", "valee", "valep", "dale", "daale", "dalee", "ok", "okey", "okay", "oki", "okis", "okii", "oki-doki", "sip", "sipi", "sep", "se", "see", "seee", "sizi", "si", "sii", "siii", "siiii", "chi", "shi", "nop", "nopi", "nones", "nanai", "noo", "nooo", "noooo", "ne", "nee", "nel", "ey", "eyy", "eyyy", "hey", "heey", "ei", "eii", "oye", "oyeee", "oyeeee", "escucha", "mira", "mire", "che", "chee", "cheee", "bo", "boludo", "wey", "we", "güey", "guey", "chale", "no mames", "órale", "orale", "híjole", "hijole", "macho", "tío", "tio", "tronco", "cari", "gordi", "bebé", "ups", "uppps", "ops", "oops", "glup", "glups", "argh", "arg", "arghh", "grr", "grrr", "grrrr", "zzz", "zzzz", "muac", "muack", "mwah", "plas", "plof", "pum", "zas", "ja", "jaja", "jajaja", "jajajaja", "je", "jeje", "jejeje", "ji", "jiji", "jijiji", "jo", "jojo", "jojojo", "ju", "juju", "jujuju", "jsjs", "jsjsjs", "kkk", "lol", "lool", "omg", "wtf", "idk", "dunno", "meh", "bleh", "chist", "chis", "shh", "shhh", "shhhh", "silencio", "calla", "ea", "huy", "huyy", "uy", "uyy", "uyyy", "ejem", "ejemejem", "cof", "cofcof", "achís", "ñam", "ñamñam", "gluglu", "hic", "hip", "ding", "dong", "toc", "toc-toc", "ring", "bip", "clic", "click", "pim", "pam", "pum", "bla", "blabla", "blablabla", "etc", "pla", "pli", "plo", "pum", "zasca", "zas", "pimba", "toma", "tomaa", "tomaaa", "venga", "vengaaa", "va", "vaaa", "amos", "vamos", "basicamente", ]
+        muletillas = ["eh", "ehh", "ehhh", "ehhhh", "ehhhhh", "he", "hee", "ehm", "ehmm", "em", "emm", "emmm", "emmmm", "eeem", "eeemm", "e-eh", "hem", "hemm", "uh", "uhh", "uhhh", "uhhhh", "uhhhhh", "uhm", "uhmm", "umm", "ummm", "ummmm", "umh", "hum", "humm", "hummm", "humn", "mmm", "mmmm", "mmmmm", "mmmh", "mmmhh", "mmh", "mm-hm", "mhm", "m-hm", "mjm", "mjum", "m-jm", "ajá", "aja", "ahá", "aha", "aham", "ajam", "ah", "ahh", "ahhh", "ahhhh", "ahhhhh", "oh", "ohh", "ohhh", "ohhhh", "ooh", "oooh", "oho", "o-oh", "wow", "wooo", "wooow", "wou", "wow", "guau", "guaau", "ala", "alaaa", "hala", "halaaa", "uala", "wala", "huala", "anda", "andaa", "andaaa", "ostras", "ostra", "ostia", "ostias", "joder", "jo", "joo", "jooo", "jopé", "jope", "jolines", "jobar", "ay", "ayy", "ayyy", "ayyyy", "ayyyyy", "ayayay", "aiaiai", "uf", "uff", "ufff", "uffff", "buf", "buff", "bufff", "pff", "pfff", "pffff", "pffft", "psch", "pscht", "tch", "tsch", "tsk", "tsk-tsk", "ts", "bah", "bahh", "bahhh", "bua", "buaa", "buaaa", "buaaaa", "puaj", "puaaj", "iugh", "eww", "ewww", "yuck", "yak", "bueno", "bueeeno", "bueeenooo", "buenooo", "buenop", "bue", "bwe", "pues", "pueees", "puuues", "pos", "ps", "pssss", "pus", "este", "esteee", "esteeee", "estem", "estemm", "estep", "osea", "o sea", "osease", "osa", "en plan", "enplan", "enplaaan", "tipo", "tipooo", "es que", "esque", "esqueee", "a ver", "aver", "a veeer", "averrr", "haber", "total", "en fin", "enfiin", "sabes", "saes", "viste", "visteee", "cierto", "claro", "claroo", "clarooo", "ya", "yaa", "yaaa", "yaaaa", "vale", "valee", "valep", "dale", "daale", "dalee", "ok", "okey", "okay", "oki", "okis", "okii", "oki-doki", "sip", "sipi", "sep", "se", "see", "seee", "sizi", "si", "sii", "siii", "siiii", "chi", "shi", "nop", "nopi", "nones", "nanai", "noo", "nooo", "noooo", "ne", "nee", "nel", "ey", "eyy", "eyyy", "hey", "heey", "ei", "eii", "oye", "oyeee", "oyeeee", "escucha", "mira", "mire", "che", "chee", "cheee", "bo", "boludo", "wey", "we", "güey", "guey", "chale", "no mames", "órale", "orale", "híjole", "hijole", "macho", "tío", "tio", "tronco", "cari", "gordi", "bebé", "ups", "uppps", "ops", "oops", "glup", "glups", "argh", "arg", "arghh", "grr", "grrr", "grrrr", "zzz", "zzzz", "muac", "muack", "mwah", "plas", "plof", "pum", "zas", "ja", "jaja", "jajaja", "jajajaja", "je", "jeje", "jejeje", "ji", "jiji", "jijiji", "jo", "jojo", "jojojo", "ju", "juju", "jujuju", "jsjs", "jsjsjs", "kkk", "lol", "lool", "omg", "wtf", "idk", "dunno", "meh", "bleh", "chist", "chis", "shh", "shhh", "shhhh", "silencio", "calla", "ea", "huy", "huyy", "uy", "uyy", "uyyy", "ejem", "ejemejem", "cof", "cofcof", "achís", "ñam", "ñamñam", "gluglu", "hic", "hip", "ding", "dong", "toc", "toc-toc", "ring", "bip", "clic", "click", "pim", "pam", "pum", "bla", "blabla", "blablabla", "etc", "pla", "pli", "plo", "pum", "zasca", "zas", "pimba", "va", "vaaa", "amos", "basicamente", ]
         #pausas = ["ppausaa"] # La pausa deberá ser detectada por el whisper/gpt de turno   
 
     repeticion_constante = False
@@ -125,10 +125,7 @@ def calcular_claridad(transcript):
 
 ### Participación y dinámica
 def calcular_participacion_dinamica(transcript):
-    # Heurísticas de interrupciones (puedes ampliar con más expresiones típicas)
-    # patrones_interrupcion = ["sí", "claro", "vale", "déjame", "espera", "pero"]
 
-    
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
     def llamar_gpt_hasta_que_este_bien():
@@ -169,58 +166,62 @@ def calcular_participacion_dinamica(transcript):
     ratio = palabras_vendedor/total_palabras
     
     # ---- Penalizaciones y bonificaciones ----
-    penalizacion = 0
-    bonificacion = min(num_escucha * 10, 40) 
+    bonificacion_escucha_activa = min(num_escucha * 10, 40) # decidimos hacerlo en términos absolutos y no relativos al número de turnos del vendedor ya que hacerlo más de tres veces, por mucho que la conversación sea larga, sería ser un pelota
+    penalizacion_ratio_participacion = 0
     
     # Arbol de decision
     if ratio < 0.1: 
-        penalizacion += 100
+        penalizacion_ratio_participacion += 100
     elif 0.1 <= ratio <= 0.2:
-        penalizacion += 50
+        penalizacion_ratio_participacion += 75
     elif 0.2 < ratio <= 0.3:
-        penalizacion += 25
+        penalizacion_ratio_participacion += 25 # no lo penalizamos más porque el bot de momento es bastante pesado
     elif 0.3 < ratio <= 0.4:
-        penalizacion += 10
-    elif 0.4 < ratio <= 0.5:
-        penalizacion += 10
-    elif 0.5 < ratio <= 0.6:
-        penalizacion += 10
+        penalizacion_ratio_participacion += 10
+    elif 0.4 < ratio <= 0.6:
+        penalizacion_ratio_participacion += 0
     elif 0.6 < ratio <= 0.7:
-        penalizacion += 25
+        penalizacion_ratio_participacion += 30
     elif 0.7 < ratio <= 0.8:
-        penalizacion += 50
+        penalizacion_ratio_participacion += 50
     elif 0.8 < ratio <= 0.9:
-        penalizacion += 75
+        penalizacion_ratio_participacion += 75
     elif ratio > 0.9:
-        penalizacion += 100
+        penalizacion_ratio_participacion += 100
 
-    # ---- Puntuación final ----
-    puntuacion = max(0, min(100, 70 - penalizacion + bonificacion))
-
-    # ---- Feedback ----
+    # ---- Interrupciones ---- (lo quitamos de momento porque a partir del transcript, es imposible que un LLM sepa si lo ha interrumpido, ya que se muestra el texto completo del cliente incluso si el vendedor lo corta)
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            feedback = json.loads(call_gpt(client, participation(transcript)))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
+    # def llamar_gpt_hasta_que_este_bien():
+    #     try:
+    #         interrupciones = json.loads(call_gpt(client, participation(transcript)))
+    #     except: 
+    #         print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+    #         llamar_gpt_hasta_que_este_bien()
             
-        return feedback
+    #     return interrupciones
 
-    feedback = llamar_gpt_hasta_que_este_bien()
-    
+    # interrupciones = llamar_gpt_hasta_que_este_bien()
+    # n_interrupciones = len(interrupciones["señales"])
+    # n_turnos_vendedor = len([t for t in transcript if t["speaker"] == "vendedor"])
+    # penalizacion_interrupciones = 100*(n_interrupciones/n_turnos_vendedor) if n_interrupciones/n_turnos_vendedor > 0.15 else 0
+
+    # ---- Puntuación final ----
+    # puntuacion = max(0, min(100, 70 - penalizacion_ratio_participacion - penalizacion_interrupciones + bonificacion_escucha_activa))
+    puntuacion = max(0, min(100, 70 - penalizacion_ratio_participacion + bonificacion_escucha_activa))
+
     return {
         "palabras_cliente": palabras_cliente, 
         "palabras_vendedor": palabras_vendedor, 
         "ratio": ratio,
         "puntuacion": puntuacion,
-        "penalizacion": penalizacion,
-        "bonificacion": bonificacion,
+        "penalizacion_ratio_participacion": penalizacion_ratio_participacion, 
+        # "penalizacion_interrupciones": penalizacion_interrupciones,
+        "bonificacion": bonificacion_escucha_activa,
         "escucha_activa": gpt_escucha_activa,
         "n_escuchas": num_escucha,
-        "feedback": f"Tu porcentaje de participación ha sido del {ratio*100:.2f}%. Interrupciones: {feedback['señales']}"
+        # "feedback": f"Tu porcentaje de participación ha sido del {ratio*100:.2f}%. Has mostrado escucha activa en {num_escucha} ocasiones. Has interrumpido al cliente {n_interrupciones} veces."
+        "feedback": f"Tu porcentaje de participación ha sido del {ratio*100:.2f}%. Has mostrado escucha activa en {num_escucha} ocasiones."
     }
 
 ### Cobertura de temas y palabras clave

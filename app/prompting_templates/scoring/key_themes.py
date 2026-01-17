@@ -8,7 +8,7 @@ def key_themes(transcript, key_themes_list):
     Determinar si el vendedor (al que te dirigirás como "tú") cubrió los TEMAS CLAVE obligatorios.
     
     # CRITERIO DE EXIGENCIA: 
-    Para considerar un tema como "abordado", NO basta con mencionar la palabra clave. Tuviste que haber desarrollado un mínimo argumento sobre ello. Si solo lo mencionaste de pasada, NO cuenta.
+    Para considerar un tema como "abordado", NO basta con mencionar la palabra clave. Tuviste que haber desarrollado un mínimo argumento sobre ello. 
 
     # TEMAS CLAVE: 
     {key_themes_list}
