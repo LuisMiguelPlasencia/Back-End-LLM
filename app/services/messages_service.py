@@ -56,7 +56,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             LEFT JOIN conversaapp.scoring_by_conversation sbc 
                 ON c.conversation_id = sbc.conversation_id
         WHERE 
-            ui.company_id = $1 AND ui.is_active = true
+            ui.company_id = $1 AND ui.is_active = true AND sbc.general_score > 0
         GROUP BY 
             ui.user_id, ui.name, ui.company_id, ui.user_type, ui.avatar
         ORDER BY 

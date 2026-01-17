@@ -10,10 +10,9 @@ from dotenv import load_dotenv
 
 # Services imports
 from app.services.conversations_service import get_voice_agent, create_conversation
-from app.services.realtime_service import stop_process, user_msg_processed
-from ..services.messages_service import send_message
-from ..services.prompting_service import master_prompt_generator
-from app.services.realtime_service import is_non_silent
+from app.services.messages_service import send_message
+from app.services.prompting_service import master_prompt_generator
+from app.services.realtime_service import stop_process, user_msg_processed, is_non_silent
 
 load_dotenv()
 
