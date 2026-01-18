@@ -209,3 +209,97 @@ async def get_user_profiling(user_id: str) -> Dict:
         print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
         return []
 
+import json
+from typing import List, Dict, Any
+
+async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
+    """
+    Retrieves consolidated KPIs for the company dashboard.
+    Handles JSON parsing for top_performer_data manually in Python.
+    """
+    try:
+        query = """
+        WITH company_users AS (
+            -- Filter users by company first
+            SELECT user_id, name, user_type
+            FROM conversaconfig.user_info
+            WHERE company_id = $1
+        ),
+        user_historical_stats AS (
+            -- Calculate average per user (historical)
+            SELECT 
+                c.user_id,
+                AVG(c.general_score) as avg_score
+            FROM conversaapp.conversations c
+            JOIN company_users u ON c.user_id = u.user_id
+            WHERE c.status = 'FINISHED'
+            GROUP BY c.user_id
+        ),
+        current_month_stats AS (
+            -- Calculate top performer (current month only)
+            SELECT 
+                c.user_id,
+                AVG(c.general_score) as monthly_avg_score
+            FROM conversaapp.conversations c
+            JOIN company_users u ON c.user_id = u.user_id
+            WHERE c.created_at >= date_trunc('month', CURRENT_DATE)
+            GROUP BY c.user_id
+        )
+        SELECT 
+            -- KPI 1: Team Average
+            (
+                SELECT COALESCE(ROUND(AVG(c.general_score), 1), 0)
+                FROM conversaapp.conversations c
+                JOIN company_users u ON c.user_id = u.user_id
+            ) as team_average,
+
+            -- KPI 2: Attention Required
+            (
+                SELECT COUNT(*)
+                FROM user_historical_stats
+                WHERE avg_score < 50
+            ) as users_requiring_attention,
+
+            -- KPI 3: Top Performer (Raw JSON from DB)
+            (
+                SELECT json_build_object(
+                    'name', u.name,
+                    'role', u.user_type,
+                    'score', ROUND(cms.monthly_avg_score, 1)
+                )
+                FROM current_month_stats cms
+                JOIN company_users u ON cms.user_id = u.user_id
+                ORDER BY cms.monthly_avg_score DESC
+                LIMIT 1
+            ) as top_performer_data;
+        """
+
+        results = await execute_query(query, company_id)
+        if not results:
+            return [{
+                "team_average": 0.0,
+                "users_requiring_attention": 0,
+                "top_performer_data": None
+            }]
+
+        row = dict(results[0])
+        raw_top_performer = row.get('top_performer_data')
+        clean_top_performer = None
+
+        if raw_top_performer:
+            if isinstance(raw_top_performer, str):
+                try:
+                    clean_top_performer = json.loads(raw_top_performer)
+                except json.JSONDecodeError:
+                    clean_top_performer = None 
+            elif isinstance(raw_top_performer, dict):
+                clean_top_performer = raw_top_performer
+        
+        row['top_performer_data'] = clean_top_performer
+        if row.get('team_average') is not None:
+            row['team_average'] = float(row['team_average'])
+        return [row]
+
+    except Exception as e:
+        print(f"Error fetching KPIs for company_id {company_id}: {str(e)}")
+        return []
