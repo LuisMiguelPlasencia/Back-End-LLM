@@ -5,17 +5,18 @@
 # curl "http://localhost:8000/read/conversation?user_id=123e4567-e89b-12d3-a456-426614174000"
 # curl "http://localhost:8000/read/messages?conversation_id=123e4567-e89b-12d3-a456-426614174000"
 
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
 from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats
 from ..utils.responses import error
+from app.services.auth_service import validate_user
 
 router = APIRouter(prefix="/read", tags=["read"])
 
 @router.get("/courses")
-async def get_courses(user_id: UUID = Query(..., description="User ID to get courses for")):
+async def get_courses(user_id: UUID = Query(..., description="User ID to get courses for"), _: dict = Depends(validate_user)):
     """Get courses available to user based on their user type"""
     try:
         print("Fetching courses for user:", user_id)
