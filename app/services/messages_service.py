@@ -221,7 +221,7 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
         query = """
         WITH company_users AS (
             -- Filter users by company first
-            SELECT user_id, name, user_type
+            SELECT user_id, name, user_type, avatar
             FROM conversaconfig.user_info
             WHERE company_id = $1
         ),
@@ -265,6 +265,7 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
                 SELECT json_build_object(
                     'name', u.name,
                     'role', u.user_type,
+                    'photo', u.avatar,
                     'score', ROUND(cms.monthly_avg_score, 1)
                 )
                 FROM current_month_stats cms
