@@ -31,6 +31,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
             mc.description,
             mc.image_src,
             mc.created_on,
+            uca.assigned_at,
             uca.estimated_completion_date,
             uca.is_mandatory, 
             cs.stage_id,
@@ -86,6 +87,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "description": row['description'],
                 "image_src": row['image_src'],
                 "created_on":row['created_on'],
+                "assigned_at": row['assigned_at'],
                 "is_mandatory": row['is_mandatory'],
                 "estimated_completion_date":row['estimated_completion_date'],
                 "progress": 0, # Default value, updated below
