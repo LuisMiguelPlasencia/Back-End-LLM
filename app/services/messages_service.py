@@ -277,11 +277,11 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
 
         results = await execute_query(query, company_id)
         if not results:
-            return [{
+            return {
                 "team_average": 0.0,
                 "users_requiring_attention": 0,
                 "top_performer_data": None
-            }]
+            }
 
         row = dict(results[0])
         raw_top_performer = row.get('top_performer_data')
@@ -299,7 +299,7 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
         row['top_performer_data'] = clean_top_performer
         if row.get('team_average') is not None:
             row['team_average'] = float(row['team_average'])
-        return [row]
+        return row
 
     except Exception as e:
         print(f"Error fetching KPIs for company_id {company_id}: {str(e)}")
