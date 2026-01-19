@@ -229,9 +229,10 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
             -- Calculate average per user (historical)
             SELECT 
                 c.user_id,
-                AVG(c.general_score) as avg_score
+                AVG(sbc.general_score) as avg_score
             FROM conversaapp.conversations c
             JOIN company_users u ON c.user_id = u.user_id
+            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
             WHERE c.status = 'FINISHED'
             GROUP BY c.user_id
         ),
@@ -239,18 +240,20 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
             -- Calculate top performer (current month only)
             SELECT 
                 c.user_id,
-                AVG(c.general_score) as monthly_avg_score
+                AVG(sbc.general_score) as monthly_avg_score
             FROM conversaapp.conversations c
             JOIN company_users u ON c.user_id = u.user_id
+            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
             WHERE c.created_at >= date_trunc('month', CURRENT_DATE)
             GROUP BY c.user_id
         )
         SELECT 
             -- KPI 1: Team Average
             (
-                SELECT COALESCE(ROUND(AVG(c.general_score), 1), 0)
+                SELECT COALESCE(ROUND(AVG(sbc.general_score), 1), 0)
                 FROM conversaapp.conversations c
                 JOIN company_users u ON c.user_id = u.user_id
+                JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
             ) as team_average,
 
             -- KPI 2: Attention Required
