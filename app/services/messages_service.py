@@ -244,7 +244,7 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
             FROM conversaapp.conversations c
             JOIN company_users u ON c.user_id = u.user_id
             JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE c.created_at >= date_trunc('month', CURRENT_DATE)
+            WHERE c.created_at >= date_trunc('month', CURRENT_DATE) AND c.status = 'FINISHED'
             GROUP BY c.user_id
         )
         SELECT 
@@ -254,6 +254,7 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
                 FROM conversaapp.conversations c
                 JOIN company_users u ON c.user_id = u.user_id
                 JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+                where c.status = 'FINISHED'
             ) as team_average,
 
             -- KPI 2: Attention Required
