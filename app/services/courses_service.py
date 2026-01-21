@@ -146,10 +146,12 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
     SELECT
       mc.course_id       AS course_id,
       mc.name            AS name,
+      mc.image_src       AS image_src,
       cs.stage_id        AS stage_id,
       cs.stage_name      AS stage_name,
       cs.stage_description AS stage_description,
       cs.stage_objectives AS stage_objectives,
+      cs.chatbot_image_src AS chatbot_image_src,
       cc.content_id      AS content_id,
       cc.level           AS level,
       cc.body            AS body,
