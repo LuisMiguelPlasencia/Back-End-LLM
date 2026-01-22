@@ -108,11 +108,10 @@ def calcular_claridad(transcript):
 
     gpt_clarity = llamar_gpt_hasta_que_este_bien()
 
-    signals = gpt_clarity['señales']
     feedback = gpt_clarity['feedback']
 
-    number_of_turns_seller = len([t for t in transcript if t["speaker"] == "vendedor"])
-    penalty = gpt_clarity['veces_falta_claridad'] / number_of_turns_seller
+    #number_of_turns_seller = len([t for t in transcript if t["speaker"] == "vendedor"])
+    penalty = gpt_clarity['veces_falta_claridad']
 
     # ---- Calcular puntuación final ----
     puntuacion = int(max(100 * (1-penalty), 0))
@@ -128,14 +127,17 @@ def calcular_participacion_dinamica(transcript):
 
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            gpt_escucha_activa = call_gpt(client, active_listening(transcript))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
-            
-        return gpt_escucha_activa
+    def llamar_gpt_hasta_que_este_bien(max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                gpt_escucha_activa = call_gpt(client, active_listening(transcript))
+                return gpt_escucha_activa
+            except Exception as e: 
+                if attempt < max_retries - 1:
+                    print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
+                else:
+                    print(f"Error después de {max_retries} intentos: {e}")
+                    raise
 
     gpt_escucha_activa = llamar_gpt_hasta_que_este_bien()
 
@@ -236,14 +238,17 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
 
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            gpt_key_themes = json.loads(call_gpt(client, prompt))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
-            
-        return gpt_key_themes
+    def llamar_gpt_hasta_que_este_bien(max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                gpt_key_themes = json.loads(call_gpt(client, prompt))
+                return gpt_key_themes
+            except Exception as e: 
+                if attempt < max_retries - 1:
+                    print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
+                else:
+                    print(f"Error después de {max_retries} intentos: {e}")
+                    raise
 
     gpt_key_themes = llamar_gpt_hasta_que_este_bien()
 
@@ -254,28 +259,28 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
     # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
     penalizacion += num_temas_olvidados*20
 
-    ## Detector de proximos pasos con GPT
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            gpt_next_steps = json.loads(call_gpt(client, next_steps(transcript)))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
+    # ## Detector de proximos pasos con GPT
+    # def llamar_gpt_hasta_que_este_bien():
+    #     try:
+    #         gpt_next_steps = json.loads(call_gpt(client, next_steps(transcript)))
+    #     except: 
+    #         print("llamando a gpt otra vez porque no daba un JSON bien formado...")
+    #         llamar_gpt_hasta_que_este_bien()
             
-        return gpt_next_steps
+    #     return gpt_next_steps
 
-    gpt_next_steps = llamar_gpt_hasta_que_este_bien()
+    # gpt_next_steps = llamar_gpt_hasta_que_este_bien()
     
     
-    indicador = bool(gpt_next_steps["indicador"])
-    señales_proximos_pasos = gpt_next_steps["señales"]
+    # indicador = bool(gpt_next_steps["indicador"])
+    # señales_proximos_pasos = gpt_next_steps["señales"]
     
-    output_gpt = gpt_next_steps  # Store the full GPT response
-    bonificacion = 10 * indicador
+    # output_gpt = gpt_next_steps  # Store the full GPT response
+    # bonificacion = 10 * indicador
     
     
     # ---- Puntuación final ----
-    puntuacion = max(0, min(100, 90 - penalizacion + bonificacion))
+    puntuacion = max(0, min(100, 100 - penalizacion))
     
     return {
         "puntuacion": puntuacion,
@@ -283,10 +288,10 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
         "bonificacion": bonificacion,
         "temas_olvidados": num_temas_olvidados,
         #"objecion_no_resuelta": objecion_detectada and not respuesta,
-        "proximos_pasos": indicador,
+        #"proximos_pasos": indicador,
         "señales_temas": señales_temas,
-        "señales_proximos_pasos": señales_proximos_pasos,
-        "output_gpt": output_gpt,
+        # "señales_proximos_pasos": señales_proximos_pasos,
+        # "output_gpt": output_gpt,
         "feedback": feedback_temas_clave
     }
 
@@ -296,14 +301,17 @@ def calcular_indice_preguntas(transcript):
     
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript)))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
-            
-        return gpt_index_of_questions
+    def llamar_gpt_hasta_que_este_bien(max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript)))
+                return gpt_index_of_questions
+            except Exception as e: 
+                if attempt < max_retries - 1:
+                    print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
+                else:
+                    print(f"Error después de {max_retries} intentos: {e}")
+                    raise
 
     gpt_index_of_questions = llamar_gpt_hasta_que_este_bien()
     
@@ -372,7 +380,7 @@ def calcular_ppm_variabilidad(transcript):
     # 120-129.9 o 150.1-160: penalización media
     # 130-150: sin penalización
     if media_ppm < 100:
-        penalizacion += 100
+        penalizacion += 80
         feedback_ppm = f"Velocidad de habla demasiado lenta ({media_ppm:.1f} PPM). Intenta aumentar el ritmo para mantener la atención del cliente."
     elif 100 <= media_ppm < 120:
         penalizacion += 60
@@ -390,13 +398,13 @@ def calcular_ppm_variabilidad(transcript):
         penalizacion += 60
         feedback_ppm = f"Velocidad de habla rápida ({media_ppm:.1f} PPM). Considera desacelerar hacia el rango óptimo (130-150 PPM)."
     else:  # media_ppm > 180
-        penalizacion += 100
+        penalizacion += 80
         feedback_ppm = f"Velocidad de habla demasiado rápida ({media_ppm:.1f} PPM). Intenta disminuir el ritmo para asegurar claridad y comprensión."
 
     
     # Penalización por variabilidad extrema
-    if variabilidad > 30:  # umbral configurable
-        penalizacion += 15
+    # if variabilidad > 30:  # umbral configurable
+    #     penalizacion += 15
     
     puntuacion = max(0, min(100, 100 - penalizacion + bonificacion))
     
@@ -417,14 +425,17 @@ async def calcular_objetivo_principal(transcript, course_id, stage_id):
     
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            gpt_objetivo = json.loads(call_gpt(client, goal(transcript, goal_description)))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
-            
-        return gpt_objetivo
+    def llamar_gpt_hasta_que_este_bien(max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                gpt_objetivo = json.loads(call_gpt(client, goal(transcript, goal_description)))
+                return gpt_objetivo
+            except Exception as e: 
+                if attempt < max_retries - 1:
+                    print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
+                else:
+                    print(f"Error después de {max_retries} intentos: {e}")
+                    raise
 
     gpt_objetivo = llamar_gpt_hasta_que_este_bien()
     
@@ -473,7 +484,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
             "cobertura": res_cobertura["puntuacion"],
             "preguntas": res_preguntas["puntuacion"],
             "ppm": res_ppm["puntuacion"], 
-            "objetivo": objetivo["accomplished"]
+            "objetivo": 100 * bool(objetivo["accomplished"])
         }
         feedback = { 
             "muletillas_pausas": res_muletillas["feedback"][:499],
@@ -505,14 +516,14 @@ async def get_conver_scores(transcript, course_id, stage_id):
         objetivo = {
         "accomplished": False,
         "señales": "Objetivo no Cumplido"
-    }
+        }
     # Calcular puntuación ponderada global
     puntuacion_final = sum(scores[k] * pesos[k] for k in scores)
     return {
         "puntuacion_global": round(puntuacion_final, 1),
         "detalle": scores,
         "feedback": feedback,
-        "objetivo": objetivo
+        "objetivo": bool(objetivo["accomplished"])
     }
 
 if __name__ == "__main__":
@@ -604,6 +615,11 @@ if __name__ == "__main__":
         "duracion": 25
         }]
 
+
+        objetivo = await calcular_objetivo_principal(transcript_demo, '3eeeda53-7dff-40bc-b036-b608acb89e6f', '1cbbf136-4e7e-49d9-9dec-402d4179bd66')
+        print(objetivo)
+        return
+
         key_themes = await get_key_themes('3eeeda53-7dff-40bc-b036-b608acb89e6f', '1cbbf136-4e7e-49d9-9dec-402d4179bd66')
         print(key_themes)
         # Evaluaciones individuales
@@ -649,5 +665,7 @@ if __name__ == "__main__":
         print(res_ppm)
         
         print("\n" + "="*50)
+
+        
 
     asyncio.run(main())

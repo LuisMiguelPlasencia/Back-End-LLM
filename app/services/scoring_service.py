@@ -69,7 +69,7 @@ async def scoring(conv_id, course_id, stage_id):
     scores_detail = scoring["detalle"]
     feedback = scoring["feedback"]
     puntuacion_global = scoring["puntuacion_global"]
-    objetivo_json = scoring["objetivo"]
+    objetivo = scoring["objetivo"]
     # Get scores
     fillerwords_scoring = scores_detail.get("muletillas_pausas")
     clarity_scoring = scores_detail.get("claridad")
@@ -86,15 +86,14 @@ async def scoring(conv_id, course_id, stage_id):
     indexofquestions_feedback = feedback.get("preguntas")
     rhythm_feedback = feedback.get("ppm")
 
-    objetivo = objetivo_json.get("accomplished")
-
     print("\n📊 Computed Scores:")
     print(f"   Fillerwords: {fillerwords_scoring}")
     print(f"   Clarity: {clarity_scoring}")
     print(f"   Participation: {participation_scoring}")
     print(f"   Key Themes: {keythemes_scoring}")
     print(f"   Index of Questions: {indexofquestions_scoring}")
-    print(f"   Rhythm: {rhythm_scoring}\n")
+    print(f"   Rhythm: {rhythm_scoring}")
+    print(f"   Objective Accomplished: {objetivo}\n")
 
     # Update database
     await set_conversation_scoring(

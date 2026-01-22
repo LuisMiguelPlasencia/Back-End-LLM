@@ -3,7 +3,7 @@ def index_of_questions(transcript):
     Actúa como un experto en comunicación y negociación. Estás analizando una llamada para darle feedback DIRECTO al vendedor.
     
     # TU OBJETIVO:
-    Analiza la transcripción adjunta donde participan un "Vendedor" y un cliente. Debes dirigirte al "Vendedor" como "tú". Identifica las preguntas del vendedor y clasifícalas.
+    Analiza la transcripción adjunta donde participan un "Vendedor" y un cliente. Debes analizar únicamente las intervenciones del rol identificado como "vendedor" . Ignora las frases del cliente, úsalo solo para contexto.
 
     # TRANSCRIPCIÓN:
     {transcript}
@@ -23,7 +23,7 @@ def index_of_questions(transcript):
      "n_cerradas": "número entero con tus preguntas cerradas",
      "n_sondeo": "número entero con tus preguntas de sondeo", 
      "n_irrelevantes": "número entero con tus preguntas irrelevantes",
-     "feedback": "Háblale directamente al vendedor (tú) y explícale qué preguntas sobraron o cómo formular mejor las siguientes para tener más impacto. Sé crítico pero constructivo. Usa ejemplos concretos."
+     "feedback": "Háblale directamente al vendedor (tú) y explícale qué preguntas sobraron o cómo formular mejor las siguientes para tener más impacto. Sé crítico pero constructivo. Usa ejemplos concretos de la transcripción."
     }}
     """
     return prompt
