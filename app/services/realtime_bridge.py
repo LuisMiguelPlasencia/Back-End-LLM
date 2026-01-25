@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from ..services.messages_service import send_message
 from ..services.prompting_service import master_prompt_generator
 from ..services.conversations_service import create_conversation
-load_dotenv()
+load_dotenv(override=True)
 API_KEY = os.getenv("OPENAI_API_KEY")
 WS_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
 

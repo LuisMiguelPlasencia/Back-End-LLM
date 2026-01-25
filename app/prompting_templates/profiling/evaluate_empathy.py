@@ -1,8 +1,4 @@
-from typing import Tuple
-from .call_gpt_utils import call_gpt
-
-
-def evaluate_empathy(transcript) -> Tuple[int, str]:
+def evaluate_empathy(transcript) -> str:
   
     prompt = f"""
 Analiza la siguiente transcripción y evalúa la EMPATÍA del vendedor:
@@ -40,5 +36,4 @@ El formato exacto es:
   "justification": "Explicación específica con ejemplos de la transcripción"
 }}
 """
-    text = call_gpt(prompt)
-    return text
+    return prompt

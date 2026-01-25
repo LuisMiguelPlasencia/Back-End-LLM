@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from app.services.conversations_service import set_conversation_profiling
 from scoring_scripts.get_conver_skills import get_conver_skills
 
-load_dotenv()
+load_dotenv(override=True)
 
 # --- DB CONFIG ---
 current_env = os.getenv("ENVIRONMENT", "DEV").upper()

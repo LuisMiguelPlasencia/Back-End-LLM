@@ -10,7 +10,7 @@ from datetime import  timedelta
 from fastapi import HTTPException
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 SECRET_KEY_JWT = os.getenv("SECRET_KEY_JWT")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 Hours

@@ -3,11 +3,9 @@ import json
 import os
 import re
 import string
-import sys
 from collections import Counter
 
 import numpy as np
-from dotenv import load_dotenv
 from openai import OpenAI
 
 from app.prompting_templates.scoring.active_listening import active_listening
@@ -20,12 +18,9 @@ from app.prompting_templates.scoring.participation import participation
 from app.services.courses_service import get_courses_details
 from app.services.db import execute_query_one
 from app.utils.call_gpt import call_gpt
+from app.utils.openai_client import get_openai_client
 
-sys.path.insert(0, "../../src")
-load_dotenv()
-
-OPENAI_TOKEN = os.getenv("OPENAI_TOKEN")
-client = OpenAI(api_key=OPENAI_TOKEN)
+DEFAULT_MODEL = "gpt-4.1-nano-2025-04-14"
 
 
 async def get_key_themes(course_id, stage_id):
@@ -93,18 +88,22 @@ def calcular_muletillas(transcript, duracion=None, muletillas=None):
     }
     
 # ### Claridad y complejidad
-def calcular_claridad(transcript):
+def calcular_claridad(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL):
 
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien():
-        try:
-            gpt_clarity = json.loads(call_gpt(client, clarity(transcript)))
-        except: 
-            print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-            llamar_gpt_hasta_que_este_bien()
-            
-        return gpt_clarity
+    def llamar_gpt_hasta_que_este_bien(max_retries=3):
+        for attempt in range(max_retries):
+            try:
+                return json.loads(call_gpt(client, clarity(transcript), model=model))
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(
+                        f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})"
+                    )
+                else:
+                    print(f"Error después de {max_retries} intentos: {e}")
+                    raise
 
     gpt_clarity = llamar_gpt_hasta_que_este_bien()
 
@@ -123,14 +122,14 @@ def calcular_claridad(transcript):
     }
 
 ### Participación y dinámica
-def calcular_participacion_dinamica(transcript):
+def calcular_participacion_dinamica(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL):
 
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
     def llamar_gpt_hasta_que_este_bien(max_retries=3):
         for attempt in range(max_retries):
             try:
-                gpt_escucha_activa = call_gpt(client, active_listening(transcript))
+                gpt_escucha_activa = call_gpt(client, active_listening(transcript), model=model)
                 return gpt_escucha_activa
             except Exception as e: 
                 if attempt < max_retries - 1:
@@ -227,7 +226,7 @@ def calcular_participacion_dinamica(transcript):
     }
 
 ### Cobertura de temas y palabras clave
-async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
+async def calcular_cobertura_temas_json(client: OpenAI, transcript, course_id, stage_id, *, model: str = DEFAULT_MODEL):
 
     penalizacion = 0
     bonificacion = 0
@@ -241,7 +240,7 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
     def llamar_gpt_hasta_que_este_bien(max_retries=3):
         for attempt in range(max_retries):
             try:
-                gpt_key_themes = json.loads(call_gpt(client, prompt))
+                gpt_key_themes = json.loads(call_gpt(client, prompt, model=model))
                 return gpt_key_themes
             except Exception as e: 
                 if attempt < max_retries - 1:
@@ -296,7 +295,7 @@ async def calcular_cobertura_temas_json(transcript, course_id, stage_id):
     }
 
 ### Indice de preguntas (Aquí hay que darle una pensadica)
-def calcular_indice_preguntas(transcript):
+def calcular_indice_preguntas(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL):
     # Definiciones de sets de preguntas
     
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
@@ -304,7 +303,7 @@ def calcular_indice_preguntas(transcript):
     def llamar_gpt_hasta_que_este_bien(max_retries=3):
         for attempt in range(max_retries):
             try:
-                gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript)))
+                gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript), model=model))
                 return gpt_index_of_questions
             except Exception as e: 
                 if attempt < max_retries - 1:
@@ -418,7 +417,7 @@ def calcular_ppm_variabilidad(transcript):
         "feedback": feedback_ppm
     }
 
-async def calcular_objetivo_principal(transcript, course_id, stage_id):
+async def calcular_objetivo_principal(client: OpenAI, transcript, course_id, stage_id, *, model: str = DEFAULT_MODEL):
 
     stage_details = await get_courses_details(course_id, stage_id)
     goal_description = stage_details[0]["stage_objectives"]
@@ -428,7 +427,7 @@ async def calcular_objetivo_principal(transcript, course_id, stage_id):
     def llamar_gpt_hasta_que_este_bien(max_retries=3):
         for attempt in range(max_retries):
             try:
-                gpt_objetivo = json.loads(call_gpt(client, goal(transcript, goal_description)))
+                gpt_objetivo = json.loads(call_gpt(client, goal(transcript, goal_description), model=model))
                 return gpt_objetivo
             except Exception as e: 
                 if attempt < max_retries - 1:
@@ -449,7 +448,14 @@ async def calcular_objetivo_principal(transcript, course_id, stage_id):
     }
 
 ## Scoring function
-async def get_conver_scores(transcript, course_id, stage_id):
+async def get_conver_scores(
+    transcript,
+    course_id,
+    stage_id,
+    *,
+    client: OpenAI | None = None,
+    model: str = DEFAULT_MODEL,
+):
     # Factores de ponderación
     pesos = {
         "muletillas_pausas": 0.075,
@@ -465,16 +471,17 @@ async def get_conver_scores(transcript, course_id, stage_id):
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
         
     if palabras_totales > 100:
+        resolved_client = client or get_openai_client()
 
         # Evaluaciones individuales
         res_muletillas = calcular_muletillas(transcript)
-        res_claridad = calcular_claridad(transcript)
-        res_participacion = calcular_participacion_dinamica(transcript)
-        res_cobertura = await calcular_cobertura_temas_json(transcript, course_id, stage_id)
-        res_preguntas = calcular_indice_preguntas(transcript)
+        res_claridad = calcular_claridad(resolved_client, transcript, model=model)
+        res_participacion = calcular_participacion_dinamica(resolved_client, transcript, model=model)
+        res_cobertura = await calcular_cobertura_temas_json(resolved_client, transcript, course_id, stage_id, model=model)
+        res_preguntas = calcular_indice_preguntas(resolved_client, transcript, model=model)
         res_ppm = calcular_ppm_variabilidad(transcript) 
 
-        objetivo = await calcular_objetivo_principal(transcript, course_id, stage_id)
+        objetivo = await calcular_objetivo_principal(resolved_client, transcript, course_id, stage_id, model=model)
 
         # Extraer puntuaciones
         scores = {
@@ -528,6 +535,7 @@ async def get_conver_scores(transcript, course_id, stage_id):
 
 if __name__ == "__main__":
     async def main():
+        client = get_openai_client()
         transcript_demo = [
     {
         "speaker": "vendedor", 
@@ -616,7 +624,12 @@ if __name__ == "__main__":
         }]
 
 
-        objetivo = await calcular_objetivo_principal(transcript_demo, '3eeeda53-7dff-40bc-b036-b608acb89e6f', '1cbbf136-4e7e-49d9-9dec-402d4179bd66')
+        objetivo = await calcular_objetivo_principal(
+            client,
+            transcript_demo,
+            '3eeeda53-7dff-40bc-b036-b608acb89e6f',
+            '1cbbf136-4e7e-49d9-9dec-402d4179bd66',
+        )
         print(objetivo)
         return
 
@@ -630,19 +643,20 @@ if __name__ == "__main__":
         print("="*50)
         print(res_muletillas)
 
-        res_claridad = calcular_claridad(transcript_demo)
+        res_claridad = calcular_claridad(client, transcript_demo)
         print("\n" + "="*50)
         print("CLARIDAD")
         print("="*50)
         print(res_claridad)
 
-        res_participacion = calcular_participacion_dinamica(transcript_demo)
+        res_participacion = calcular_participacion_dinamica(client, transcript_demo)
         print("\n" + "="*50)
         print("PARTICIPACIÓN Y DINÁMICA")
         print("="*50)
         print(res_participacion)
 
         res_cobertura = await calcular_cobertura_temas_json(
+            client,
             transcript_demo,
             '3eeeda53-7dff-40bc-b036-b608acb89e6f',
             '1cbbf136-4e7e-49d9-9dec-402d4179bd66'
@@ -652,7 +666,7 @@ if __name__ == "__main__":
         print("="*50)
         print(res_cobertura)
 
-        res_preguntas = calcular_indice_preguntas(transcript_demo)
+        res_preguntas = calcular_indice_preguntas(client, transcript_demo)
         print("\n" + "="*50)
         print("ÍNDICE DE PREGUNTAS")
         print("="*50)

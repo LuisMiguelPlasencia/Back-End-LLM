@@ -1,8 +1,4 @@
-from typing import Tuple
-from .call_gpt_utils import call_gpt
-
-
-def evaluate_resilience(transcript) -> Tuple[int, str]:
+def evaluate_resilience(transcript) -> str:
 
     prompt = f"""
 Analiza la siguiente transcripción y evalúa la RESILIENCIA del vendedor:
@@ -39,6 +35,4 @@ El formato exacto es:
   "justification": "Explicación específica con ejemplos de la transcripción"
 }}
 """
-    output = call_gpt(prompt) 
-    
-    return output
+    return prompt

@@ -14,7 +14,7 @@ from app.services.messages_service import send_message
 from app.services.prompting_service import master_prompt_generator
 from app.services.realtime_service import stop_process, user_msg_processed, is_non_silent
 
-load_dotenv()
+load_dotenv(override=True)
 
 # CONFIGURACIÓN ELEVENLABS
 # Asegúrate de tener estas variables en tu .env

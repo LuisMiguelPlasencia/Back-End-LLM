@@ -14,7 +14,7 @@ from app.services.db import execute_query
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 
-load_dotenv()
+load_dotenv(override=True)
 SECRET_KEY_JWT = os.getenv("SECRET_KEY_JWT")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60

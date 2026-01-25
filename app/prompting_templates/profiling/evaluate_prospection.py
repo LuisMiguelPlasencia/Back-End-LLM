@@ -1,8 +1,4 @@
-from typing import Tuple
-from .call_gpt_utils import call_gpt
-
-
-def evaluate_prospection(transcript) -> Tuple[int, str]:
+def evaluate_prospection(transcript) -> str:
   
     prompt = f"""
 Analiza la siguiente transcripción de una llamada de ventas y evalúa la PROSPECCIÓN del vendedor según esta rúbrica:
@@ -35,6 +31,4 @@ El formato exacto es:
   "justification": "Explicación específica con ejemplos de la transcripción"
 }}
 """
-    output = call_gpt(prompt)
-    
-    return output
+    return prompt

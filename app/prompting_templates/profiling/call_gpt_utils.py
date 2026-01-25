@@ -1,18 +1,14 @@
-import os
-import sys
-from dotenv import load_dotenv
+"""Compatibility wrapper for older profiling modules.
 
-sys.path.insert(0, "../../src")
-load_dotenv()
-OPENAI_TOKEN = os.getenv("OPENAI_TOKEN")
+New code should use:
+- `app.utils.openai_client.get_openai_client()` to create the client
+- `app.utils.call_gpt.call_gpt(client, prompt, model=...)` to execute requests
+"""
+
 from openai import OpenAI
 
-client = OpenAI(api_key=OPENAI_TOKEN)
+from app.utils.call_gpt import call_gpt as _call_gpt
 
 
-def call_gpt(prompt: str) -> str:
-    response = client.responses.create(
-        model="gpt-4.1-nano-2025-04-14",
-        input=prompt,
-    )
-    return response.output_text
+def call_gpt(client: OpenAI, prompt: str, model: str = "gpt-4.1-nano-2025-04-14") -> str:
+    return _call_gpt(client, prompt, model=model)

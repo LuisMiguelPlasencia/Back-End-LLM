@@ -7,7 +7,7 @@ import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Global connection pool
 _pool = None
