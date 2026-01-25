@@ -19,7 +19,7 @@ def index_of_questions(transcript):
     # Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
     {{
      "señales": "Lista breve de momentos clave donde identificas estos tipos de preguntas",
-     "n_total": "número entero con el total de preguntas que hiciste (tú, el vendedor)",
+     "n_total": "número entero con el total de preguntas del vendedor",
      "n_cerradas": "número entero con tus preguntas cerradas",
      "n_sondeo": "número entero con tus preguntas de sondeo", 
      "n_irrelevantes": "número entero con tus preguntas irrelevantes",

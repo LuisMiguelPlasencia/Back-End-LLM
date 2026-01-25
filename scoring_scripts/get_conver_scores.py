@@ -92,7 +92,7 @@ def calcular_claridad(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL)
 
     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien(max_retries=3):
+    def llamar_gpt_hasta_que_este_bien(max_retries=10):
         for attempt in range(max_retries):
             try:
                 return json.loads(call_gpt(client, clarity(transcript), model=model))
@@ -113,7 +113,7 @@ def calcular_claridad(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL)
     penalty = gpt_clarity['veces_falta_claridad']
 
     # ---- Calcular puntuación final ----
-    puntuacion = int(max(100 * (1-penalty), 0))
+    puntuacion = max(0, 100 - 10 * penalty)
 
     return {
         "puntuacion": puntuacion,
@@ -167,7 +167,7 @@ def calcular_participacion_dinamica(client: OpenAI, transcript, *, model: str = 
     ratio = palabras_vendedor/total_palabras
     
     # ---- Penalizaciones y bonificaciones ----
-    bonificacion_escucha_activa = min(num_escucha * 10, 40) # decidimos hacerlo en términos absolutos y no relativos al número de turnos del vendedor ya que hacerlo más de tres veces, por mucho que la conversación sea larga, sería ser un pelota
+    bonificacion_escucha_activa = min(num_escucha * 10, 10) # decidimos hacerlo en términos absolutos y no relativos al número de turnos del vendedor ya que hacerlo más de tres veces, por mucho que la conversación sea larga, sería ser un pelota
     penalizacion_ratio_participacion = 0
     
     # Arbol de decision
@@ -209,7 +209,7 @@ def calcular_participacion_dinamica(client: OpenAI, transcript, *, model: str = 
 
     # ---- Puntuación final ----
     # puntuacion = max(0, min(100, 70 - penalizacion_ratio_participacion - penalizacion_interrupciones + bonificacion_escucha_activa))
-    puntuacion = max(0, min(100, 70 - penalizacion_ratio_participacion + bonificacion_escucha_activa))
+    puntuacion = max(0, min(100, 90 - penalizacion_ratio_participacion + bonificacion_escucha_activa))
 
     return {
         "palabras_cliente": palabras_cliente, 
@@ -319,18 +319,42 @@ def calcular_indice_preguntas(client: OpenAI, transcript, *, model: str = DEFAUL
     count_sondeo = gpt_index_of_questions['n_sondeo']
     count_irrelevantes = gpt_index_of_questions['n_irrelevantes']
     
+    # Árbol de decisión para bonificación y penalización basado en porcentajes respecto al total de preguntas
+    
     penalizacion = 0
     bonificacion = 0
-    
-    # Penalización si cerradas > 60% del total
-    if total_preguntas > 0 and (count_cerradas / total_preguntas) > 0.6:
-        penalizacion += 15
-    
-    # Penalización por irrelevantes
-    penalizacion += count_irrelevantes * 15
-    
-    # Bonificación por sondeo
-    bonificacion = min(count_sondeo * 10,40)
+
+    if total_preguntas > 0:
+        porcentaje_cerradas = count_cerradas / total_preguntas
+        porcentaje_sondeo = count_sondeo / total_preguntas
+        porcentaje_irrelevantes = count_irrelevantes / total_preguntas
+
+        # Penalización por demasiadas cerradas
+        if porcentaje_cerradas > 0.7:
+            penalizacion += 30
+        elif porcentaje_cerradas > 0.6:
+            penalizacion += 20
+        elif porcentaje_cerradas > 0.5:
+            penalizacion += 10
+
+        # Penalización por preguntas irrelevantes (sube por tramo)
+        if porcentaje_irrelevantes > 0.3:
+            penalizacion += 30
+        elif porcentaje_irrelevantes > 0.2:
+            penalizacion += 20
+        elif porcentaje_irrelevantes > 0.1:
+            penalizacion += 10
+
+        # Bonificación por preguntas de sondeo (más porcentaje, más bonificación)
+        if porcentaje_sondeo > 0.5:
+            bonificacion += 40
+        elif porcentaje_sondeo > 0.3:
+            bonificacion += 30
+        elif porcentaje_sondeo > 0.2:
+            bonificacion += 20
+        elif porcentaje_sondeo > 0.1:
+            bonificacion += 10
+
     
     # Score final
     puntuacion = max(0, min(100,  60 - penalizacion + bonificacion))
@@ -499,7 +523,8 @@ async def get_conver_scores(
             "participacion": res_participacion["feedback"][:499],
             "cobertura": res_cobertura["feedback"][:499],
             "preguntas": res_preguntas["feedback"][:499],
-            "ppm": res_ppm["feedback"][:499]
+            "ppm": res_ppm["feedback"][:499], 
+            "objetivo": objetivo["señales"]
         }
     else: 
         scores = {

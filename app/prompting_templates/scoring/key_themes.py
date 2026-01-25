@@ -21,6 +21,6 @@ def key_themes(transcript, key_themes_list):
     {{"n_temas_abordados": "numero entero mencionando el numero de temas clave abordados",
       "n_temas_olvidados": "numero entero mencionando el numero de temas clave olvidados",
      "señales": "Señales donde se identifican temas claves abordados. Se lo más breve y conciso posible",
-     "feedback": "Temas claves que no se han abordado. Se lo más breve y conciso posible. Habla en segunda persona."}}
+     "feedback": "Temas claves que no se han abordado. Se lo más breve y conciso posible. Habla en segunda persona. Si se abordaron todos los temas, felicita por la cobertura completa."}}
     """
     return prompt
