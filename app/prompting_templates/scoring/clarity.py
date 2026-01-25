@@ -16,7 +16,7 @@ def clarity(transcript):
 
     ### ESTRUCTURA DEL JSON DE RESPUESTA:
 
-    * `"señales"`: (String) Cita las frases textuales exactas entre comillas o resume brevemente el momento donde se perdió la claridad. Si hay varias, sepáralas por punto y coma. Si el valor de "Veces_falta_claridad" es 0, escribe exactamente "Ninguna".
+    * `"señales"`: (String) Cita las frases textuales exactas entre comillas o resume brevemente el momento donde se perdió la claridad. Si hay varias, sepáralas por punto y coma. Si no hay ninguna falta de claridad en el discurso, escribe exactamente "Ninguna".
     * `"veces_falta_claridad"`: (Int) Número total de veces que detectaste un problema de claridad. Si todo fue perfecto, pon 0.
     * `"feedback"`: (String) Proporciona consejos tácticos y directos para mejorar la claridad basándote en los errores encontrados. Si no hubo errores, felicita por la estructura clara. Habla en segunda persona del singular. 
 

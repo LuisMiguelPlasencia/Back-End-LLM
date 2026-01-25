@@ -30,8 +30,8 @@ INSTRUCCIONES DE FORMATO (IMPORTANTE):
 
 El formato exacto es:
 {{
+  "justification": "Feedback con ejemplos de la transcripción que justifiquen la nota obtenida",
   "score": "numero entero indicando la puntuación segun la rubrica.",
-  "justification": "Explicación específica con ejemplos de la transcripción"
 }}
 
 """

@@ -21,8 +21,8 @@ def next_steps(transcript):
 
     Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
     {{
+     "señales": "En caso de existir señales de próximos pasos por parte del vendedor, resúmelos (ej: 'Propusiste una reunión para el martes'). Si no, indica brevemente qué faltó (ej: 'Te despediste sin concretar fecha para el siguiente contacto'). Máximo 40 palabras.",
      "indicador": true/false, 
-     "señales": "Si es TRUE: Resume qué paso concreto propusiste (ej: 'Propusiste una reunión para el martes'). Si es FALSE: Indica brevemente qué faltó (ej: 'Te despediste sin concretar fecha para el siguiente contacto'). Máximo 40 palabras."
      }}
     """
     return prompt
