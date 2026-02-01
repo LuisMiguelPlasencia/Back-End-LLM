@@ -35,6 +35,8 @@ wordfreq = "^3.1.1"
 certifi = "^2025.11.12"
 bcrypt = "^5.0.0"
 python-jose = {extras = ["cryptography"], version = "^3.5.0"}
+pypdf = "^6.6.2"
+matplotlib = "^3.10.8"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.11.0"
