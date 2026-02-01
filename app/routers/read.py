@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query, HTTPException, Depends
 from uuid import UUID
 from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats
+from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 
@@ -151,3 +151,11 @@ async def get_company_kpi_stats(company_id: str = Query(..., description="Compan
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")
 
+@router.get("/userJourney")
+async def get_journay_by_user(user_id: UUID = Query(..., description="User ID to get Jouney for")):
+    """Get User Journey"""
+    try:
+        get_user_jouney = await get_user_journey(user_id)
+        return get_user_jouney
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")

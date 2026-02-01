@@ -315,3 +315,47 @@ FROM team_monthly_comparison tmc;
     except Exception as e:
         print(f"Error fetching KPIs for company_id {company_id}: {str(e)}")
         return []
+
+async def get_user_journey(user_id: str) -> List[Dict]:
+    """
+    Retrieves the learning journey for a specific user, including progress 
+    details per stage and counts of contents/modules.
+    """
+    try:
+        query = """
+            SELECT 
+                ulj.journey_id,
+                ulj.course_id,
+                ulj.stage_id,
+                cs.stage_name,
+                ulj.status,
+                ulj.display_order,
+                ulj.is_optional,
+                ulj.start_timestamp,
+                ulj.last_accessed_at,
+                ulj.end_timestamp,
+                -- Contamos cuántos contenidos/módulos tiene esta etapa
+                COUNT(cc.content_id) AS total_modules,
+                -- Ejemplo de lógica para módulos completados (si tienes esa info en course_contents)
+                COUNT(cc.content_id) FILTER (WHERE ulj.status = 'completed') AS modules_done
+            FROM conversaconfig.user_learning_journey ulj
+            JOIN conversaconfig.course_stages cs 
+                ON ulj.stage_id = cs.stage_id
+            LEFT JOIN conversaconfig.course_contents cc 
+                ON cs.stage_id = cc.stage_id
+            WHERE ulj.user_id = $1
+            GROUP BY 
+                ulj.journey_id, 
+                cs.stage_name, 
+                ulj.display_order
+            ORDER BY ulj.display_order ASC;
+        """
+
+        results = await execute_query(query, user_id)
+        
+        # Retornamos la lista de diccionarios para que el front mapee el Journey
+        return [dict(r) for r in results] if results else []
+
+    except Exception as e:
+        print(f"Error fetching user learning journey for user id {user_id}: {str(e)}")
+        return []
