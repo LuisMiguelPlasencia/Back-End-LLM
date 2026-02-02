@@ -1,27 +1,50 @@
 def evaluate_technical_domain(transcript) -> str:
   
     prompt = f"""
-Analiza la siguiente transcripción y evalúa el DOMINIO TÉCNICO del vendedor:
+# CONTEXTO Y TAREA
+Eres un experto en comunicación, negociación y ventas. Tu tarea es analizar una conversación entre un vendedor y su potencial cliente. A continuación encontrarás las pautas que debes seguir para dar una puntuación u otra, y después recibirás la transcripción de la conversaciónAnaliza la siguiente transcripción. En este caso, debes evaluar el DOMINIO TÉCNICO del vendedor sobre el producto o servicio que ofrece, en una escala del 1 al 5, evaluándolo en base a las siguientes pautas:
 
-**ALTA (5 puntos)**: Traduce características técnicas en beneficios específicos para el cliente con ejemplos concretos. Responde con confianza a preguntas técnicas complejas, usa datos específicos y métricas. Ejemplos: "nuestra batería dura 12 horas, lo que significa que tus clientes no tendrán que recargarla durante un vuelo transatlántico", "la tecnología X reduce el procesamiento en 30%, permitiéndote ahorrar costes operativos".
+# RÚBRICA DETALLADA
+## 5 – Dominio técnico avanzado
+El vendedor cumple todas las siguientes condiciones:
+- Describe características técnicas con detalle específico (funcionamiento, límites, condiciones).
+- Traduce esas características en beneficios operativos o económicos concretos para el cliente.
+- Utiliza datos verificables: cifras, porcentajes, tiempos, capacidades, comparaciones técnicas.
+- Responde directamente a preguntas técnicas sin evasivas.
 
-**MEDIA-ALTA (4 puntos)**: Conecta características técnicas con beneficios del cliente, responde bien a preguntas técnicas, pero puede ser menos específico en ejemplos o métricas.
+## 4 – Dominio técnico sólido
+El vendedor cumple al menos 3 de las siguientes condiciones:
+- Explica correctamente características técnicas relevantes.
+- Relaciona esas características con beneficios para el cliente.
+- Responde preguntas técnicas de forma correcta pero sin datos cuantitativos o ejemplos detallados.
+- Usa ejemplos genéricos pero coherentes.
 
-**MEDIA (3 puntos)**: Menciona características técnicas pero sin conectarlas claramente con beneficios específicos para el cliente. Ejemplos: "tiene batería de 12 horas", "es resistente al agua", "utiliza tecnología X".
+## 3 – Dominio técnico básico
+El vendedor cumple al menos 1 de las siguientes condiciones:
+- Enumera características técnicas correctas sin explicar su impacto en el cliente.
+- Usa terminología técnica sin contextualizarla.
+- Responde preguntas técnicas de forma superficial o incompleta.
 
-**MEDIA-BAJA (2 puntos)**: Menciona algunas características básicas pero sin profundidad técnica o conexión con beneficios.
+## 2 – Dominio técnico insuficiente
+El vendedor:
+- Menciona características vagas o genéricas sin detalle técnico.
+- No demuestra comprensión del funcionamiento del producto.
+- Evita profundizar cuando surge un aspecto técnico.
 
-**BAJA (1 punto)**: No menciona características específicas o no puede responder preguntas técnicas. Ejemplos: "es muy bueno", "funciona bien", "déjame preguntar a mi superior".
+## 1 – Sin dominio técnico
+El vendedor:
+- No menciona características técnicas identificables.
+- No responde preguntas técnicas o deriva la respuesta a terceros.
+- Usa únicamente valoraciones subjetivas sin contenido técnico.
 
-TRANSCRIPCIÓN:
+
+# TRANSCRIPCIÓN DE LA CONVERSACIÓN A EVALUAR
 {transcript}
 
-Evalúa si el vendedor:
-- Conoce las características técnicas del producto
-- Las conecta con beneficios específicos
-- Responde con confianza a preguntas técnicas
+# INSTRUCCIONES FINALES
+Debes justificar brevemente tu puntuación con ejemplos concretos extraídos de la transcripción, y responder con una puntuación del 1 al 5 según las pautas anteriores. REGLA DE DESEMPATE: en caso de duda, si la evaluación cae entre dos puntuaciones de la rúbrica, el vendedor recibirá la puntuación inferior. Darás tu respuesta en formato JSON, ajustándote estrictamente a las siguientes instrucciones de formato:
 
-INSTRUCCIONES DE FORMATO (IMPORTANTE):
+# INSTRUCCIONES DE FORMATO (IMPORTANTE):
 1. Responde en español empleando la segunda persona del singular.
 2. Responde ÚNICAMENTE con un JSON válido.
 3. NO uses bloques de código markdown (```json).
