@@ -295,84 +295,84 @@ async def calcular_cobertura_temas_json(client: OpenAI, transcript, course_id, s
     }
 
 ### Indice de preguntas (Aquí hay que darle una pensadica)
-def calcular_indice_preguntas(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL):
-    # Definiciones de sets de preguntas
+# def calcular_indice_preguntas(client: OpenAI, transcript, *, model: str = DEFAULT_MODEL):
+#     # Definiciones de sets de preguntas
     
-    # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
-    # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
-    def llamar_gpt_hasta_que_este_bien(max_retries=3):
-        for attempt in range(max_retries):
-            try:
-                gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript), model=model))
-                return gpt_index_of_questions
-            except Exception as e: 
-                if attempt < max_retries - 1:
-                    print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
-                else:
-                    print(f"Error después de {max_retries} intentos: {e}")
-                    raise
+#     # guarrada temporal para evitar errores cuando gpt devuelve algo que no es un JSON bien formado
+#     # habrá que pensar una forma mejor de hacerlo o al menos ponerlo más bonito
+#     def llamar_gpt_hasta_que_este_bien(max_retries=3):
+#         for attempt in range(max_retries):
+#             try:
+#                 gpt_index_of_questions = json.loads(call_gpt(client, index_of_questions(transcript), model=model))
+#                 return gpt_index_of_questions
+#             except Exception as e: 
+#                 if attempt < max_retries - 1:
+#                     print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
+#                 else:
+#                     print(f"Error después de {max_retries} intentos: {e}")
+#                     raise
 
-    gpt_index_of_questions = llamar_gpt_hasta_que_este_bien()
+#     gpt_index_of_questions = llamar_gpt_hasta_que_este_bien()
     
-    total_preguntas = gpt_index_of_questions['n_total']
-    count_cerradas = gpt_index_of_questions['n_cerradas']
-    count_sondeo = gpt_index_of_questions['n_sondeo']
-    count_irrelevantes = gpt_index_of_questions['n_irrelevantes']
+#     total_preguntas = gpt_index_of_questions['n_total']
+#     count_cerradas = gpt_index_of_questions['n_cerradas']
+#     count_sondeo = gpt_index_of_questions['n_sondeo']
+#     count_irrelevantes = gpt_index_of_questions['n_irrelevantes']
     
-    # Árbol de decisión para bonificación y penalización basado en porcentajes respecto al total de preguntas
+#     # Árbol de decisión para bonificación y penalización basado en porcentajes respecto al total de preguntas
     
-    penalizacion = 0
-    bonificacion = 0
+#     penalizacion = 0
+#     bonificacion = 0
 
-    if total_preguntas > 0:
-        porcentaje_cerradas = count_cerradas / total_preguntas
-        porcentaje_sondeo = count_sondeo / total_preguntas
-        porcentaje_irrelevantes = count_irrelevantes / total_preguntas
+#     if total_preguntas > 0:
+#         porcentaje_cerradas = count_cerradas / total_preguntas
+#         porcentaje_sondeo = count_sondeo / total_preguntas
+#         porcentaje_irrelevantes = count_irrelevantes / total_preguntas
 
-        # Penalización por demasiadas cerradas
-        if porcentaje_cerradas > 0.7:
-            penalizacion += 30
-        elif porcentaje_cerradas > 0.6:
-            penalizacion += 20
-        elif porcentaje_cerradas > 0.5:
-            penalizacion += 10
+#         # Penalización por demasiadas cerradas
+#         if porcentaje_cerradas > 0.7:
+#             penalizacion += 30
+#         elif porcentaje_cerradas > 0.6:
+#             penalizacion += 20
+#         elif porcentaje_cerradas > 0.5:
+#             penalizacion += 10
 
-        # Penalización por preguntas irrelevantes (sube por tramo)
-        if porcentaje_irrelevantes > 0.3:
-            penalizacion += 30
-        elif porcentaje_irrelevantes > 0.2:
-            penalizacion += 20
-        elif porcentaje_irrelevantes > 0.1:
-            penalizacion += 10
+#         # Penalización por preguntas irrelevantes (sube por tramo)
+#         if porcentaje_irrelevantes > 0.3:
+#             penalizacion += 30
+#         elif porcentaje_irrelevantes > 0.2:
+#             penalizacion += 20
+#         elif porcentaje_irrelevantes > 0.1:
+#             penalizacion += 10
 
-        # Bonificación por preguntas de sondeo (más porcentaje, más bonificación)
-        if porcentaje_sondeo > 0.5:
-            bonificacion += 40
-        elif porcentaje_sondeo > 0.3:
-            bonificacion += 30
-        elif porcentaje_sondeo > 0.2:
-            bonificacion += 20
-        elif porcentaje_sondeo > 0.1:
-            bonificacion += 10
+#         # Bonificación por preguntas de sondeo (más porcentaje, más bonificación)
+#         if porcentaje_sondeo > 0.5:
+#             bonificacion += 40
+#         elif porcentaje_sondeo > 0.3:
+#             bonificacion += 30
+#         elif porcentaje_sondeo > 0.2:
+#             bonificacion += 20
+#         elif porcentaje_sondeo > 0.1:
+#             bonificacion += 10
 
     
-    # Score final
-    puntuacion = max(0, min(100,  60 - penalizacion + bonificacion))
+#     # Score final
+#     puntuacion = max(0, min(100,  60 - penalizacion + bonificacion))
 
-    # Feedback
-    feedback = gpt_index_of_questions['feedback']
+#     # Feedback
+#     feedback = gpt_index_of_questions['feedback']
     
-    return {
-        "puntuacion": puntuacion,
-        "total_preguntas": total_preguntas,
-        #"preguntas": preguntas,
-        "cerradas": count_cerradas,
-        "sondeo": count_sondeo,
-        "irrelevantes": count_irrelevantes,
-        "penalizacion": penalizacion,
-        "bonificacion": bonificacion,
-        "feedback": feedback
-    }
+#     return {
+#         "puntuacion": puntuacion,
+#         "total_preguntas": total_preguntas,
+#         #"preguntas": preguntas,
+#         "cerradas": count_cerradas,
+#         "sondeo": count_sondeo,
+#         "irrelevantes": count_irrelevantes,
+#         "penalizacion": penalizacion,
+#         "bonificacion": bonificacion,
+#         "feedback": feedback
+#     }
 
 ### PPM y variabilidad
 def calcular_ppm_variabilidad(transcript):
@@ -487,16 +487,15 @@ async def get_conver_scores(
     client: OpenAI | None = None,
     model: str = DEFAULT_MODEL,
 ):
-    # Factores de ponderación
+    # Factores de ponderación (preguntas desactivada: su 0.075 pasó a objetivo)
     pesos = {
         "muletillas_pausas": 0.075,
         "claridad": 0.075,
-        "participacion": 0.1,
-        "cobertura": 0.1,
-        "preguntas": 0.075,
-        "ppm": 0.075, 
-        "objetivo": 0.5
-
+        "participacion": 0.1375,
+        "cobertura": 0.1375,
+        "preguntas": 0.0,  # Métrica desactivada temporalmente
+        "ppm": 0.075,
+        "objetivo": 0.5,
     }
 
     palabras_totales = sum(len(turn["text"].split()) for turn in transcript)
@@ -509,7 +508,9 @@ async def get_conver_scores(
         res_claridad = calcular_claridad(resolved_client, transcript, model=model)
         res_participacion = calcular_participacion_dinamica(resolved_client, transcript, model=model)
         res_cobertura = await calcular_cobertura_temas_json(resolved_client, transcript, course_id, stage_id, model=model)
-        res_preguntas = calcular_indice_preguntas(resolved_client, transcript, model=model)
+        # Índice de preguntas desactivado temporalmente; placeholder para no romper pipeline/DB
+        # res_preguntas = calcular_indice_preguntas(resolved_client, transcript, model=model)
+        res_preguntas = {"puntuacion": 0, "feedback": "Métrica desactivada temporalmente"}
         res_ppm = calcular_ppm_variabilidad(transcript) 
 
         objetivo = await calcular_objetivo_principal(resolved_client, transcript, course_id, stage_id, model=model)
@@ -698,11 +699,11 @@ if __name__ == "__main__":
         print("="*50)
         print(res_cobertura)
 
-        res_preguntas = calcular_indice_preguntas(client, transcript_demo)
-        print("\n" + "="*50)
-        print("ÍNDICE DE PREGUNTAS")
-        print("="*50)
-        print(res_preguntas)
+        # res_preguntas = calcular_indice_preguntas(client, transcript_demo)  # Métrica desactivada
+        # print("\n" + "="*50)
+        # print("ÍNDICE DE PREGUNTAS")
+        # print("="*50)
+        # print(res_preguntas)
 
         res_ppm = calcular_ppm_variabilidad(transcript_demo)
         print("\n" + "="*50)
