@@ -460,15 +460,22 @@ async def calcular_objetivo_principal(client: OpenAI, transcript, course_id, sta
                     print(f"Error después de {max_retries} intentos: {e}")
                     raise
 
-    gpt_objetivo = llamar_gpt_hasta_que_este_bien()
-    
-    
-    indicador = bool(gpt_objetivo["indicador"])
-    señales = gpt_objetivo["señales"]
+    NUM_CALLS = 5
+    results = []
+    for _ in range(NUM_CALLS):
+        gpt_objetivo = llamar_gpt_hasta_que_este_bien()
+        indicador = bool(gpt_objetivo["indicador"])
+        señales = gpt_objetivo["señales"]
+        results.append((indicador, señales))
+
+    indicadores = [r[0] for r in results]
+    most_voted_indicador = max(set(indicadores), key=indicadores.count)
+    # Use feedback from one of the calls that voted for the majority value
+    feedback_señales = next(r[1] for r in results if r[0] == most_voted_indicador)
 
     return {
-        "accomplished": indicador,
-        "señales": señales
+        "accomplished": most_voted_indicador,
+        "señales": feedback_señales
     }
 
 ## Scoring function
