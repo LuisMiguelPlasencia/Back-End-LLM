@@ -12,6 +12,8 @@ from ..services.conversations_service import get_conversation_details, get_user_
 from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey
 from ..utils.responses import error
 from app.services.auth_service import validate_user
+from app.services.payments_service import get_billing_plans, validate_coupon, simulate_investment, InvestmentSimulation
+
 
 router = APIRouter(prefix="/read", tags=["read"])
 
@@ -149,7 +151,7 @@ async def get_company_kpi_stats(company_id: str = Query(..., description="Compan
         company_kpis = await get_company_dashboard_stats(company_id)
         return company_kpis
     except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
+        error(500, f"Failed to retrieve: {str(e)}")
 
 @router.get("/userJourney")
 async def get_journay_by_user(user_id: UUID = Query(..., description="User ID to get Jouney for")):
@@ -158,4 +160,32 @@ async def get_journay_by_user(user_id: UUID = Query(..., description="User ID to
         get_user_jouney = await get_user_journey(user_id)
         return get_user_jouney
     except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
+        error(500, f"Failed to retrieve: {str(e)}")
+
+
+@router.get("/plans")
+async def get_billing_plansAPI():
+    """Return the billing plans for the selectors in the front"""
+    try:
+        billing_plans = await get_billing_plans()
+        return billing_plans
+    except Exception as e:
+        error(500, f"Failed to retrieve: {str(e)}")
+
+@router.get("/check-coupon")
+async def validate_couponAPI(coupon_code: str):
+    """Endpoint to validate the coupon visually in the front"""
+    try:
+        coupon_details = await validate_coupon(coupon_code)
+        return coupon_details
+    except Exception as e:
+        error(500, f"Failed to retrieve: {str(e)}")
+
+@router.post("/simulate-investment")
+async def simulate_investment_checkout(data: InvestmentSimulation):
+    """Simulate the investment for the checkout"""
+    try:
+        investment = await simulate_investment(data)
+        return investment
+    except Exception as e:
+        error(500, f"Failed to retrieve: {str(e)}")
