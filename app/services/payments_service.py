@@ -20,7 +20,7 @@ class InvestmentSimulation(BaseModel):
 
 async def get_billing_plans():
     """Return the billing plans for the selectors in the front"""
-    query = "SELECT plan_id, name, base_price_per_user FROM conversapay.billing_plans WHERE is_active = TRUE"
+    query = "SELECT plan_id, name, base_price_per_user, currency, product_stripe_id FROM conversapay.billing_plans WHERE is_active = TRUE"
     results = await execute_query(query)
     return [dict(r) for r in results]
 
