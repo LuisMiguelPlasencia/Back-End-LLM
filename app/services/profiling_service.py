@@ -5,62 +5,12 @@ import os
 from dotenv import load_dotenv
 from app.services.conversations_service import set_conversation_profiling
 from scoring_scripts.get_conver_skills import get_conver_skills
+from app.services.messages_service import get_conversation_transcript
 
 load_dotenv(override=True)
 
-# --- DB CONFIG ---
-current_env = os.getenv("ENVIRONMENT", "DEV").upper()
-DB_NAME = os.getenv("DB_NAME")
-PASSWORD = os.getenv("DB_PASSWORD")
-HOST = os.getenv("DB_HOST")
-PORT = os.getenv("DB_PORT")
-
-#Get user based on environtment in ENV
-env_key = "DB_USER_PRO" if current_env == "PRO" else "DB_USER_DEV"
-USER = os.getenv(env_key) or os.getenv("DB_USER")
-if not USER: raise ValueError(f"DB_USER is missing for environment: {current_env}")
-
-
-def read_msg(conv_id):
-    conn = psycopg2.connect(
-        dbname=DB_NAME,
-        user=USER,
-        password=PASSWORD,
-        host=HOST,
-        port=PORT
-    )
-
-    # read from db
-    # output: dict with conv 
-    query = f"""
-    SELECT 
-        role,
-        content,
-        created_at
-    FROM conversaapp.messages 
-    WHERE conversation_id = '{conv_id}'
-    ORDER BY created_at ASC
-    """
-
-    df = pd.read_sql(query, conn)
-
-    role_map = {"user": "vendedor", "assistant": "cliente"}
-    
-    conversation = [
-        {
-            "speaker": role_map.get(row["role"], row["role"]),
-            "text": row["content"],
-            "duracion": 10
-        }
-        for _, row in df.iterrows()
-    ]
-
-    # --- CLOSE CONNECTION ---
-    conn.close()
-    return conversation
-
 async def profiling(conv_id, course_id, stage_id):
-    transcript = read_msg(conv_id)
+    transcript = await get_conversation_transcript(conv_id)
 
     if not transcript:
         print(f"No messages found for conversation_id: {conv_id}")

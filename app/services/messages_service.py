@@ -1,11 +1,38 @@
 # Message service for handling conversation messages
 # Manages user messages and generates simple assistant responses
 # Note: assistant messages have user_id = NULL (system messages)
-
+import asyncio
+import pandas as pd
 from .db import execute_query, execute_query_one
 from uuid import UUID
 from typing import List, Dict, Optional, Tuple
 
+async def get_conversation_transcript(conversation_id: UUID) -> List[Dict]:
+    query = """
+    SELECT 
+        role,
+        content,
+        created_at,
+        duration
+    FROM conversaapp.messages 
+    WHERE conversation_id = $1
+    ORDER BY created_at ASC
+    """
+
+    results = await execute_query(query, conversation_id)
+    
+    role_map = {"user": "vendedor", "assistant": "cliente"}
+    
+    conversation = [
+        {
+            "speaker": role_map.get(row["role"], row["role"]),
+            "text": row["content"],
+            "duracion": float(row["duration"]) if row["duration"] is not None else None
+        }
+        for row in results
+    ]
+
+    return conversation
 
 async def get_conversation_messages(conversation_id: UUID) -> List[Dict]:
     """Get all messages for a conversation, ordered by creation time"""
