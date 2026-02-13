@@ -20,8 +20,13 @@ async def master_prompt(level: str,  bot_prompt: str):
     else: 
         level_prompt = ""
 
-    master_prompt = f"""# CONTEXTO, ROL Y OBJETIVO {bot_prompt}
-    {level_prompt}"""
+    master_prompt = f"""
+    # CONTEXTO, ROL Y OBJETIVO 
+    
+    {bot_prompt}
+
+    {level_prompt}
+    """
 
     return master_prompt
 

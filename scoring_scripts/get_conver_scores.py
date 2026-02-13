@@ -251,46 +251,19 @@ async def calcular_cobertura_temas_json(client: OpenAI, transcript, course_id, s
 
     gpt_key_themes = llamar_gpt_hasta_que_este_bien()
 
+
+    num_temas_abordados = gpt_key_themes['n_temas_abordados']
     num_temas_olvidados = gpt_key_themes['n_temas_olvidados']
-    señales_temas = gpt_key_themes['señales']
+    num_temas_clave = num_temas_abordados + num_temas_olvidados
+
     feedback_temas_clave = gpt_key_themes.get('feedback')
 
-    # Puedes usar num_temas_abordados y señales_temas como quieras para penalizar o bonificar
-    penalizacion += num_temas_olvidados*20
-
-    # ## Detector de proximos pasos con GPT
-    # def llamar_gpt_hasta_que_este_bien():
-    #     try:
-    #         gpt_next_steps = json.loads(call_gpt(client, next_steps(transcript)))
-    #     except: 
-    #         print("llamando a gpt otra vez porque no daba un JSON bien formado...")
-    #         llamar_gpt_hasta_que_este_bien()
-            
-    #     return gpt_next_steps
-
-    # gpt_next_steps = llamar_gpt_hasta_que_este_bien()
-    
-    
-    # indicador = bool(gpt_next_steps["indicador"])
-    # señales_proximos_pasos = gpt_next_steps["señales"]
-    
-    # output_gpt = gpt_next_steps  # Store the full GPT response
-    # bonificacion = 10 * indicador
-    
-    
-    # ---- Puntuación final ----
-    puntuacion = max(0, min(100, 100 - penalizacion))
+    puntuacion = round(num_temas_abordados/num_temas_clave, 2) * 100
     
     return {
         "puntuacion": puntuacion,
-        "penalizacion": penalizacion,
-        "bonificacion": bonificacion,
+        "temas_abordados": num_temas_abordados,
         "temas_olvidados": num_temas_olvidados,
-        #"objecion_no_resuelta": objecion_detectada and not respuesta,
-        #"proximos_pasos": indicador,
-        "señales_temas": señales_temas,
-        # "señales_proximos_pasos": señales_proximos_pasos,
-        # "output_gpt": output_gpt,
         "feedback": feedback_temas_clave
     }
 
@@ -384,12 +357,14 @@ def calcular_ppm_variabilidad(transcript):
     
     for t in turnos_vendedor:
         palabras = len(t["text"].split())
-        duracion = t["duracion"]
-        ppm = palabras / (duracion / 60)
-        
-        ppms.append(ppm)
-        total_palabras += palabras
-        total_duracion += duracion
+        duracion = t["duracion"] 
+        if duracion: 
+            ppm = palabras / (duracion / 60)
+
+            
+            ppms.append(ppm)
+            total_palabras += palabras
+            total_duracion += duracion
     
     media_ppm = total_palabras / (total_duracion / 60)
     variabilidad = np.std(ppms) if len(ppms) > 1 else 0
