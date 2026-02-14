@@ -3,12 +3,15 @@ def index_of_questions(transcript):
     Actúa como un experto en comunicación y negociación. Estás analizando una llamada para darle feedback DIRECTO al vendedor.
     
     # TU OBJETIVO:
+
     Analiza la transcripción adjunta donde participan un "Vendedor" y un cliente. Debes analizar únicamente las intervenciones del rol identificado como "vendedor" . Ignora las frases del cliente, úsalo solo para contexto.
 
     # TRANSCRIPCIÓN:
+
     {transcript}
 
     # INSTRUCCIONES DE FORMATO (IMPORTANTE):
+    
     1. Responde SIEMPRE en español empleando la segunda persona del singular (ej: "hiciste", "preguntaste", "deberías").
     2. NUNCA te refieras al usuario como "el vendedor", refiérete a él como "tú".
     3. Responde ÚNICAMENTE con un JSON válido.
@@ -16,7 +19,8 @@ def index_of_questions(transcript):
     5. Si citas palabras de la transcripción, USA COMILLAS SIMPLES ('ejemplo') para no romper el JSON.
     6. LONGITUD: Feedback máximo de 2 oraciones o 40 palabras. Directo y al grano.
 
-    # Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
+    Responde ÚNICAMENTE devolviendo un JSON con el siguiente formato:
+    
     {{
      "señales": "Lista breve de momentos clave donde identificas estos tipos de preguntas",
      "n_total": "número entero con el total de preguntas del vendedor",

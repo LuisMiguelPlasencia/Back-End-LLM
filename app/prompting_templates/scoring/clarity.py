@@ -7,6 +7,7 @@ def clarity(transcript):
     ### DATOS DE ENTRADA:
 
     # TRANSCRIPCIÓN:
+    
     {transcript}
 
     ### TUS INSTRUCCIONES:
@@ -24,9 +25,9 @@ def clarity(transcript):
 
     {{
      "señales": (String) Cita las frases textuales exactas entre comillas o resume brevemente el momento donde se perdió la claridad. Si hay varias, sepáralas por punto y coma. Si no hay ninguna falta de claridad en el discurso, escribe exactamente "Ninguna".,
+     "feedback": (String) Proporciona consejos tácticos y directos para mejorar la claridad basándote en los errores encontrados en la transcripción. Si no hubo errores, felicita por la estructura clara. Habla en segunda persona del singular y usa ejemplos concretos de la transcripción. ,
      "veces_falta_claridad": (Int) Número total de veces que detectaste un problema de claridad. Si todo fue perfecto, pon 0.
-     "feedback": (String) Proporciona consejos tácticos y directos para mejorar la claridad basándote en los errores encontrados en la transcripción. Si no hubo errores, felicita por la estructura clara. Habla en segunda persona del singular y usa ejemplos concretos de la transcripción. 
-    }}
+     }}
 
     """
     return prompt
