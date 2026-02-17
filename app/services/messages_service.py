@@ -75,7 +75,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             ui.company_id,
             ui.user_type,
             ui.avatar,
-            COALESCE(AVG(sbc.general_score), 0) AS score
+            COALESCE(ROUND(AVG(sbc.general_score), 2), 0) AS score
         FROM 
             conversaconfig.user_info ui
             LEFT JOIN conversaapp.conversations c
