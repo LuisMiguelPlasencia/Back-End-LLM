@@ -493,3 +493,79 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
     except Exception as e:
         print(f"Error updating progress for user {user_id}, course {course_id}: {str(e)}")
         return {"success": False, "error": str(e)}
+
+
+from typing import Dict, Any
+
+def get_user_level_label(score: int) -> str:
+    """Función auxiliar para determinar el nivel basado en la nota."""
+    if score >= 80:
+        return "Level 5: Avanzado"
+    elif score >= 60:
+        return "Level 3: Intermedio"
+    elif score > 0:
+        return "Level 1: Principiante"
+    else:
+        return "Sin Nivel"
+
+async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
+    """
+    Recupera y calcula las estadísticas del usuario desde la base de datos
+    (nota general, horas de aprendizaje y cursos completados).
+    """
+    try:
+        query = """
+            WITH stats_conversations AS (
+                SELECT
+                    COALESCE(ROUND(AVG(sbc.general_score)), 0) AS average_score,
+                    COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (c.end_timestamp - c.start_timestamp))) / 3600.0, 1), 0.0) AS total_learning_hours
+                FROM conversaapp.conversations c
+                JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+                WHERE c.user_id = $1::uuid
+                  AND sbc.is_accomplished = true
+            ),
+            stats_courses AS (
+                SELECT COUNT(ucp.course_progress_id) AS total_completed_courses
+                FROM conversaconfig.user_course_progress ucp
+                JOIN conversaconfig.user_journeys_assigments uja ON ucp.user_journey_id = uja.user_journey_id
+                JOIN conversaconfig.master_courses mc ON ucp.course_id = mc.course_id
+                WHERE uja.user_id = $1::uuid
+                  AND ucp.completed_modules >= mc.course_steps
+                  AND mc.course_steps > 0
+            )
+            SELECT 
+                sc.average_score,
+                sc.total_learning_hours,
+                stc.total_completed_courses
+            FROM stats_conversations sc
+            CROSS JOIN stats_courses stc;
+        """
+
+        results = await execute_query(query, user_id)
+        
+        # Si el usuario es nuevo y no tiene historial
+        if not results:
+            return {
+                "user_id": user_id,
+                "level": "Sin Nivel",
+                "average_score": 0,
+                "total_learning_hours": 0.0,
+                "total_completed_courses": 0
+            }
+            
+        row = results[0]
+        avg_score = int(row['average_score'])
+        
+        # Devolvemos el diccionario formateado
+        return {
+            "user_id": user_id,
+            "level": get_user_level_label(avg_score),
+            "average_score": avg_score,
+            "total_learning_hours": float(row['total_learning_hours']),
+            "total_completed_courses": int(row['total_completed_courses'])
+        }
+
+    except Exception as e:
+        print(f"Error getting dashboard stats for {user_id}: {str(e)}")
+        # Retornamos None para que el router sepa que hubo un fallo
+        return None

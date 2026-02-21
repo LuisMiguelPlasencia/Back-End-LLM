@@ -8,6 +8,7 @@ from fastapi import APIRouter
 from ..schemas.insert import StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateProgressRequest
 from ..services.conversations_service import create_conversation, close_conversation
 from ..services.messages_service import send_message, update_module_progress
+from ..services.payments_service import simulate_investment, InvestmentSimulation
 from ..utils.responses import error
 
 router = APIRouter(prefix="/insert", tags=["insert"])
@@ -81,6 +82,16 @@ async def close_conversation_route(request: CloseConversationRequest):
     
     except Exception as e:
         error(500, f"Failed to create conversation: {str(e)}")
+
+
+@router.post("/simulate-investment")
+async def simulate_investment_checkout(data: InvestmentSimulation):
+    """Simulate the investment for the checkout"""
+    try:
+        investment = await simulate_investment(data)
+        return investment
+    except Exception as e:
+        error(500, f"Failed to retrieve: {str(e)}")
 
 @router.post("/update_progress")
 async def update_progress_route(request: UpdateProgressRequest):
