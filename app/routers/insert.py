@@ -5,9 +5,9 @@
 # curl -X POST "http://localhost:8000/insert/message" -H "Content-Type: application/json" -d '{"user_id":"123e4567-e89b-12d3-a456-426614174000","conversation_id":"123e4567-e89b-12d3-a456-426614174002","message":"Hello, how are you?"}'
 
 from fastapi import APIRouter
-from ..schemas.insert import StartConversationRequest, SendMessageRequest, CloseConversationRequest
+from ..schemas.insert import StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateProgressRequest
 from ..services.conversations_service import create_conversation, close_conversation
-from ..services.messages_service import send_message
+from ..services.messages_service import send_message, update_module_progress
 from ..utils.responses import error
 
 router = APIRouter(prefix="/insert", tags=["insert"])
@@ -81,3 +81,35 @@ async def close_conversation_route(request: CloseConversationRequest):
     
     except Exception as e:
         error(500, f"Failed to create conversation: {str(e)}")
+
+@router.post("/update_progress")
+async def update_progress_route(request: UpdateProgressRequest):
+    """
+    Updates the progress for a user when they complete a module.
+    Automatically handles course completion and journey completion statuses.
+    """
+    try:
+        # Llamamos a la función que ejecuta el UPSERT en base de datos
+        result = await update_module_progress(
+            user_id=request.user_id, 
+            journey_id=request.journey_id, 
+            course_id=request.course_id
+        )
+        
+        # Validamos si la función interna reportó algún error lógico
+        if not result or not result.get("success"):
+            error_msg = result.get("error", "Unknown database error") if result else "No result returned"
+            error(500, f"Failed to update progress: {error_msg}")
+        
+        # Retornamos el éxito con el formato que ya usas
+        return {
+            "status": "progress updated success",
+            "result": {
+                "course_status": result.get("course_status"),
+                "journey_status": result.get("journey_status"),
+                "completed_modules": result.get("completed_modules")
+            }
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to update progress: {str(e)}")

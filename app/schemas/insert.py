@@ -35,3 +35,8 @@ class MessageSentResponse(BaseModel):
     status: str
     message: dict
     assistant_response: dict
+
+class UpdateProgressRequest(BaseModel):
+    user_id: str
+    journey_id: str
+    course_id: str

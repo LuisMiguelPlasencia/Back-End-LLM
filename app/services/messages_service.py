@@ -343,46 +343,153 @@ FROM team_monthly_comparison tmc;
         print(f"Error fetching KPIs for company_id {company_id}: {str(e)}")
         return []
 
-async def get_user_journey(user_id: str) -> List[Dict]:
+
+async def get_user_journey(user_id: str) -> List[Dict[str, Any]]:
     """
-    Retrieves the learning journey for a specific user, including progress 
-    details per stage and counts of contents/modules.
+    Recupera los journeys asignados al usuario y agrupa los cursos con su 
+    progreso detallado (módulos completados vs totales).
     """
     try:
+        # Tu SQL definitiva
         query = """
             SELECT 
-                ulj.journey_id,
-                ulj.course_id,
-                ulj.stage_id,
-                cs.stage_name,
-                ulj.status,
-                ulj.display_order,
-                ulj.is_optional,
-                ulj.start_timestamp,
-                ulj.last_accessed_at,
-                ulj.end_timestamp,
-                -- Contamos cuántos contenidos/módulos tiene esta etapa
-                COUNT(cc.content_id) AS total_modules,
-                -- Ejemplo de lógica para módulos completados (si tienes esa info en course_contents)
-                COUNT(cc.content_id) FILTER (WHERE ulj.status = 'completed') AS modules_done
-            FROM conversaconfig.user_learning_journey ulj
-            JOIN conversaconfig.course_stages cs 
-                ON ulj.stage_id = cs.stage_id
-            LEFT JOIN conversaconfig.course_contents cc 
-                ON cs.stage_id = cc.stage_id
-            WHERE ulj.user_id = $1
-            GROUP BY 
-                ulj.journey_id, 
-                cs.stage_name, 
-                ulj.display_order
-            ORDER BY ulj.display_order ASC;
+                uaj.journey_id,
+                jc.course_id,
+                jc.is_mandatory,
+                jc.display_order AS course_order,
+                mc.name AS course_name,
+                mc.course_steps AS total_modules,  
+                COALESCE(ucp.completed_modules, 0) AS completed_modules,
+                COALESCE(ucp.status, 'locked') AS course_status,   
+                uaj.status AS journey_status
+            FROM conversaconfig.user_journeys_assigments uaj
+            JOIN conversaconfig.journey_courses jc ON uaj.journey_id = jc.journey_id
+            JOIN conversaconfig.master_journeys mj ON uaj.journey_id = mj.journey_id
+            JOIN conversaconfig.master_courses mc ON jc.course_id = mc.course_id
+            LEFT JOIN conversaconfig.user_course_progress ucp 
+                ON uaj.user_journey_id = ucp.user_journey_id 
+                AND jc.course_id = ucp.course_id
+            WHERE uaj.user_id = $1  AND mj.is_active 
+            ORDER BY jc.display_order;
         """
 
         results = await execute_query(query, user_id)
         
-        # Retornamos la lista de diccionarios para que el front mapee el Journey
-        return [dict(r) for r in results] if results else []
+        if not results:
+            return []
+
+        journeys_map = {}
+
+        for row in results:
+            j_id = str(row['journey_id'])
+            
+            # 1. Inicializamos el journey si es la primera vez que iteramos sobre él
+            if j_id not in journeys_map:
+                journeys_map[j_id] = {
+                    "journey_id": j_id,
+                    "journey_status": row['journey_status'],
+                    "courses": []
+                }
+            
+            # 2. Añadimos el curso actual a la lista de cursos del journey
+            journeys_map[j_id]["courses"].append({
+                "course_id": str(row['course_id']),
+                "course_name": row['course_name'],
+                "is_mandatory": row['is_mandatory'],
+                "course_order": row['course_order'],
+                "total_modules": row['total_modules'],
+                "completed_modules": row['completed_modules'],
+                "course_status": row['course_status']
+            })
+
+        # 3. Retornamos solo los valores (la lista de journeys ya agrupada)
+        return list(journeys_map.values())
 
     except Exception as e:
-        print(f"Error fetching user learning journey for user id {user_id}: {str(e)}")
+        print(f"Error fetching journey assignments for user {user_id}: {str(e)}")
         return []
+
+
+async def update_module_progress(user_id: str, journey_id: str, course_id: str) -> Dict[str, Any]:
+    """
+    Registra que un usuario ha completado un módulo de un curso específico.
+    Actualiza el progreso del curso y, si es necesario, el estado global del Journey.
+    """
+    try:
+        # 1. Obtener el user_journey_id y el total de módulos del curso
+        # Añadimos ::uuid para asegurar la conversión desde el string de Python
+        context_query = """
+            SELECT uaj.user_journey_id, mc.course_steps
+            FROM conversaconfig.user_journeys_assigments uaj
+            JOIN conversaconfig.master_courses mc ON mc.course_id = $3::uuid
+            WHERE uaj.user_id = $1::uuid AND uaj.journey_id = $2::uuid;
+        """
+        context = await execute_query(context_query, user_id, journey_id, course_id)
+        
+        if not context:
+            return {"success": False, "error": "Asignación o curso no encontrado"}
+            
+        user_journey_id = context[0]['user_journey_id']
+        total_modules = context[0]['course_steps']
+
+        # 2. UPSERT: Insertar progreso si es el módulo 1, o sumar +1 si ya existe.
+        upsert_query = """
+            INSERT INTO conversaconfig.user_course_progress 
+                (user_journey_id, course_id, completed_modules, status, started_at)
+            VALUES 
+                ($1::uuid, $2::uuid, 1, 'in_progress', CURRENT_TIMESTAMP)
+            ON CONFLICT (user_journey_id, course_id) 
+            DO UPDATE SET 
+                completed_modules = LEAST(conversaconfig.user_course_progress.completed_modules + 1, $3::int),
+                status = CASE 
+                    WHEN conversaconfig.user_course_progress.completed_modules + 1 >= $3::int THEN 'completed'::varchar
+                    ELSE 'in_progress'::varchar
+                END,
+                completed_at = CASE 
+                    WHEN conversaconfig.user_course_progress.completed_modules + 1 >= $3::int THEN CURRENT_TIMESTAMP
+                    ELSE conversaconfig.user_course_progress.completed_at
+                END,
+                updated_at = CURRENT_TIMESTAMP
+            RETURNING completed_modules, status;
+        """
+        progress_result = await execute_query(upsert_query, user_journey_id, course_id, total_modules)
+        current_course_status = progress_result[0]['status']
+
+        # 3. Verificamos si quedan cursos obligatorios sin terminar
+        journey_check_query = """
+            SELECT count(*) AS pending_courses
+            FROM conversaconfig.journey_courses jc
+            LEFT JOIN conversaconfig.user_course_progress ucp 
+                ON ucp.course_id = jc.course_id AND ucp.user_journey_id = $1::uuid
+            WHERE jc.journey_id = $2::uuid 
+              AND jc.is_mandatory = true 
+              AND (ucp.status IS NULL OR ucp.status != 'completed');
+        """
+        check_result = await execute_query(journey_check_query, user_journey_id, journey_id)
+        pending_courses = check_result[0]['pending_courses']
+
+        # 4. Actualizar el estado del Journey
+        # ¡AQUÍ ESTÁ LA SOLUCIÓN AL ERROR! -> $2::varchar
+        new_journey_status = 'completed' if pending_courses == 0 else 'in_progress'
+        
+        update_journey_query = """
+            UPDATE conversaconfig.user_journeys_assigments
+            SET 
+                status = $2::varchar,
+                completed_at = CASE WHEN $2::varchar = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_journey_id = $1::uuid
+            RETURNING status;
+        """
+        await execute_query(update_journey_query, user_journey_id, new_journey_status)
+
+        return {
+            "success": True,
+            "course_status": current_course_status,
+            "journey_status": new_journey_status,
+            "completed_modules": progress_result[0]['completed_modules']
+        }
+
+    except Exception as e:
+        print(f"Error updating progress for user {user_id}, course {course_id}: {str(e)}")
+        return {"success": False, "error": str(e)}

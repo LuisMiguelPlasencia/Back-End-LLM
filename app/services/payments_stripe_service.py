@@ -156,7 +156,6 @@ class StripeCheckoutService:
                     "plan_internal_id": data.plan_id
                 }
             )
-            # ... (código anterior Paso 1 y 2 hasta create_async) ...
 
             # D. Crear la Suscripción
             subscription = await stripe.Subscription.create_async(
@@ -195,13 +194,7 @@ class StripeCheckoutService:
             
             # A. Gestión de la Factura (Invoice)
             invoice_stripe = sub_dict.get('latest_invoice')
-            
-            # Si viene solo el ID (string), lo convertimos a dict vacío para no romper,
-            # pero lo ideal sería hacer un retrieve si necesitaras datos de la factura.
-            # Para este caso, nos centramos en el PaymentIntent que es lo crítico.
             if isinstance(invoice_stripe, str):
-                # Si es string, es el ID. No tenemos el objeto, así que usaremos el ID para buscar el PI si es necesario
-                # Pero normalmente si expandiste, debería ser dict. Si falla, asumimos dict vacío.
                 invoice_stripe = {} 
             elif hasattr(invoice_stripe, 'to_dict'):
                 invoice_stripe = invoice_stripe.to_dict()
@@ -235,7 +228,6 @@ class StripeCheckoutService:
                 # Mantenemos los valores por defecto
                 pass
 
-            # Montos (Stripe usa enteros, convertimos a Decimal)
             amount_total = Decimal(invoice_stripe.get('total', 0)) / 100
             amount_subtotal = Decimal(invoice_stripe.get('subtotal', 0)) / 100
             
