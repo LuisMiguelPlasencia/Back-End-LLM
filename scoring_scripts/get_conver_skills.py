@@ -108,14 +108,18 @@ async def get_conver_skills(
             model=model,
         )
 
+        def _truncate(data: Dict[str, Any], limit: int = 499) -> Dict[str, Any]:
+            justification = data.get("justification", "")
+            return {**data, "justification": justification[:limit]}
+
         # We return the structure exactly as the consumer function expects it
         # (Keys are the skill names, containing both score and justification)
         return {
-            "prospection": prospection_data,
-            "empathy": empathy_data,
-            "technical_domain": technical_domain_data,
-            "negociation": negociation_data,
-            "resilience": resilience_data,
+            "prospection": _truncate(prospection_data),
+            "empathy": _truncate(empathy_data),
+            "technical_domain": _truncate(technical_domain_data),
+            "negociation": _truncate(negociation_data),
+            "resilience": _truncate(resilience_data),
         }
     else:
         return {

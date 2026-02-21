@@ -27,7 +27,7 @@ async def user_msg_processed(user_id, conversation_id):
     # placeholder for any processing needed when user message is sent to OpenAI
     pass
 
-def is_non_silent(audio_b64, threshold=0.01):
+def is_non_silent(audio_b64, threshold=0.05):
     pcm = np.frombuffer(base64.b64decode(audio_b64), dtype=np.int16)
     rms = np.sqrt(np.mean((pcm / 32768.0) ** 2))
     return rms > threshold

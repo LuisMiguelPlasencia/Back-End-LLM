@@ -1,38 +1,32 @@
 def goal(transcript, goal_description):
     prompt = f"""
-    Vas a analizar la transcripción de una conversación comercial entre un vendedor y un cliente.
-    
-    Tu tarea es evaluar exclusivamente si el vendedor logra cumplir el OBJETIVO PRINCIPAL, basándote únicamente en lo que está explícitamente dicho en la transcripción.
+    Vas a actuar como un auditor de ventas estricto e imparcial. Tu tarea es evaluar exclusivamente si el vendedor logra cumplir TODOS los parámetros del OBJETIVO PRINCIPAL basándote únicamente en lo que está explícitamente dicho en la transcripción.
 
     # INSTRUCCIONES:
-    
-    - El objetivo solo se considera cumplido si el vendedor lo ejecuta de forma clara, directa y verificable dentro de la conversación.
-    - Intenciones, promesas futuras, suposiciones o respuestas ambiguas NO cuentan como cumplimiento del objetivo.
-    - Si el cliente acepta algo pero el vendedor no realiza la acción correspondiente, el objetivo NO se considera cumplido.
-    - Si el objetivo se cumple, debes identificar exactamente la intervención del vendedor (frase literal) que demuestra dicho cumplimiento.
-    - Si no se cumple, el indicador debe ser false y las señales deben explicar brevemente por qué no hay evidencia suficiente.
+    - REGLA DE ORO: El objetivo es un "Todo o Nada". Si el objetivo pide vender un producto X y el vendedor ofrece el producto Y, el objetivo NO se cumple. Si falta uno solo de los requisitos del objetivo, es false.
+    - Intenciones, promesas futuras, evasivas o si el vendedor abandona la conversación (ej: "lo dejamos aquí"), equivale a NO cumplido.
+    - Solo es true si hay confirmación verbal clara por ambas partes en la transcripción.
 
     # OBJETIVO PRINCIPAL: 
-
     {goal_description} 
 
     # TRANSCRIPCIÓN:
-    
     {transcript}
-    
+
     # FORMATO DE RESPUESTA (IMPORTANTE):
-    
     1. Responde ÚNICAMENTE con un JSON válido.
     2. NO uses bloques de código markdown (```json).
-    3. Si citas palabras de la transcripción en la justificación, USA COMILLAS SIMPLES ('ejemplo') en lugar de dobles para no romper el formato JSON.
-    4. Asegúrate de escapar cualquier comilla doble interna si es estrictamente necesario.
-    5. LONGITUD Y ESTILO: Nunca mas de 300 caracteres de longitud. La justificación debe ser un resumen ejecutivo, directo y profesional. MÁXIMO 2 oraciones o 40 palabras. Evita palabras de relleno.
+    3. Si citas palabras, USA COMILLAS SIMPLES ('ejemplo'). Escapa comillas dobles si es necesario.
+    4. ESTRUCTURA DEL JSON:
+    - "analisis": (Máximo 40 palabras). Razona paso a paso si se cumplieron TODAS las partes del objetivo. Sé muy crítico.
+    - "señales": (Máximo 30 palabras). Si es true, cita la frase exacta del cierre. Si es false, explica el fallo o cita la frase donde se pierde la venta.
+    - "indicador": true o false (booleano).
 
-        RESPONDE ÚNICAMENTE devolviendo un JSON con el siguiente formato: 
-        {{
-        "señales": "Indica la intervención en la que se demuestre que el vendedor cumple el objetivo, acompañado de la frase exacta. Por ejemplo: '¡Fantástico! Le acabo de enviar un enlace seguro a su correo' . Sé lo más breve y conciso posible. Habla en segunda persona." ,
-        "indicador": true/false, 
-        }}
-        """
-
+    EJEMPLO DE RESPUESTA DE FRACASO:
+    {{
+    "analisis": "El vendedor no ofreció las 20 unidades de la 3500i ni el contrato de 2 años. Además, el vendedor abandonó la conversación sin dar argumentos técnicos válidos.",
+    "señales": "Fracaso evidente. El vendedor se rinde diciendo: 'Yo lo dejaría aquí'.",
+    "indicador": false
+    }}
+    """
     return prompt
