@@ -112,6 +112,33 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
     return list(courses_map.values())
 
 
+async def get_all_courses() -> List[Dict]:
+
+    query = """
+        SELECT 
+            *
+        FROM conversaconfig.master_courses
+        order by created_on desc;
+    """
+    
+    results = await execute_query(query)
+
+    return [dict(row) for row in results]
+
+async def get_all_stages() -> List[Dict]:
+
+    query = """
+        SELECT 
+            *
+        FROM conversaconfig.course_stages
+            INNER JOIN conversaconfig.course_contents 
+            ON course_stages.stage_id = course_contents.stage_id
+    """
+    
+    results = await execute_query(query)
+
+    return [dict(row) for row in results]
+
 
 async def get_user_courses_stages(course_id: UUID) -> List[Dict]:
     """
@@ -172,3 +199,99 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
     return [dict(row) for row in results]
 
 
+async def create_new_course(name: str, description: str, image_src: str, is_active: bool, is_mandatory: bool, completion_time_minutes: int, course_steps: int) -> UUID:
+    """
+    Create a new course in the system.
+    """
+    query = """
+        INSERT INTO conversaconfig.master_courses 
+            (name, description, image_src, is_active, is_mandatory, completion_time_minutes, course_steps)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING course_id;
+    """
+    result = await execute_query(
+        query, 
+        name, description, image_src, is_active, is_mandatory, completion_time_minutes, course_steps)
+    return result[0]['course_id'] if result else None 
+
+async def update_course(course_id: UUID, name: str, description: str, image_src: str, is_active: bool, is_mandatory: bool, completion_time_minutes: int, course_steps: int) -> UUID:
+    """
+    Update an existing course in the system.
+    """
+    query = """
+        UPDATE conversaconfig.master_courses 
+        SET name = $2, description = $3, image_src = $4, is_active = $5, is_mandatory = $6, completion_time_minutes = $7, course_steps = $8
+        WHERE course_id = $1
+        RETURNING course_id;
+    """
+    result = await execute_query(
+        query, 
+        course_id, name, description, image_src, is_active, is_mandatory, completion_time_minutes, course_steps)
+    return result[0]['course_id'] if result else None
+
+async def create_new_stage(
+    course_id: UUID, stage_order: int, stage_name: str, stage_description: str, 
+    key_themes: str, position: int, level: str, body: str, bot_prompt: str, user_role: str, 
+    bot_role: str, context_info: str, stage_objectives: str, voice_id: str, agent_id: str, chatbot_image_src: str
+) -> UUID:
+    """
+    Create a new stage in the system.
+    """
+    query = """
+        INSERT INTO conversaconfig.course_stages 
+            (course_id, stage_order, stage_name, stage_description, 
+            key_themes, stage_objectives, voice_id, agent_id, chatbot_image_src)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING stage_id;
+    """
+    result = await execute_query(
+        query, 
+        course_id, stage_order, stage_name, stage_description, key_themes, stage_objectives, voice_id, agent_id, chatbot_image_src
+    )
+    if result:
+        stage_id = result[0]['stage_id']
+        # Insert content for the stage
+        content_query = """
+            INSERT INTO conversaconfig.course_contents 
+                (course_id, stage_id, position, level, body, bot_prompt, user_role, bot_role, context_info)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+        """
+        await execute_query(
+            content_query,
+            course_id, stage_id, position, level, body, bot_prompt, user_role, bot_role, context_info
+        )
+
+    return result[0]['stage_id'] if result else None
+
+async def update_stage(
+    stage_id: UUID, course_id: UUID, stage_order: int, stage_name: str, stage_description: str, 
+    key_themes: str, position: int, level: str, body: str, bot_prompt: str, user_role: str, 
+    bot_role: str, context_info: str, stage_objectives: str, voice_id: str, agent_id: str, chatbot_image_src: str
+) -> UUID:
+    """
+    Update an existing stage in the system.
+    """
+    query = """
+        UPDATE conversaconfig.course_stages 
+        SET stage_order = $3, stage_name = $4, stage_description = $5, 
+            key_themes = $6, stage_objectives = $7, voice_id = $8, agent_id = $9, chatbot_image_src = $10
+        WHERE stage_id = $1 and course_id = $2
+        RETURNING stage_id;
+    """
+    result = await execute_query(
+        query,
+        stage_id, course_id, stage_order, stage_name, stage_description, key_themes, stage_objectives, voice_id, agent_id, chatbot_image_src
+    )
+    if result:
+        # Update content for the stage
+        content_query = """
+            UPDATE conversaconfig.course_contents 
+            SET position = $3, level = $4, body = $5, bot_prompt = $6, user_role = $7, bot_role = $8, context_info = $9
+            WHERE stage_id = $1 and course_id = $2;
+        """
+        await execute_query(
+            content_query,
+            stage_id, course_id, position, level, body, bot_prompt, user_role, bot_role, context_info
+        )
+
+    return result[0]['stage_id'] if result else None

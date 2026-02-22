@@ -4,8 +4,11 @@
 # curl -X POST "http://localhost:8000/insert/conversation" -H "Content-Type: application/json" -d '{"user_id":"123e4567-e89b-12d3-a456-426614174000","course_id":"123e4567-e89b-12d3-a456-426614174001"}'
 # curl -X POST "http://localhost:8000/insert/message" -H "Content-Type: application/json" -d '{"user_id":"123e4567-e89b-12d3-a456-426614174000","conversation_id":"123e4567-e89b-12d3-a456-426614174002","message":"Hello, how are you?"}'
 
-from fastapi import APIRouter
-from ..schemas.insert import StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateProgressRequest
+from fastapi import APIRouter, Depends
+
+from app.services.auth_service import validate_user
+from app.services.courses_service import create_new_course, create_new_stage, update_course, update_stage, update_stage
+from ..schemas.insert import NewCourseRequest, NewStageRequest, StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateCourseRequest, UpdateProgressRequest, UpdateStageRequest
 from ..services.conversations_service import create_conversation, close_conversation
 from ..services.messages_service import send_message, update_module_progress
 from ..services.payments_service import simulate_investment, InvestmentSimulation
@@ -124,3 +127,158 @@ async def update_progress_route(request: UpdateProgressRequest):
     
     except Exception as e:
         error(500, f"Failed to update progress: {str(e)}")
+
+
+
+@router.post("/course")
+async def create_new_courseAPI(request: NewCourseRequest, _: dict = Depends(validate_user)):
+    """
+    Create a new course in the system. This endpoint is intended for admin use to add courses to the platform.
+    """
+    try:
+        # Validate message is not empty
+        if not request.name or not request.name.strip():
+            error(400, "Course name cannot be empty")
+        
+        course_id = await create_new_course(
+            name=request.name,
+            description=request.description,
+            image_src=request.image_src,
+            is_active=request.is_active,
+            is_mandatory=request.is_mandatory,
+            completion_time_minutes=request.completion_time_minutes,
+            course_steps=request.course_steps
+        )
+        
+        if not course_id:
+            error(500, "Failed to create course")
+        
+        return {
+            "status": "course created",
+            "course_id": course_id
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to create course: {str(e)}")
+
+
+@router.post("/update_course")
+async def update_courseAPI(request: UpdateCourseRequest, _: dict = Depends(validate_user)):
+    """
+    Update an existing course in the system. This endpoint is intended for admin use to update courses in the platform.
+    """
+    try:
+        # Validate message is not empty
+        if not request.course_id:
+            error(400, "Course id cannot be empty")
+        if not request.name or not request.name.strip():
+            error(400, "Course name cannot be empty")
+        
+        course_id = await update_course(
+            course_id=request.course_id,
+            name=request.name,
+            description=request.description,
+            image_src=request.image_src,
+            is_active=request.is_active,
+            is_mandatory=request.is_mandatory,
+            completion_time_minutes=request.completion_time_minutes,
+            course_steps=request.course_steps
+        )
+        
+        if not course_id:
+            error(500, "Failed to update course")
+        
+        return {
+            "status": "course updated",
+            "course_id": course_id
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to update course: {str(e)}")
+
+
+
+@router.post("/stage")
+async def create_new_stageAPI(request: NewStageRequest, _: dict = Depends(validate_user)):
+    """
+    Create a new stage in the system. This endpoint is intended for admin use to add stages to existing courses.
+    """
+    try:
+        # Validate message is not empty
+        if not request.stage_name or not request.stage_name.strip():
+            error(400, "Stage name cannot be empty")
+        
+        stage_id = await create_new_stage(
+            course_id=request.course_id,
+            stage_order=request.stage_order,
+            stage_name=request.stage_name,
+            stage_description=request.stage_description,
+            key_themes=request.key_themes,
+            position=request.position,
+            level=request.level,
+            body=request.body,
+            bot_prompt=request.bot_prompt,
+            user_role=request.user_role,
+            bot_role=request.bot_role,
+            context_info=request.context_info,
+            stage_objectives=request.stage_objectives,
+            voice_id=request.voice_id,
+            agent_id=request.agent_id,
+            chatbot_image_src=request.chatbot_image_src
+        )
+        
+        if not stage_id:
+            error(500, "Failed to create stage")
+        
+        return {
+            "status": "stage created",
+            "stage_id": stage_id
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to create stage: {str(e)}")
+
+@router.post("/update_stage")
+async def update_stageAPI(request: UpdateStageRequest, _: dict = Depends(validate_user)):
+    """
+    Update an existing stage in the system. This endpoint is intended for admin use to update stages in existing courses.
+    """
+    try:
+        # Validate message is not empty
+        if not request.stage_id:
+            error(400, "Stage id cannot be empty")
+        if not request.stage_name or not request.stage_name.strip():
+            error(400, "Stage name cannot be empty")
+
+        print(request)
+        
+        stage_id = await update_stage(
+            stage_id=request.stage_id,
+            course_id=request.course_id,
+            stage_order=request.stage_order,
+            stage_name=request.stage_name,
+            stage_description=request.stage_description,
+            key_themes=request.key_themes,
+            position=request.position,
+            level=request.level,
+            body=request.body,
+            bot_prompt=request.bot_prompt,
+            user_role=request.user_role,
+            bot_role=request.bot_role,
+            context_info=request.context_info,
+            stage_objectives=request.stage_objectives,
+            voice_id=request.voice_id,
+            agent_id=request.agent_id,
+            chatbot_image_src=request.chatbot_image_src
+        )
+        
+        if not stage_id:
+            error(500, "Failed to update stage")
+        
+        return {
+            "status": "stage updated",
+            "stage_id": stage_id
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to create stage: {str(e)}")

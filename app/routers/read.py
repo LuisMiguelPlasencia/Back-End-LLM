@@ -7,7 +7,7 @@
 
 from fastapi import APIRouter, Query, HTTPException, Depends
 from uuid import UUID
-from ..services.courses_service import get_user_courses, get_user_courses_stages, get_courses_details
+from ..services.courses_service import get_all_courses, get_all_stages, get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
 from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats
 from ..utils.responses import error
@@ -16,6 +16,26 @@ from app.services.payments_service import get_billing_plans, validate_coupon
 
 
 router = APIRouter(prefix="/read", tags=["read"])
+
+@router.get("/all_courses")
+async def get_all_coursesAPI(_: dict = Depends(validate_user)):
+    """Get courses available to user based on their user type"""
+    try:
+        print("Fetching all courses")
+        courses = await get_all_courses()
+        return courses
+    except Exception as e:
+        error(500, f"Failed to retrieve courses: {str(e)}")
+
+@router.get("/all_stages")
+async def get_all_stagesAPI(_: dict = Depends(validate_user)):
+    """Get all stages available in the system"""
+    try:
+        print("Fetching all stages")
+        stages = await get_all_stages()  # Assuming get_all_courses returns stage data
+        return stages
+    except Exception as e:
+        error(500, f"Failed to retrieve stages: {str(e)}")
 
 @router.get("/courses")
 async def get_courses(user_id: UUID = Query(..., description="User ID to get courses for"), _: dict = Depends(validate_user)):
