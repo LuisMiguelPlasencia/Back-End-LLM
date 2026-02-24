@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query, HTTPException, Depends
 from uuid import UUID
 from ..services.courses_service import get_all_courses, get_all_stages, get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats
+from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 from app.services.payments_service import get_billing_plans, validate_coupon
@@ -215,3 +215,23 @@ async def get_my_analytics(user_id: str):
     
     except Exception as e:
         error(500, f"Failed to retrieve stats: {str(e)}")
+
+
+@router.get("/companies_news")
+async def get_company_news_route(company_id: str):
+    """
+    Get the latest active announcements (news) for a specific company
+    """
+    try:
+        result = await get_company_announcements(company_id)
+        
+        if result is None:
+            error(500, "Failed to fetch company news")
+            
+        return {
+            "status": "news retrieved success",
+            "result": result
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to retrieve company news: {str(e)}")

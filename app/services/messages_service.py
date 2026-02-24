@@ -66,36 +66,72 @@ async def send_message(user_id: UUID, conversation_id: UUID, message: str, role:
     return dict(user_message) if user_message else None
 
 async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
-    """Get all user scores for a company, ordered by puntuation"""
+    """
+    Recupera el Top 5 de usuarios de una empresa ordenados por Puntuación, 
+    desempatando por Cursos completados y nombre.
+    """
     try:
+        # Tu SQL definitiva
         query = """
-        SELECT 
-            ui.user_id,
-            ui.name,
-            ui.company_id,
-            ui.user_type,
-            ui.avatar,
-            COALESCE(ROUND(AVG(sbc.general_score), 2), 0) AS score
-        FROM 
-            conversaconfig.user_info ui
-            LEFT JOIN conversaapp.conversations c
-                ON c.user_id = ui.user_id and c.status = 'FINISHED'
-            LEFT JOIN conversaapp.scoring_by_conversation sbc 
-                ON c.conversation_id = sbc.conversation_id
-        WHERE 
-            ui.company_id = $1 AND ui.is_active = true AND sbc.general_score > 0
-        GROUP BY 
-            ui.user_id, ui.name, ui.company_id, ui.user_type, ui.avatar
-        ORDER BY 
-            score DESC
-        LIMIT 5
+            WITH UserScores AS (
+                SELECT
+                    ui.user_id,
+                    ui.name,
+                    ui.avatar,
+                    COALESCE(ROUND(AVG(sbc.general_score))::int, 0) AS puntaje
+                FROM conversaconfig.user_info ui
+                JOIN conversaapp.conversations c ON ui.user_id = c.user_id
+                JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+                WHERE ui.company_id = $1
+                GROUP BY ui.user_id, ui.name, ui.avatar
+            ),
+            UserCompletedCourses AS (
+                SELECT 
+                    uja.user_id,
+                    COUNT(ucp.course_progress_id) AS total_courses
+                FROM conversaconfig.user_info ui
+                JOIN conversaconfig.user_journeys_assigments uja ON ui.user_id = uja.user_id
+                JOIN conversaconfig.user_course_progress ucp ON uja.user_journey_id = ucp.user_journey_id
+                JOIN conversaconfig.master_courses mc ON ucp.course_id = mc.course_id
+                WHERE ui.company_id = $1
+                  AND ucp.completed_modules >= mc.course_steps 
+                  AND mc.course_steps > 0
+                GROUP BY uja.user_id
+            )
+            SELECT
+                RANK() OVER (ORDER BY us.puntaje desc, ucc.total_courses desc, us."name" asc) as rank,
+                us.user_id,
+                us.name as Usuario,
+                us.avatar,
+                us.puntaje as Puntuacion,
+                COALESCE(ucc.total_courses, 0) AS Cursos
+            FROM UserScores us
+            LEFT JOIN UserCompletedCourses ucc ON us.user_id = ucc.user_id
+            ORDER BY rank asc
+            LIMIT 5;
         """
 
         results = await execute_query(query, company_id)
-        return [dict(row) for row in results]
+        
+        if not results:
+            return []
+            
+        leaderboard = []
+        for row in results:
+            leaderboard.append({
+                "rank": int(row['rank']),
+                "user_id": str(row['user_id']),
+                "Usuario": row['usuario'],        # Alias de tu SQL
+                "avatar": row['avatar'],
+                "Puntuacion": int(row['puntuacion']), # Alias de tu SQL
+                "Cursos": int(row['cursos'])          # Alias de tu SQL
+            })
+
+        return leaderboard
+
     except Exception as e:
-        print(f"Error fetching user scores for company_id {company_id}: {str(e)}")
-        return []
+        print(f"Error getting leaderboard for company {company_id}: {str(e)}")
+        return None
     
 async def get_all_user_conversation_scoring_by_stage_company(stage_id: str, company_id: str) -> List[Dict]:
     """Get all user conversation scores for a stage and company, ordered by puntuation"""
@@ -568,4 +604,40 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error getting dashboard stats for {user_id}: {str(e)}")
         # Retornamos None para que el router sepa que hubo un fallo
+        return None
+
+
+
+async def get_company_announcements(company_id: str) -> List[Dict[str, Any]]:
+    """
+    Recupera las noticias (announcements) activas y no caducadas para una empresa,
+    ordenadas de más recientes a más antiguas.
+    """
+    try:
+        query = """
+            SELECT 
+                announcement_id,
+                type,
+                title,
+                message,
+                badge_text,
+                created_at
+            FROM conversaconfig.company_announcements
+            WHERE company_id = $1
+              AND is_active = true
+              -- Filtro de caducidad: Si es NULL es permanente, si tiene fecha debe ser futura
+              AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+            ORDER BY created_at DESC
+            LIMIT 5; -- Traemos solo las 5 más recientes para no saturar la UI
+        """
+
+        results = await execute_query(query, company_id)
+        
+        if not results:
+            return []
+
+        return results
+
+    except Exception as e:
+        print(f"Error getting announcements for company {company_id}: {str(e)}")
         return None

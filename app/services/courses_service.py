@@ -40,6 +40,8 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
             cs.stage_description,
             cs.stage_order,
             cs.stage_objectives,
+            mc.course_steps,
+            mc.completion_time_minutes,
             CASE 
                 WHEN c.status = 'FINISHED' AND c.is_accomplished = true
                 THEN cs.stage_order
@@ -91,6 +93,8 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "assigned_at": row['assigned_at'],
                 "is_mandatory": row['is_mandatory'],
                 "estimated_completion_date":row['estimated_completion_date'],
+                "completion_time_minutes": row['completion_time_minutes'],
+                "course_steps": row['course_steps'],
                 "completion_time_minutes": row['completion_time_minutes'],
                 "progress": 0, # Default value, updated below
                 "stages": []
