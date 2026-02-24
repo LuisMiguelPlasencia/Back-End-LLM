@@ -133,6 +133,40 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
         print(f"Error getting leaderboard for company {company_id}: {str(e)}")
         return None
     
+async def get_all_user_conversation_scoring_by_company(company_id: str) -> List[Dict]:
+    """Get all user conversation scores for a company, ordered by puntuation"""
+    try:
+        query = """
+            SELECT DISTINCT ON (ui.user_id)
+                ui.user_id,
+                ui.name,
+                ui.company_id,
+                ui.user_type,
+                ui.avatar,
+                ROUND(AVG(sbc.general_score),2) AS general_score,
+                ROUND(AVG(sbc.fillerwords_scoring),2) AS fillerwords_scoring,
+                ROUND(AVG(sbc.clarity_scoring),2)      AS clarity_scoring,
+                ROUND(AVG(sbc.participation_scoring),2)      AS participation_scoring,
+                ROUND(AVG(sbc.keythemes_scoring),2)      AS keythemes_scoring,
+                ROUND(AVG(sbc.indexofquestions_scoring),2)      AS indexofquestions_scoring,
+                ROUND(AVG(sbc.rhythm_scoring),2)       AS rhythm_scoring
+            FROM conversaconfig.user_info ui
+            LEFT JOIN conversaapp.conversations c
+                ON c.user_id = ui.user_id
+            LEFT JOIN conversaapp.scoring_by_conversation sbc 
+                ON c.conversation_id = sbc.conversation_id
+                AND c.status = 'FINISHED'
+            WHERE ui.company_id = $1
+                AND ui.is_active = true
+            GROUP BY ui.user_id;
+        """
+
+        results = await execute_query(query, company_id)
+        return [dict(row) for row in results]
+    except Exception as e:
+        print(f"Error fetching user scores for company_id {company_id}: {str(e)}")
+        return []
+    
 async def get_all_user_conversation_scoring_by_stage_company(stage_id: str, company_id: str) -> List[Dict]:
     """Get all user conversation scores for a stage and company, ordered by puntuation"""
     try:
