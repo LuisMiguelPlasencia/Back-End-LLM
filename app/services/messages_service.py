@@ -675,3 +675,138 @@ async def get_company_announcements(company_id: str) -> List[Dict[str, Any]]:
     except Exception as e:
         print(f"Error getting announcements for company {company_id}: {str(e)}")
         return None
+
+
+from typing import Dict, Any
+
+async def get_user_avg_participation(user_id: str) -> Dict[str, Any]:
+    """
+    Calcula el balance de participación real sumando la duración de los 
+    mensajes del usuario y restándoselo a la duración total de sus conversaciones.
+    """
+    try:
+        query = """
+            WITH valid_conversations AS (
+                -- 1. Aislamos las conversaciones completadas y calculamos la duración de cada una en segundos
+                SELECT 
+                    c.conversation_id,
+                    EXTRACT(EPOCH FROM (c.end_timestamp - c.start_timestamp)) AS conv_duration
+                FROM conversaapp.conversations c
+                JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+                WHERE c.user_id = $1::uuid 
+                  --AND sbc.is_accomplished = true
+                  AND c.start_timestamp IS NOT NULL
+                  AND c.end_timestamp IS NOT NULL
+            ),
+            total_time AS (
+                -- 2. Sumamos todo el tiempo que el usuario ha estado en conversaciones
+                SELECT COALESCE(SUM(conv_duration), 0) AS total_duration
+                FROM valid_conversations
+            ),
+            user_time AS (
+                -- 3. Sumamos la duración específica de los mensajes donde el rol es 'user'
+                SELECT COALESCE(SUM(m.duration), 0) AS user_duration
+                FROM conversaapp.messages m
+                JOIN valid_conversations vc ON m.conversation_id = vc.conversation_id
+                WHERE m.role = 'user'
+            )
+            -- 4. Juntamos los datos y calculamos por diferencia el tiempo del asistente
+            SELECT 
+                t.total_duration,
+                u.user_duration,
+                -- Usamos GREATEST por seguridad, para evitar tiempos negativos si hay algún desfase de milisegundos
+                GREATEST(t.total_duration - u.user_duration, 0) AS assistant_duration
+            FROM total_time t
+            CROSS JOIN user_time u;
+        """
+        
+        results = await execute_query(query, user_id)
+        
+        # Si no hay resultados o la duración total es 0 (no ha completado nada aún)
+        if not results or float(results[0]['total_duration']) == 0:
+            return {
+                "user_percentage": 50.0,
+                "client_percentage": 50.0,
+                "balance_status": "Sin datos suficientes"
+            }
+            
+        row = results[0]
+        total_duration = float(row['total_duration'])
+        user_duration = float(row['user_duration'])
+        
+        # Calculamos los porcentajes reales
+        user_pct = round((user_duration / total_duration) * 100, 1)
+        # El cliente es simplemente el resto hasta 100
+        client_pct = round(100.0 - user_pct, 1) 
+        
+        # Lógica de feedback basada en el porcentaje del usuario
+        if 40 <= user_pct <= 60:
+            balance_status = "Balance Ideal"
+        elif user_pct > 60:
+            balance_status = "Hablas demasiado"
+        else:
+            balance_status = "Escuchas demasiado"
+
+        return {
+            "user_percentage": user_pct,
+            "client_percentage": client_pct,
+            "balance_status": balance_status
+        }
+
+    except Exception as e:
+        print(f"Error fetching participation metrics for user {user_id}: {str(e)}")
+        return None
+
+
+
+async def get_user_avg_rhythm(user_id: str) -> Dict[str, Any]:
+    """
+    Calcula las Palabras por Minuto (WPM) agregadas del usuario contando 
+    el total de sus palabras y dividiéndolo entre su tiempo de habla real.
+    """
+    try:
+        query = """
+            WITH user_messages AS (
+                SELECT 
+                    m.content,
+                    m.duration
+                FROM conversaapp.messages m
+                JOIN conversaapp.conversations c ON m.conversation_id = c.conversation_id
+                WHERE c.user_id = $1::uuid 
+                  AND m.role = 'user'
+                  -- AND c.status = 'completed' -- Descomenta esto si solo quieres contar las terminadas
+            )
+            SELECT 
+                -- Truco SQL: limpiamos espacios extra, cortamos por espacios y contamos el tamaño del array
+                COALESCE(SUM(array_length(string_to_array(trim(content), ' '), 1)), 0) as total_words,
+                
+                -- Sumamos la duración exacta de sus audios/mensajes
+                COALESCE(SUM(duration), 0) as total_seconds
+            FROM user_messages;
+        """
+        
+        results = await execute_query(query, user_id)
+        
+        
+        if not results or float(results[0]['total_seconds']) == 0:
+            return {"wpm": 0, "status_label": "Sin datos suficientes"}
+            
+        total_words = int(results[0]['total_words'])
+        total_seconds = float(results[0]['total_seconds'])
+        
+        
+        wpm = int((total_words / total_seconds) * 60)
+        
+        
+        if 130 <= wpm <= 150:
+            status_label = "Rango Óptimo: 130-150"
+        elif wpm > 150:
+            status_label = "Ligeramente Rápido"
+        else:
+            status_label = "Ligeramente Lento"
+
+        return {"wpm": wpm, "status_label": status_label}
+
+    except Exception as e:
+        print(f"Error fetching rhythm metrics for user {user_id}: {str(e)}")
+        return None

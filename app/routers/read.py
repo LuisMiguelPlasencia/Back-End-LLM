@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query, HTTPException, Depends
 from uuid import UUID
 from ..services.courses_service import get_all_courses, get_all_stages, get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements
+from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements, get_user_avg_participation, get_user_avg_rhythm
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 from app.services.payments_service import get_billing_plans, validate_coupon
@@ -244,3 +244,22 @@ async def get_company_news_route(company_id: str):
     
     except Exception as e:
         error(500, f"Failed to retrieve company news: {str(e)}")
+
+
+@router.get("/users_participation")
+async def get_user_participation(user_id: str):
+    """Get user participation"""
+    try:
+        result = await get_user_avg_participation(user_id)
+        return result
+    except Exception as e:
+        error(500, f"Failed to retrieve: {str(e)}")
+
+@router.get("/users_rhythm")
+async def get_user_rhythm(user_id: str):
+    try:
+        result = await get_user_avg_rhythm(user_id)
+        if result is None: error(404, "User analytics not found")
+        return result
+    except Exception as e:
+        error(500, f"Failed to retrieve: {str(e)}")
