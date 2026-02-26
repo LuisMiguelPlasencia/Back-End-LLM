@@ -202,6 +202,19 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
     results = await execute_query(query, course_id, stage_id)
     return [dict(row) for row in results]
 
+async def get_company_courses(company_id: str) -> List[Dict]:
+    """
+    Get courses by company id
+    """
+    query = """
+    SELECT
+      ALL COURSES FOR A COMPANY
+    FROM x
+    """
+    
+    results = await execute_query(query, company_id)
+    return [dict(row) for row in results]
+
 
 async def create_new_course(name: str, description: str, image_src: str, is_active: bool, is_mandatory: bool, completion_time_minutes: int, course_steps: int) -> UUID:
     """
