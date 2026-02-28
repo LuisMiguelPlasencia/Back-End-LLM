@@ -592,7 +592,6 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
                 FROM conversaapp.conversations c
                 JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
                 WHERE c.user_id = $1::uuid
-                  AND sbc.is_accomplished = true
             ),
             stats_courses AS (
                 SELECT COUNT(ucp.course_progress_id) AS total_completed_courses
