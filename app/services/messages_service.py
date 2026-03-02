@@ -594,18 +594,22 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
                 WHERE c.user_id = $1::uuid
             ),
             stats_courses AS (
-                SELECT COUNT(ucp.course_progress_id) AS total_completed_courses
+                SELECT COUNT(ucp.course_progress_id) AS total_completed_courses, 
+                up.profile_type AS profile_type
                 FROM conversaconfig.user_course_progress ucp
                 JOIN conversaconfig.user_journeys_assigments uja ON ucp.user_journey_id = uja.user_journey_id
                 JOIN conversaconfig.master_courses mc ON ucp.course_id = mc.course_id
+                JOIN conversascoring.user_profile up ON uja.user_id = up.user_id
                 WHERE uja.user_id = $1::uuid
-                  AND ucp.completed_modules >= mc.course_steps
-                  AND mc.course_steps > 0
+                 AND ucp.completed_modules >= mc.course_steps
+                AND mc.course_steps > 0
+                GROUP BY up.profile_type
             )
             SELECT 
                 sc.average_score,
                 sc.total_learning_hours,
-                stc.total_completed_courses
+                stc.total_completed_courses,
+                stc.profile_type
             FROM stats_conversations sc
             CROSS JOIN stats_courses stc;
         """
@@ -619,7 +623,8 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
                 "level": "Sin Nivel",
                 "average_score": 0,
                 "total_learning_hours": 0.0,
-                "total_completed_courses": 0
+                "total_completed_courses": 0,
+                "profile_type": None
             }
             
         row = results[0]
@@ -631,7 +636,8 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
             "level": get_user_level_label(avg_score),
             "average_score": avg_score,
             "total_learning_hours": float(row['total_learning_hours']),
-            "total_completed_courses": int(row['total_completed_courses'])
+            "total_completed_courses": int(row['total_completed_courses']),
+            "profile_type": row['profile_type']
         }
 
     except Exception as e:
@@ -808,4 +814,71 @@ async def get_user_avg_rhythm(user_id: str) -> Dict[str, Any]:
 
     except Exception as e:
         print(f"Error fetching rhythm metrics for user {user_id}: {str(e)}")
+        return None
+
+
+
+async def get_user_avg_filler_words(user_id: str) -> Dict[str, Any]:
+    """
+    Computes the average frequency of filler words for a user.
+    """
+    try:
+        query = """
+                SELECT COALESCE(ROUND(AVG(sbc.fillerwords_scoring)::numeric, 1), 0.0) as frequency_percentage
+                FROM conversaapp.conversations c
+                JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+                WHERE c.user_id = $1::uuid;
+        """
+        
+        results = await execute_query(query, user_id)
+        
+        if not results or results[0]['frequency_percentage'] is None:
+            return {"frequency_percentage": 0.0, "feedback_text": "Sin datos suficientes."}
+            
+        frequency_percentage = float(results[0]['frequency_percentage'])
+        
+        return {
+            "frequency_percentage": frequency_percentage
+        }
+    except Exception as e:
+        print(f"Error fetching filler words metrics for user {user_id}: {str(e)}")
+        return None
+
+async def get_user_avg_technical_level(user_id: str) -> Dict[str, Any]:
+    """
+    Computes the average technical level (keythemes) for a user.
+    """
+    try:
+        query = """
+            SELECT COALESCE(ROUND(AVG(sbc.keythemes_scoring)), 0) as technical_level
+            FROM conversaapp.conversations c
+            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+            WHERE c.user_id = $1::uuid;
+        """
+        
+        results = await execute_query(query, user_id)
+        
+        if not results:
+            return {"score": 0, "level_label": "Básico", "feedback_text": "Sin datos suficientes."}
+            
+        score = float(results[0]['technical_level'])
+        
+        # Lógica de categorización para pintar el gráfico del frontend
+        if score >= 80:
+            level_label = "Alta"
+            feedback_text = "Dominio preciso de terminología."
+        elif score >= 50:
+            level_label = "Medio"
+            feedback_text = "Conocimiento adecuado, puedes mejorar detalles."
+        else:
+            level_label = "Básico"
+            feedback_text = "Necesitas repasar los conceptos clave."
+
+        return {
+            "score": score,  
+            "level_label": level_label,  
+            "feedback_text": feedback_text
+        }
+    except Exception as e:
+        print(f"Error fetching technical level metrics for user {user_id}: {str(e)}")
         return None

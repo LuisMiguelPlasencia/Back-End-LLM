@@ -6,10 +6,11 @@
 # curl "http://localhost:8000/read/messages?conversation_id=123e4567-e89b-12d3-a456-426614174000"
 
 from fastapi import APIRouter, Query, HTTPException, Depends
+import asyncio
 from uuid import UUID
 from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements, get_user_avg_participation, get_user_avg_rhythm
+from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements, get_user_avg_participation, get_user_avg_rhythm, get_user_avg_filler_words, get_user_avg_technical_level
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 from app.services.payments_service import get_billing_plans, validate_coupon
@@ -210,7 +211,6 @@ async def validate_couponAPI(coupon_code: str):
     except Exception as e:
         error(500, f"Failed to retrieve: {str(e)}")
 
-# Asumiendo que has importado la función anterior como `get_dashboard_stats`
 
 @router.get("/myAnalytics")
 async def get_my_analytics(user_id: str):
@@ -246,23 +246,6 @@ async def get_company_news_route(company_id: str):
         error(500, f"Failed to retrieve company news: {str(e)}")
 
 
-@router.get("/users_participation")
-async def get_user_participation(user_id: str):
-    """Get user participation"""
-    try:
-        result = await get_user_avg_participation(user_id)
-        return result
-    except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
-
-@router.get("/users_rhythm")
-async def get_user_rhythm(user_id: str):
-    try:
-        result = await get_user_avg_rhythm(user_id)
-        if result is None: error(404, "User analytics not found")
-        return result
-    except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
 
 @router.get("/company_courses")
 async def get_company_coursesAPI(company_id: str):
@@ -272,3 +255,38 @@ async def get_company_coursesAPI(company_id: str):
         return result
     except Exception as e:
         error(500, f"Failed to retrieve: {str(e)}")
+
+
+
+@router.get("/myAnalytics-ScoringTab")
+async def get_my_analytics_scoring_tab(user_id: str):
+    """
+    Retrieves all aggregated metrics for the user for the Scoring tab in 'My Analytics' in a single concurrent request.
+    """
+    try:
+        # Launch the 4 tasks in parallel for maximum speed
+        participation_task = get_user_avg_participation(user_id)
+        rhythm_task = get_user_avg_rhythm(user_id)
+        filler_words_task = get_user_avg_filler_words(user_id)
+        technical_level_task = get_user_avg_technical_level(user_id)
+
+        # Wait for all to complete simultaneously
+        participation, rhythm, filler_words, technical_level = await asyncio.gather(
+            participation_task,
+            rhythm_task,
+            filler_words_task,
+            technical_level_task
+        )
+
+        return {
+            "status": "success",
+            "result": {
+                "participation": participation,
+                "rhythm": rhythm,
+                "filler_words": filler_words,
+                "technical_level": technical_level
+            }
+        }
+
+    except Exception as e:
+        error(500, f"Failed to retrieve analytics scoring tab: {str(e)}")
