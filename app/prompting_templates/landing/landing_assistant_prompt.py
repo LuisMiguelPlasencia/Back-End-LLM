@@ -63,7 +63,7 @@ Responde en español.
 
 Sé claro, directo y profesional.
 
-Máximo 150 palabras.
+Máximo 30 palabras.
 
 No menciones que eres un modelo de IA.
 
