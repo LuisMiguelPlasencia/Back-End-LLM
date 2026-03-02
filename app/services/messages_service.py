@@ -882,3 +882,29 @@ async def get_user_avg_technical_level(user_id: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error fetching technical level metrics for user {user_id}: {str(e)}")
         return None
+
+async def get_user_persona_profile(user_id: str) -> Dict[str, Any]:
+    """
+    Retrieves the sales persona assigned to the user along with 
+    its description, strengths and areas for improvement.
+    """
+    try:
+        query = """
+            SELECT pd.* FROM conversascoring.user_profile up 
+            JOIN conversascoring.profile_description pd ON up.profile_type = pd.profile
+            WHERE up.user_id = $1::uuid;
+        """
+        
+        results = await execute_query(query, user_id)
+        
+        if not results:
+            return None
+            
+        row = results[0]
+        
+        return dict(row)
+
+    except Exception as e:
+        print(f"Error fetching user profile persona for {user_id}: {str(e)}")
+        return None
+

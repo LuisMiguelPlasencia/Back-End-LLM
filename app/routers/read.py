@@ -10,7 +10,7 @@ import asyncio
 from uuid import UUID
 from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements, get_user_avg_participation, get_user_avg_rhythm, get_user_avg_filler_words, get_user_avg_technical_level
+from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements, get_user_avg_participation, get_user_avg_rhythm, get_user_avg_filler_words, get_user_avg_technical_level, get_user_persona_profile
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 from app.services.payments_service import get_billing_plans, validate_coupon
@@ -290,3 +290,27 @@ async def get_my_analytics_scoring_tab(user_id: str):
 
     except Exception as e:
         error(500, f"Failed to retrieve analytics scoring tab: {str(e)}")
+
+@router.get("/myAnalytics-PersonalityTab")
+async def get_my_analytics_personality_tab(user_id: str):
+    """
+    Retrieves the descriptive card of the conversational profile of the user 
+    (e.g: The Hunter) with its strengths and areas for improvement.
+    """
+    try:
+        result = await get_user_persona_profile(user_id)
+        
+        if result is None:
+            error(404, "User profile not found")
+            return {
+                "status": "not_found",
+                "message": "El usuario aún no tiene un perfil asignado."
+            }
+            
+        return {
+            "status": "success",
+            "result": result
+        }
+    except Exception as e:
+        # Usa tu manejador de errores habitual
+        error(500, f"Error fetching user persona profile: {str(e)}")
