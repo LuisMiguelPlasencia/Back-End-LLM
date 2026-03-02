@@ -10,7 +10,25 @@ import asyncio
 from uuid import UUID
 from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details
 from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import get_all_user_conversation_average_scoring_by_stage_company, get_all_user_conversation_scoring_by_company, get_all_user_conversation_scoring_by_stage_company, get_all_user_profiling_by_company, get_conversation_messages, get_all_user_scoring_by_company, get_user_profiling, get_company_dashboard_stats, get_user_journey, get_dashboard_stats, get_company_announcements, get_user_avg_participation, get_user_avg_rhythm, get_user_avg_filler_words, get_user_avg_technical_level, get_user_persona_profile
+from ..services.messages_service import (
+    get_all_user_conversation_average_scoring_by_stage_company, 
+    get_user_cumulative_average_score, 
+    get_all_user_conversation_scoring_by_company, 
+    get_all_user_conversation_scoring_by_stage_company, 
+    get_all_user_profiling_by_company, 
+    get_conversation_messages, 
+    get_all_user_scoring_by_company, 
+    get_user_profiling, 
+    get_company_dashboard_stats, 
+    get_user_journey, 
+    get_dashboard_stats, 
+    get_company_announcements, 
+    get_user_avg_participation, 
+    get_user_avg_rhythm, 
+    get_user_avg_filler_words, 
+    get_user_avg_technical_level, 
+    get_user_persona_profile
+)
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 from app.services.payments_service import get_billing_plans, validate_coupon
@@ -164,6 +182,17 @@ async def get_all_user_conversation_average_scores_by_stage_company(stage_id: st
         return user_scores_list
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")
+
+
+@router.get("/userScoringTimeSeries")
+async def get_user_scoring_time_series(user_id: str = Query(..., description="User ID to get the scoring time series for"), n_days: int = Query(7, description="Number of days to retrieve")):
+    """Get the scoring time series for a user"""
+    try:
+        user_scores_time_series = await get_user_cumulative_average_score(user_id, n_days)
+        return user_scores_time_series
+    except Exception as e:
+        error(500, f"Failed to retrieve stats: {str(e)}")
+
 
 @router.get("/allUserProfilingByCompany")
 async def get_all_user_profiling_by_companyAPI(company_id: str = Query(..., description="Company ID to get the list of user scores for")):

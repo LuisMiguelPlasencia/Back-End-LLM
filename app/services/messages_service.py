@@ -246,6 +246,116 @@ async def get_all_user_conversation_average_scoring_by_stage_company(stage_id: s
         print(f"Error fetching user scores for stage_id {stage_id} and company_id {company_id}: {str(e)}")
         return []
 
+async def get_user_cumulative_average_score(user_id: str, days_back: int = 7) -> List[Dict]:
+    """
+    Get cumulative average general_score for a user
+    up to today, yesterday, ... N days ago.
+    
+    :param user_id: UUID of the user
+    :param days_back: Number of days to go back
+    :return: List of {day, average_score}
+    """
+    try:
+        query = """
+            WITH all_scores AS (
+                SELECT
+                    c.end_timestamp::date AS day,
+                    sbc.general_score
+                FROM conversaapp.conversations c
+                JOIN conversaapp.scoring_by_conversation sbc
+                    ON c.conversation_id = sbc.conversation_id
+                WHERE c.user_id = $1::uuid
+                  AND c.status = 'FINISHED'
+                  AND c.end_timestamp IS NOT NULL
+            ),
+            daily AS (
+                SELECT
+                    day,
+                    SUM(general_score) AS sum_score,
+                    COUNT(*) AS cnt
+                FROM all_scores
+                GROUP BY day
+            ),
+            cumulative AS (
+                SELECT
+                    day,
+                    SUM(sum_score) OVER (ORDER BY day)
+                        / NULLIF(SUM(cnt) OVER (ORDER BY day), 0) AS avg_score
+                FROM daily
+            )
+            SELECT
+                day,
+                COALESCE(ROUND(avg_score, 2), 0) AS average_score
+            FROM cumulative
+           /* WHERE day >= CURRENT_DATE - ($2::int * INTERVAL '1 day')*/
+            ORDER BY day DESC
+            LIMIT $2    ;
+        """
+        # query = """
+        #     WITH all_scores AS (
+        #         SELECT
+        #             c.end_timestamp::date AS day,
+        #             sbc.general_score
+        #         FROM conversaapp.conversations c
+        #         JOIN conversaapp.scoring_by_conversation sbc
+        #             ON c.conversation_id = sbc.conversation_id
+        #         WHERE c.user_id = $1::uuid
+        #           AND c.status = 'FINISHED'
+        #           AND c.end_timestamp IS NOT NULL
+        #     ),
+        #     daily AS (
+        #         SELECT
+        #             day,
+        #             SUM(general_score) AS sum_score,
+        #             COUNT(*) AS cnt
+        #         FROM all_scores
+        #         GROUP BY day
+        #     ),
+        #     cumulative AS (
+        #         SELECT
+        #             day,
+        #             SUM(sum_score) OVER (ORDER BY day)
+        #                 / NULLIF(SUM(cnt) OVER (ORDER BY day), 0) AS avg_score
+        #         FROM daily
+        #     ),
+        #     date_series AS (
+        #         SELECT generate_series(
+        #             CURRENT_DATE - ($2::int * INTERVAL '1 day'),
+        #             CURRENT_DATE,
+        #             INTERVAL '1 day'
+        #         )::date AS day
+        #     ),
+        #     joined AS (
+        #         SELECT
+        #             ds.day,
+        #             c.avg_score
+        #         FROM date_series ds
+        #         LEFT JOIN cumulative c
+        #             ON c.day <= ds.day
+        #     ),
+        #     filled AS (
+        #         SELECT
+        #             day,
+        #             MAX(avg_score) OVER (
+        #                 PARTITION BY day
+        #             ) AS avg_score
+        #         FROM joined
+        #     )
+        #     SELECT
+        #         day,
+        #         COALESCE(ROUND(MAX(avg_score), 2), 0) AS average_score
+        #     FROM filled
+        #     GROUP BY day
+        #     ORDER BY day DESC;
+        # """
+        results = await execute_query(query, user_id, days_back)
+        return [dict(row) for row in results]
+
+    except Exception as e:
+        print(f"Error fetching cumulative average score for user_id {user_id}: {str(e)}")
+        return []
+    
+
 async def get_all_user_profiling_by_company(company_id: str) -> List[Dict]:
     """Get all user profiling scores for a company"""
     try:
