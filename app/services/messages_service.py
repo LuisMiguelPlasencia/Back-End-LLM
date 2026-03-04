@@ -71,44 +71,45 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
     desempatando por Cursos completados y nombre.
     """
     try:
-        # Tu SQL definitiva
         query = """
-            WITH UserScores AS (
-                SELECT
-                    ui.user_id,
-                    ui.name,
-                    ui.avatar,
-                    COALESCE(ROUND(AVG(sbc.general_score))::int, 0) AS puntaje
-                FROM conversaconfig.user_info ui
-                JOIN conversaapp.conversations c ON ui.user_id = c.user_id
-                JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-                WHERE ui.company_id = $1
-                GROUP BY ui.user_id, ui.name, ui.avatar
-            ),
-            UserCompletedCourses AS (
-                SELECT 
-                    uja.user_id,
-                    COUNT(ucp.course_progress_id) AS total_courses
-                FROM conversaconfig.user_info ui
-                JOIN conversaconfig.user_journeys_assigments uja ON ui.user_id = uja.user_id
-                JOIN conversaconfig.user_course_progress ucp ON uja.user_journey_id = ucp.user_journey_id
-                JOIN conversaconfig.master_courses mc ON ucp.course_id = mc.course_id
-                WHERE ui.company_id = $1
-                  AND ucp.completed_modules >= mc.course_steps 
-                  AND mc.course_steps > 0
-                GROUP BY uja.user_id
-            )
+                    WITH UserScores AS (
             SELECT
-                RANK() OVER (ORDER BY us.puntaje desc, ucc.total_courses desc, us."name" asc) as rank,
-                us.user_id,
-                us.name as Usuario,
-                us.avatar,
-                us.puntaje as Puntuacion,
-                COALESCE(ucc.total_courses, 0) AS Cursos
-            FROM UserScores us
-            LEFT JOIN UserCompletedCourses ucc ON us.user_id = ucc.user_id
-            ORDER BY rank asc
-            LIMIT 5;
+                ui.user_id,
+                ui.name,
+                ui.avatar,
+                -- Fórmula maestra de Puntuación
+                COALESCE(ROUND(AVG(sbc.general_score))::int, 0) AS puntaje
+            FROM conversaconfig.user_info ui
+            JOIN conversaapp.conversations c ON ui.user_id = c.user_id
+            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+            WHERE ui.company_id = $1
+            GROUP BY ui.user_id, ui.name, ui.avatar
+        ),
+        UserCompletedCourses AS (
+            SELECT 
+                uja.user_id,
+                -- Fórmula maestra de Cursos
+                COUNT(ucp.course_progress_id) AS total_courses
+            FROM conversaconfig.user_info ui
+            JOIN conversaconfig.user_journeys_assigments uja ON ui.user_id = uja.user_id
+            JOIN conversaconfig.user_course_progress ucp ON uja.user_journey_id = ucp.user_journey_id
+            JOIN conversaconfig.master_courses mc ON ucp.course_id = mc.course_id
+            WHERE ui.company_id = $1
+            AND ucp.completed_modules >= mc.course_steps 
+            AND mc.course_steps > 0
+            GROUP BY uja.user_id
+        )
+        SELECT
+            RANK() OVER (ORDER BY us.puntaje desc, ucc.total_courses desc, us."name" asc) as rank,
+            us.user_id,
+            us.name as Usuario,
+            us.avatar,
+            us.puntaje as Puntuacion,
+            COALESCE(ucc.total_courses, 0) AS Cursos
+        FROM UserScores us
+        LEFT JOIN UserCompletedCourses ucc ON us.user_id = ucc.user_id
+        ORDER BY rank asc
+        LIMIT 5;
         """
 
         results = await execute_query(query, company_id)
@@ -697,29 +698,31 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
         query = """
             WITH stats_conversations AS (
                 SELECT
-                    COALESCE(ROUND(AVG(sbc.general_score)), 0) AS average_score,
+                    -- Idéntico al leaderboard: COALESCE(ROUND(...)::int, 0)
+                    COALESCE(ROUND(AVG(sbc.general_score))::int, 0) AS average_score,
+                    -- Aquí sumamos el tiempo correctamente
                     COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (c.end_timestamp - c.start_timestamp))) / 3600.0, 1), 0.0) AS total_learning_hours
                 FROM conversaapp.conversations c
                 JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
                 WHERE c.user_id = $1::uuid
             ),
             stats_courses AS (
-                SELECT COUNT(ucp.course_progress_id) AS total_completed_courses, 
-                up.profile_type AS profile_type
-                FROM conversaconfig.user_course_progress ucp
-                JOIN conversaconfig.user_journeys_assigments uja ON ucp.user_journey_id = uja.user_journey_id
+                SELECT 
+                    -- Idéntico al leaderboard: contamos donde los módulos completados cubren los steps
+                    COUNT(ucp.course_progress_id) AS total_completed_courses
+                FROM conversaconfig.user_journeys_assigments uja
+                JOIN conversaconfig.user_course_progress ucp ON uja.user_journey_id = ucp.user_journey_id
                 JOIN conversaconfig.master_courses mc ON ucp.course_id = mc.course_id
-                JOIN conversascoring.user_profile up ON uja.user_id = up.user_id
                 WHERE uja.user_id = $1::uuid
-                 AND ucp.completed_modules >= mc.course_steps
+                AND ucp.completed_modules >= mc.course_steps
                 AND mc.course_steps > 0
-                GROUP BY up.profile_type
             )
             SELECT 
                 sc.average_score,
                 sc.total_learning_hours,
                 stc.total_completed_courses,
-                stc.profile_type
+                -- Extraemos el perfil de forma segura sin romper los cálculos de cursos usando un sub-SELECT
+                (SELECT profile_type FROM conversascoring.user_profile WHERE user_id = $1::uuid) AS profile_type
             FROM stats_conversations sc
             CROSS JOIN stats_courses stc;
         """
