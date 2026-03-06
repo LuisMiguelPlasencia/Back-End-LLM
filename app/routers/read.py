@@ -137,7 +137,13 @@ async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID 
             "negotiation_scoring": profiling.get('negotiation_scoring') or None,
             "prospection_scoring": profiling.get('prospection_scoring') or None,
             "resilience_scoring": profiling.get('resilience_scoring') or None,
-            "technical_domain_scoring": profiling.get('technical_domain_scoring') or None
+            "technical_domain_scoring": profiling.get('technical_domain_scoring') or None,
+            "empathy_feedback": profiling.get('empathy_feedback') or None,
+            "negotiation_feedback": profiling.get('negotiation_feedback') or None,
+            "prospection_feedback": profiling.get('prospection_feedback') or None,
+            "resilience_feedback": profiling.get('resilience_feedback') or None,
+            "technical_domain_feedback": profiling.get('technical_domain_feedback') or None,
+            "avatar": profiling.get('avatar') or None,
         }
         return result
         
