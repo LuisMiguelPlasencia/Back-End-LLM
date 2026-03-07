@@ -419,6 +419,31 @@ async def get_user_profiling(user_id: str) -> Dict:
         print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
         return []
 
+
+async def get_user_profiling_feedbacks(user_id: str) -> Dict | None:
+    """Get all profiling feedbacks for a given user"""
+    try:
+        query = """
+            SELECT
+                up.empathy_feedback,
+                up.negotiation_feedback,
+                up.prospection_feedback,
+                up.resilience_feedback,
+                up.technical_domain_feedback
+            FROM conversaconfig.user_info ui
+            LEFT JOIN conversascoring.user_profile up
+                ON ui.user_id = up.user_id
+            WHERE ui.user_id = $1
+        """
+
+        results = await execute_query(query, user_id)
+        print(results)
+        return dict(results) if len(results) > 0 else None
+    except Exception as e:
+        print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
+        return None
+
+
 import json
 from typing import List, Dict, Any
 
