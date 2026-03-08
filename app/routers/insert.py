@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends
 
 from app.services.auth_service import validate_user
 from app.services.courses_service import create_new_course, create_new_stage, update_course, update_stage, update_stage
-from ..schemas.insert import NewCourseRequest, NewStageRequest, StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateCourseRequest, UpdateProgressRequest, UpdateStageRequest
+from ..schemas.insert import NewCourseRequest, NewStageRequest, StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateCourseRequest, UpdateProgressRequest, UpdateStageRequest, UpdateUserCourseProgressRequest
 from ..services.conversations_service import create_conversation, close_conversation
-from ..services.messages_service import send_message, update_module_progress
+from ..services.messages_service import send_message, update_module_progress, update_user_course_progress
 from ..services.payments_service import simulate_investment, InvestmentSimulation
 from ..utils.responses import error
 
@@ -128,6 +128,27 @@ async def update_progress_route(request: UpdateProgressRequest):
     except Exception as e:
         error(500, f"Failed to update progress: {str(e)}")
 
+@router.post("/update_user_course_progress")
+async def update_user_course_progressAPI(request: UpdateUserCourseProgressRequest):
+    """
+    Updates the progress for a user when they complete a module.
+    Automatically handles course completion and journey completion statuses.
+    """
+    try:
+        # Llamamos a la función que ejecuta el UPSERT en base de datos
+        result = await update_user_course_progress(
+            user_id=request.user_id, 
+            course_id=request.course_id,
+            new_progress=request.new_progress
+        )
+        
+        # Retornamos el éxito con el formato que ya usas
+        return {
+            "status": "progress updated success"
+        }
+    
+    except Exception as e:
+        error(500, f"Failed to update progress: {str(e)}")
 
 
 @router.post("/course")

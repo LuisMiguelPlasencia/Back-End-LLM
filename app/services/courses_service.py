@@ -4,7 +4,7 @@
 
 from .db import execute_query
 from uuid import UUID
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 async def get_user_courses(user_id: UUID) -> List[Dict]:
     """
@@ -313,3 +313,48 @@ async def update_stage(
         )
 
     return result[0]['stage_id'] if result else None
+
+
+async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
+    """
+    Get user course progress. If it doesn't exist, create it.
+    """
+
+    select_query = """
+        SELECT *
+        FROM conversaconfig.user_course_progress
+        WHERE user_id = $1 AND course_id = $2
+    """
+
+    result = await execute_query(select_query, user_id, course_id)
+
+    if result:
+        return result[0]
+
+    insert_query = """
+        INSERT INTO conversaconfig.user_course_progress (
+            user_id,
+            course_id,
+            completed_modules,
+            status,
+            started_at,
+            completed_at,
+            updated_at
+        )
+        VALUES (
+            $1,
+            $2,
+            0,
+            'locked',
+            NOW(),
+            NULL,
+            NOW()
+        )
+        ON CONFLICT (user_id, course_id)
+        DO UPDATE SET updated_at = NOW()
+        RETURNING *
+    """
+
+    result = await execute_query(insert_query, user_id, course_id)
+
+    return result[0] if result else None

@@ -41,6 +41,11 @@ class UpdateProgressRequest(BaseModel):
     journey_id: str
     course_id: str
 
+class UpdateUserCourseProgressRequest(BaseModel):
+    user_id: str
+    course_id: str
+    new_progress: int
+
 class NewCourseRequest(BaseModel):
     """Send message request payload"""
     name: str
