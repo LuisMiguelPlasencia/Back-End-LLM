@@ -46,10 +46,12 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 WHEN c.status = 'FINISHED' AND c.is_accomplished = true
                 THEN cs.stage_order
                 ELSE 0
-            END AS stage_progress
+            END AS stage_progress,
+            ucp.completed_modules
         FROM conversaconfig.user_course_assignments uca 
         JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
+        LEFT JOIN conversaconfig.user_course_progress ucp on ucp.user_id = $1
         LEFT JOIN (
             SELECT 
                 c.course_id,
@@ -96,13 +98,9 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "completion_time_minutes": row['completion_time_minutes'],
                 "course_steps": row['course_steps'],
                 "completion_time_minutes": row['completion_time_minutes'],
-                "progress": 0, # Default value, updated below
+                "progress": row['completed_modules'], # Default value, updated below
                 "stages": []
             }
-
-        # Update Course Progress: Keep the highest stage_order completed
-        if row['stage_progress'] > courses_map[c_id]["progress"]:
-            courses_map[c_id]["progress"] = row['stage_progress']
 
         # Append Stage if it exists (handling LEFT JOIN nulls)
         if row['stage_id']:

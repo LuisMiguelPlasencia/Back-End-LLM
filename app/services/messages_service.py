@@ -365,19 +365,15 @@ async def get_all_user_profiling_by_company(company_id: str) -> List[Dict]:
                 ui."name",
                 ui.user_id,
                 ui.avatar,
-                ROUND(AVG(pbc.empathy_scoring),2)          AS empathy_scoring,
-                ROUND(AVG(pbc.negotiation_scoring),2)      AS negotiation_scoring,
-                ROUND(AVG(pbc.prospection_scoring),2)      AS prospection_scoring,
-                ROUND(AVG(pbc.resilience_scoring),2)       AS resilience_scoring,
-                ROUND(AVG(pbc.technical_domain_scoring),2) AS technical_domain_scoring
+                up.empathy_score          AS empathy_scoring,
+                up.negotiation_score      AS negotiation_scoring,
+                up.prospection_score      AS prospection_scoring,
+                up.resilience_score       AS resilience_scoring,
+                up.technical_domain_score AS technical_domain_scoring
             FROM conversaConfig.user_info ui
-            LEFT JOIN conversaApp.conversations c
-                ON ui.user_id = c.user_id
-            LEFT JOIN conversaApp.profiling_by_conversation pbc
-                ON c.conversation_id = pbc.conversation_id
+            LEFT JOIN conversascoring.user_profile up
+                ON ui.user_id = up.user_id
             WHERE ui.company_id = $1
-                AND c.status = 'FINISHED'
-            GROUP BY ui.user_id;
         """
 
         results = await execute_query(query, company_id)
@@ -413,7 +409,6 @@ async def get_user_profiling(user_id: str) -> Dict:
         """
 
         results = await execute_query(query, user_id)
-        print(results)
         return dict(results[0] if len(results) > 0 else {} )
     except Exception as e:
         print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
