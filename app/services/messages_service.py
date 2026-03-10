@@ -424,28 +424,35 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
     """
     try:
         query = """
-        WITH company_users AS (
+                WITH company_users AS (
             SELECT user_id, name, user_type, avatar
             FROM conversaconfig.user_info
             WHERE company_id = $1
         ),
-        team_monthly_comparison AS (
-            
+        company_stats AS (
+            -- Calculamos el promedio global y los mensuales de una sola vez
             SELECT 
+                -- Para el KPI 1: Promedio histórico total de la compañía
+                AVG(sbc.general_score) as all_time_avg,
+                
+                -- Para el Porcentaje: Promedio del mes actual
                 AVG(CASE 
                     WHEN c.created_at >= date_trunc('month', CURRENT_DATE) 
                     THEN sbc.general_score END) as current_month_avg,
+                    
+                -- Para el Porcentaje: Promedio del mes anterior
                 AVG(CASE 
                     WHEN c.created_at >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
                     AND c.created_at < date_trunc('month', CURRENT_DATE)
                     THEN sbc.general_score END) as prev_month_avg
+                    
             FROM conversaapp.conversations c
             JOIN company_users u ON c.user_id = u.user_id
             JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
             WHERE c.status = 'FINISHED'
-            AND c.created_at >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
         ),
         user_historical_stats AS (
+            -- Para el KPI 3: Histórico por usuario para ver quién requiere atención
             SELECT 
                 c.user_id,
                 AVG(sbc.general_score) as avg_score
@@ -456,26 +463,35 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
             GROUP BY c.user_id
         ),
         current_month_stats AS (
+            -- Para el KPI 2: Promedios de usuarios SOLO en el mes actual
             SELECT 
                 c.user_id,
                 AVG(sbc.general_score) as monthly_avg_score
             FROM conversaapp.conversations c
             JOIN company_users u ON c.user_id = u.user_id
             JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE c.created_at >= date_trunc('month', CURRENT_DATE) AND c.status = 'FINISHED'
+            WHERE c.created_at >= date_trunc('month', CURRENT_DATE) 
+            AND c.status = 'FINISHED'
             GROUP BY c.user_id
         )
         SELECT 
-            COALESCE(ROUND(tmc.current_month_avg, 1), 0) as team_average,
+            -- KPI 1: Promedio general (histórico de todos los usuarios)
+            COALESCE(ROUND(cs.all_time_avg, 1), 0) as team_average,
+            
+            -- Porcentaje: Crecimiento respecto al mes anterior
             CASE 
-                WHEN tmc.prev_month_avg IS NULL OR tmc.prev_month_avg = 0 THEN 0 
-                ELSE ROUND(((tmc.current_month_avg - tmc.prev_month_avg) / tmc.prev_month_avg) * 100, 1)
+                WHEN cs.prev_month_avg IS NULL OR cs.prev_month_avg = 0 THEN 0 
+                ELSE ROUND(((cs.current_month_avg - cs.prev_month_avg) / cs.prev_month_avg) * 100, 1)
             END as team_average_growth_pct,
+            
+            -- KPI 3: Usuarios que requieren atención (score histórico < 50)
             (
                 SELECT COUNT(*)
                 FROM user_historical_stats
                 WHERE avg_score < 50
             ) as users_requiring_attention,
+            
+            -- KPI 2: Top Performer del mes actual
             (
                 SELECT json_build_object(
                     'name', u.name,
@@ -488,7 +504,8 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
                 ORDER BY cms.monthly_avg_score DESC
                 LIMIT 1
             ) as top_performer_data
-        FROM team_monthly_comparison tmc;
+            
+        FROM company_stats cs;
         """
 
         results = await execute_query(query, company_id)
