@@ -51,7 +51,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
         FROM conversaconfig.user_course_assignments uca 
         JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
-        LEFT JOIN conversaconfig.user_course_progress ucp on ucp.user_id = $1
+        LEFT JOIN conversaconfig.user_course_progress ucp on ucp.user_id = $1 and mc.course_id = ucp.course_id
         LEFT JOIN (
             SELECT 
                 c.course_id,
