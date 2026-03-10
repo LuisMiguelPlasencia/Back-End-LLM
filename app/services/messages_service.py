@@ -424,88 +424,83 @@ async def get_company_dashboard_stats(company_id: str) -> List[Dict[str, Any]]:
     """
     try:
         query = """
-                WITH company_users AS (
-            SELECT user_id, name, user_type, avatar
-            FROM conversaconfig.user_info
-            WHERE company_id = $1
-        ),
-        company_stats AS (
-            -- Calculamos el promedio global y los mensuales de una sola vez
-            SELECT 
-                -- Para el KPI 1: Promedio histórico total de la compañía
-                AVG(sbc.general_score) as all_time_avg,
-                
-                -- Para el Porcentaje: Promedio del mes actual
-                AVG(CASE 
-                    WHEN c.created_at >= date_trunc('month', CURRENT_DATE) 
-                    THEN sbc.general_score END) as current_month_avg,
-                    
-                -- Para el Porcentaje: Promedio del mes anterior
-                AVG(CASE 
-                    WHEN c.created_at >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
-                    AND c.created_at < date_trunc('month', CURRENT_DATE)
-                    THEN sbc.general_score END) as prev_month_avg
-                    
-            FROM conversaapp.conversations c
-            JOIN company_users u ON c.user_id = u.user_id
-            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE c.status = 'FINISHED'
-        ),
-        user_historical_stats AS (
-            -- Para el KPI 3: Histórico por usuario para ver quién requiere atención
-            SELECT 
-                c.user_id,
-                AVG(sbc.general_score) as avg_score
-            FROM conversaapp.conversations c
-            JOIN company_users u ON c.user_id = u.user_id
-            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE c.status = 'FINISHED'
-            GROUP BY c.user_id
-        ),
-        current_month_stats AS (
-            -- Para el KPI 2: Promedios de usuarios SOLO en el mes actual
-            SELECT 
-                c.user_id,
-                AVG(sbc.general_score) as monthly_avg_score
-            FROM conversaapp.conversations c
-            JOIN company_users u ON c.user_id = u.user_id
-            JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE c.created_at >= date_trunc('month', CURRENT_DATE) 
-            AND c.status = 'FINISHED'
-            GROUP BY c.user_id
+               WITH company_users AS (
+    SELECT user_id, name, user_type, avatar
+    FROM conversaconfig.user_info
+    WHERE company_id = $1
+),
+company_stats AS (
+    -- Mantenemos esto para calcular el % de crecimiento mensual del equipo
+    SELECT 
+        AVG(CASE 
+            WHEN c.created_at >= date_trunc('month', CURRENT_DATE) 
+            THEN sbc.general_score END) as current_month_avg,
+            
+        AVG(CASE 
+            WHEN c.created_at >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month') 
+            AND c.created_at < date_trunc('month', CURRENT_DATE)
+            THEN sbc.general_score END) as prev_month_avg
+            
+    FROM conversaapp.conversations c
+    JOIN company_users u ON c.user_id = u.user_id
+    JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+    WHERE c.status = 'FINISHED'
+),
+user_historical_stats AS (
+    -- Paso 1 para el KPI 1 y KPI 3: Sacamos el promedio individual de cada usuario
+    SELECT 
+        c.user_id,
+        AVG(sbc.general_score) as avg_score
+    FROM conversaapp.conversations c
+    JOIN company_users u ON c.user_id = u.user_id
+    JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+    WHERE c.status = 'FINISHED'
+    GROUP BY c.user_id
+),
+current_month_stats AS (
+    -- KPI 2: Promedios de usuarios SOLO en el mes actual para el Top Performer
+    SELECT 
+        c.user_id,
+        AVG(sbc.general_score) as monthly_avg_score
+    FROM conversaapp.conversations c
+    JOIN company_users u ON c.user_id = u.user_id
+    JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+    WHERE c.created_at >= date_trunc('month', CURRENT_DATE) 
+      AND c.status = 'FINISHED'
+    GROUP BY c.user_id
+)
+SELECT 
+    -- KPI 1 CORREGIDO: Promedio de los promedios de todos los usuarios
+    COALESCE(ROUND((SELECT AVG(avg_score) FROM user_historical_stats), 1), 0) as team_average,
+    
+    -- Porcentaje: Crecimiento respecto al mes anterior
+    CASE 
+        WHEN cs.prev_month_avg IS NULL OR cs.prev_month_avg = 0 THEN 0 
+        ELSE ROUND(((cs.current_month_avg - cs.prev_month_avg) / cs.prev_month_avg) * 100, 1)
+    END as team_average_growth_pct,
+    
+    -- KPI 3: Usuarios que requieren atención (score histórico < 50)
+    (
+        SELECT COUNT(*)
+        FROM user_historical_stats
+        WHERE avg_score < 50
+    ) as users_requiring_attention,
+    
+    -- KPI 2: Top Performer del mes actual
+    (
+        SELECT json_build_object(
+            'name', u.name,
+            'role', u.user_type,
+            'photo', u.avatar,
+            'score', ROUND(cms.monthly_avg_score, 1)
         )
-        SELECT 
-            -- KPI 1: Promedio general (histórico de todos los usuarios)
-            COALESCE(ROUND(cs.all_time_avg, 1), 0) as team_average,
-            
-            -- Porcentaje: Crecimiento respecto al mes anterior
-            CASE 
-                WHEN cs.prev_month_avg IS NULL OR cs.prev_month_avg = 0 THEN 0 
-                ELSE ROUND(((cs.current_month_avg - cs.prev_month_avg) / cs.prev_month_avg) * 100, 1)
-            END as team_average_growth_pct,
-            
-            -- KPI 3: Usuarios que requieren atención (score histórico < 50)
-            (
-                SELECT COUNT(*)
-                FROM user_historical_stats
-                WHERE avg_score < 50
-            ) as users_requiring_attention,
-            
-            -- KPI 2: Top Performer del mes actual
-            (
-                SELECT json_build_object(
-                    'name', u.name,
-                    'role', u.user_type,
-                    'photo', u.avatar,
-                    'score', ROUND(cms.monthly_avg_score, 1)
-                )
-                FROM current_month_stats cms
-                JOIN company_users u ON cms.user_id = u.user_id
-                ORDER BY cms.monthly_avg_score DESC
-                LIMIT 1
-            ) as top_performer_data
-            
-        FROM company_stats cs;
+        FROM current_month_stats cms
+        JOIN company_users u ON cms.user_id = u.user_id
+        ORDER BY cms.monthly_avg_score DESC
+        LIMIT 1
+    ) as top_performer_data
+    
+FROM company_stats cs;
         """
 
         results = await execute_query(query, company_id)
