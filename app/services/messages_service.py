@@ -82,7 +82,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             FROM conversaconfig.user_info ui
             JOIN conversaapp.conversations c ON ui.user_id = c.user_id
             JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE ui.company_id = $1
+            WHERE ui.company_id = $1 and (sbc.general_score is not null or sbc.general_score > 0) and c.status = 'FINISHED'
             GROUP BY ui.user_id, ui.name, ui.avatar
         ),
         UserCompletedCourses AS (
@@ -745,7 +745,7 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
                     COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (c.end_timestamp - c.start_timestamp))) / 3600.0, 1), 0.0) AS total_learning_hours
                 FROM conversaapp.conversations c
                 JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-                WHERE c.user_id = $1::uuid
+                WHERE c.user_id = $1::uuid and (sbc.general_score is not null or sbc.general_score > 0) and c.status = 'FINISHED'
             ),
             stats_courses AS (
                 SELECT 
