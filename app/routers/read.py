@@ -105,7 +105,7 @@ async def get_conversations(user_id: UUID = Query(..., description="User ID to g
         error(500, f"Failed to retrieve conversations: {str(e)}")
 
 @router.get("/messages")
-async def get_messages(conversation_id: UUID = Query(..., description="Conversation ID to get messages for")):
+async def get_messages(conversation_id: UUID = Query(..., description="Conversation ID to get messages for"), _: dict = Depends(validate_user)):
     """Get all messages for a conversation"""
     try:
         messages = await get_conversation_messages(conversation_id)

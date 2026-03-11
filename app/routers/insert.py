@@ -138,8 +138,7 @@ async def update_user_course_progressAPI(request: UpdateUserCourseProgressReques
         # Llamamos a la función que ejecuta el UPSERT en base de datos
         result = await update_user_course_progress(
             user_id=request.user_id, 
-            course_id=request.course_id,
-            new_progress=request.new_progress
+            course_id=request.course_id
         )
         
         # Retornamos el éxito con el formato que ya usas

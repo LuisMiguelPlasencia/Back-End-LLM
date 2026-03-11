@@ -44,7 +44,6 @@ class UpdateProgressRequest(BaseModel):
 class UpdateUserCourseProgressRequest(BaseModel):
     user_id: str
     course_id: str
-    new_progress: int
 
 class NewCourseRequest(BaseModel):
     """Send message request payload"""
