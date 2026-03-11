@@ -659,7 +659,6 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
         pending_courses = check_result[0]['pending_courses']
 
         # 4. Actualizar el estado del Journey
-        # ¡AQUÍ ESTÁ LA SOLUCIÓN AL ERROR! -> $2::varchar
         new_journey_status = 'completed' if pending_courses == 0 else 'in_progress'
         
         update_journey_query = """
@@ -684,27 +683,41 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
         print(f"Error updating progress for user {user_id}, course {course_id}: {str(e)}")
         return {"success": False, "error": str(e)}
 
-
-async def update_user_course_progress(user_id: str, course_id: str, new_progress: int) -> Dict[str, Any]:
+async def update_user_course_progress(user_id: str, course_id: str) -> Dict[str, Any]:
     try:
-        # 1. Obtener el user_journey_id y el total de módulos del curso
-        # Añadimos ::uuid para asegurar la conversión desde el string de Python
+        # Incrementa completed_modules en 1 directamente en la BD
+        # y evalúa si el usuario ha completado el curso.
         query = """
             UPDATE conversaconfig.user_course_progress
             SET 
-                completed_modules = $3::int,
+                completed_modules = completed_modules + 1,
                 status = CASE 
-                    WHEN $3::int >= (SELECT course_steps FROM conversaconfig.master_courses WHERE course_id = $2::uuid) THEN 'completed'::varchar
+                    WHEN (completed_modules + 1) >= (SELECT course_steps FROM conversaconfig.master_courses WHERE course_id = $2::uuid) THEN 'completed'::varchar
                     ELSE 'in_progress'::varchar
                 END,
                 updated_at = CURRENT_TIMESTAMP
             WHERE user_id = $1::uuid AND course_id = $2::uuid
             RETURNING completed_modules, status;
         """
-        await execute_query(query, user_id, course_id, new_progress)
+        
+        # Ya solo pasamos $1 (user_id) y $2 (course_id)
+        result = await execute_query(query, user_id, course_id)
+        
+        # Extraemos los datos devueltos por el RETURNING (asumiendo que execute_query devuelve una lista de registros)
+        # Ajusta esta parte si tu función execute_query devuelve el resultado en otro formato.
+        updated_modules = None
+        new_status = None
+        
+        if result and len(result) > 0:
+            updated_modules = result[0].get('completed_modules')
+            new_status = result[0].get('status')
                     
         return {
-            "success": True
+            "success": True,
+            "data": {
+                "completed_modules": updated_modules,
+                "status": new_status
+            }
         }
 
     except Exception as e:
