@@ -4,7 +4,7 @@
 
 from .db import execute_query
 from uuid import UUID
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 async def get_user_courses(user_id: UUID) -> List[Dict]:
     """
@@ -46,10 +46,12 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 WHEN c.status = 'FINISHED' AND c.is_accomplished = true
                 THEN cs.stage_order
                 ELSE 0
-            END AS stage_progress
+            END AS stage_progress,
+            ucp.completed_modules
         FROM conversaconfig.user_course_assignments uca 
         JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
+        LEFT JOIN conversaconfig.user_course_progress ucp on ucp.user_id = $1 and mc.course_id = ucp.course_id
         LEFT JOIN (
             SELECT 
                 c.course_id,
@@ -96,13 +98,9 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "completion_time_minutes": row['completion_time_minutes'],
                 "course_steps": row['course_steps'],
                 "completion_time_minutes": row['completion_time_minutes'],
-                "progress": 0, # Default value, updated below
+                "progress": row['completed_modules'], # Default value, updated below
                 "stages": []
             }
-
-        # Update Course Progress: Keep the highest stage_order completed
-        if row['stage_progress'] > courses_map[c_id]["progress"]:
-            courses_map[c_id]["progress"] = row['stage_progress']
 
         # Append Stage if it exists (handling LEFT JOIN nulls)
         if row['stage_id']:
@@ -313,3 +311,48 @@ async def update_stage(
         )
 
     return result[0]['stage_id'] if result else None
+
+
+async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
+    """
+    Get user course progress. If it doesn't exist, create it.
+    """
+
+    select_query = """
+        SELECT *
+        FROM conversaconfig.user_course_progress
+        WHERE user_id = $1 AND course_id = $2
+    """
+
+    result = await execute_query(select_query, user_id, course_id)
+
+    if result:
+        return result[0]
+
+    insert_query = """
+        INSERT INTO conversaconfig.user_course_progress (
+            user_id,
+            course_id,
+            completed_modules,
+            status,
+            started_at,
+            completed_at,
+            updated_at
+        )
+        VALUES (
+            $1,
+            $2,
+            0,
+            'locked',
+            NOW(),
+            NULL,
+            NOW()
+        )
+        ON CONFLICT (user_id, course_id)
+        DO UPDATE SET updated_at = NOW()
+        RETURNING *
+    """
+
+    result = await execute_query(insert_query, user_id, course_id)
+
+    return result[0] if result else None

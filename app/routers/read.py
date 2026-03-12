@@ -8,7 +8,7 @@
 from fastapi import APIRouter, Query, HTTPException, Depends
 import asyncio
 from uuid import UUID
-from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details
+from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details, user_course_progress
 from ..services.conversations_service import get_conversation_details, get_user_conversations
 from ..services.messages_service import (
     get_all_user_conversation_average_scoring_by_stage_company, 
@@ -106,7 +106,7 @@ async def get_conversations(user_id: UUID = Query(..., description="User ID to g
         error(500, f"Failed to retrieve conversations: {str(e)}")
 
 @router.get("/messages")
-async def get_messages(conversation_id: UUID = Query(..., description="Conversation ID to get messages for")):
+async def get_messages(conversation_id: UUID = Query(..., description="Conversation ID to get messages for"), _: dict = Depends(validate_user)):
     """Get all messages for a conversation"""
     try:
         messages = await get_conversation_messages(conversation_id)
@@ -363,6 +363,30 @@ async def get_my_analytics_personality_tab(user_id: str):
             return {
                 "status": "not_found",
                 "message": "El usuario aún no tiene un perfil asignado."
+            }
+            
+        return {
+            "status": "success",
+            "result": result
+        }
+    except Exception as e:
+        # Usa tu manejador de errores habitual
+        error(500, f"Error fetching user persona profile: {str(e)}")
+
+@router.get("/user_course_progress")
+async def user_course_progressAPI(user_id: str, course_id: str):
+    """
+    Retrieves the descriptive card of the conversational profile of the user 
+    (e.g: The Hunter) with its strengths and areas for improvement.
+    """
+    try:
+        result = await user_course_progress(user_id, course_id)
+        
+        if result is None:
+            error(404, "User profile not found")
+            return {
+                "status": "not_found",
+                "message": "El usuario aún no tiene este curso asignado"
             }
             
         return {

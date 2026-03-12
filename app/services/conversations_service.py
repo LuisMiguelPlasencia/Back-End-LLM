@@ -58,6 +58,7 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
     LEFT JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
     WHERE user_id = $1
     ORDER BY start_timestamp DESC
+    LIMIT 10
     """
     
     results = await execute_query(query, user_id)
