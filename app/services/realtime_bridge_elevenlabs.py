@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 # Services imports
 from app.services.conversations_service import get_voice_agent, create_conversation
-from app.services.messages_service import send_message
+from app.services.messages_service import send_message, update_user_course_status
 from app.services.prompting_service import master_prompt_generator
 from app.services.realtime_service import stop_process, user_msg_processed, is_non_silent
 
@@ -89,6 +89,7 @@ class RealtimeBridge:
                     print(f"Stage: {self.stage_id} ")
                     # Crear conversación en DB
                     conversation_details = await create_conversation(self.user_id, self.course_id, self.stage_id)
+                    _ = await update_user_course_status(self.user_id, self.course_id)
                     self.voice_id = "851ejYcv2BoNPjrkw93G"
                     self.agent_id = ELEVENLABS_AGENT_ID
                     record = await get_voice_agent(self.stage_id)

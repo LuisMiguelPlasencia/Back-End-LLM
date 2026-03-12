@@ -725,6 +725,39 @@ async def update_user_course_progress(user_id: str, course_id: str) -> Dict[str,
         return {"success": False, "error": str(e)}
 
 
+
+async def update_user_course_status(user_id: str, course_id: str) -> Dict[str, Any]:
+    try:
+        # Updates the status based on current completed_modules vs total course_steps
+        query = """
+            UPDATE conversaconfig.user_course_progress p
+            SET 
+                status = CASE 
+                    WHEN p.completed_modules >= c.course_steps THEN 'completed'
+                    ELSE 'in_progress'
+                END,
+                updated_at = CURRENT_TIMESTAMP
+            FROM conversaconfig.master_courses c
+            WHERE p.user_id = $1::uuid 
+              AND p.course_id = $2::uuid
+              AND c.course_id = p.course_id
+            RETURNING p.completed_modules, p.status;
+        """
+        
+        result = await execute_query(query, user_id, course_id)
+        
+        # If the record was found and updated, return the data cleanly
+        if result:
+            return {
+                "success": True,
+                "data": dict(result[0]) # Easily maps the RETURNING fields into a dictionary
+            }
+            
+        return {"success": False, "error": "Progress record not found."}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 from typing import Dict, Any
 
 def get_user_level_label(score: int) -> str:
