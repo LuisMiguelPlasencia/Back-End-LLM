@@ -650,9 +650,9 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
         # 2. UPSERT: Insertar progreso si es el módulo 1, o sumar +1 si ya existe.
         upsert_query = """
             INSERT INTO conversaconfig.user_course_progress 
-                (user_journey_id, course_id, completed_modules, status, started_at)
+                (user_journey_id, course_id, completed_modules, status, started_at, user_id)
             VALUES 
-                ($1::uuid, $2::uuid, 1, 'in_progress', CURRENT_TIMESTAMP)
+                ($1::uuid, $2::uuid, 1, 'in_progress', CURRENT_TIMESTAMP, $4::uuid)
             ON CONFLICT (user_journey_id, course_id) 
             DO UPDATE SET 
                 completed_modules = LEAST(conversaconfig.user_course_progress.completed_modules + 1, $3::int),
@@ -667,7 +667,7 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
                 updated_at = CURRENT_TIMESTAMP
             RETURNING completed_modules, status;
         """
-        progress_result = await execute_query(upsert_query, user_journey_id, course_id, total_modules)
+        progress_result = await execute_query(upsert_query, user_journey_id, course_id, total_modules, user_id)
         current_course_status = progress_result[0]['status']
 
         # 3. Verificamos si quedan cursos obligatorios sin terminar
