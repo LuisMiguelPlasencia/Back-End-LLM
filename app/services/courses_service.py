@@ -313,9 +313,10 @@ async def update_stage(
     return result[0]['stage_id'] if result else None
 
 
-async def user_course_progress(user_id: str, course_id: str, journey_id: str) -> Optional[Dict]:
+
+async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
     """
-    Get user course progress. If it doesn't exist, create it.
+    Get user course progress. If it doesn't exist, return a default progress dictionary.
     """
 
     # 1. Intentamos buscar si ya existe
@@ -327,45 +328,18 @@ async def user_course_progress(user_id: str, course_id: str, journey_id: str) ->
 
     result = await execute_query(select_query, user_id, course_id)
 
+    # Si hay resultados en la base de datos, los devolvemos
     if result:
         return result[0]
 
-    select_query = """
-        SELECT user_journey_id
-        FROM conversaconfig.user_journeys_assigments
-        WHERE user_id = $1 AND journey_id = $2
-    """
-
-    result_journey = await execute_query(select_query, user_id, journey_id)
-
-    # 2. Si no existe, lo creamos (ahora incluyendo user_journey_id)
-    insert_query = """
-        INSERT INTO conversaconfig.user_course_progress (
-            user_id,
-            course_id,
-            user_journey_id,
-            completed_modules,
-            status,
-            started_at,
-            completed_at,
-            updated_at
-        )
-        VALUES (
-            $1,
-            $2,
-            $3,
-            0,
-            'locked',
-            NOW(),
-            NULL,
-            NOW()
-        )
-        ON CONFLICT (user_id, course_id)
-        DO UPDATE SET updated_at = NOW()
-        RETURNING *
-    """
-
-    # Asegúrate de pasar los 3 parámetros a execute_query
-    result = await execute_query(insert_query, user_id, course_id, result_journey[0]['user_journey_id'])
-
-    return result[0] if result else None
+    # 2. Si no existe, devolvemos un "progreso falso" directamente en código, sin tocar la BBDD
+    return {
+        "user_id": user_id,
+        "course_id": course_id,
+        "user_journey_id": None, 
+        "completed_modules": 0,
+        "status": "locked",  # O puedes cambiarlo a "in_progress" si tu lógica lo requiere
+        "started_at": None,
+        "completed_at": None,
+        "updated_at": None
+    }

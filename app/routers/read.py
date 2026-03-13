@@ -374,13 +374,13 @@ async def get_my_analytics_personality_tab(user_id: str):
         error(500, f"Error fetching user persona profile: {str(e)}")
 
 @router.get("/user_course_progress")
-async def user_course_progressAPI(user_id: str, course_id: str, journey_id: str):
+async def user_course_progressAPI(user_id: str, course_id: str):
     """
     Retrieves the descriptive card of the conversational profile of the user 
     (e.g: The Hunter) with its strengths and areas for improvement.
     """
     try:
-        result = await user_course_progress(user_id, course_id, journey_id)
+        result = await user_course_progress(user_id, course_id)
         
         if result is None:
             error(404, "User profile not found")
