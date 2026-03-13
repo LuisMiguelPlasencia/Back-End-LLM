@@ -82,7 +82,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             FROM conversaconfig.user_info ui
             JOIN conversaapp.conversations c ON ui.user_id = c.user_id
             JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE ui.company_id = $1 and (sbc.general_score is not null or sbc.general_score > 0) and c.status = 'FINISHED'
+            WHERE ui.company_id = $1 and sbc.general_score > 0 and c.status = 'FINISHED'
             GROUP BY ui.user_id, ui.name, ui.avatar
         ),
         UserCompletedCourses AS (
@@ -157,6 +157,7 @@ async def get_all_user_conversation_scoring_by_company(company_id: str) -> List[
             LEFT JOIN conversaapp.scoring_by_conversation sbc 
                 ON c.conversation_id = sbc.conversation_id
                 AND c.status = 'FINISHED'
+                AND sbc.general_score > 0
             WHERE ui.company_id = $1
                 AND ui.is_active = true
             GROUP BY ui.user_id;
@@ -479,7 +480,7 @@ user_historical_stats AS (
     FROM conversaapp.conversations c
     JOIN company_users u ON c.user_id = u.user_id
     JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-    WHERE c.status = 'FINISHED'
+    WHERE c.status = 'FINISHED' and sbc.general_score > 0
     GROUP BY c.user_id
 ),
 current_month_stats AS (
@@ -491,7 +492,7 @@ current_month_stats AS (
     JOIN company_users u ON c.user_id = u.user_id
     JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
     WHERE c.created_at >= date_trunc('month', CURRENT_DATE) 
-      AND c.status = 'FINISHED'
+      AND c.status = 'FINISHED' and sbc.general_score > 0
     GROUP BY c.user_id
 )
 SELECT 
@@ -508,7 +509,7 @@ SELECT
     (
         SELECT COUNT(*)
         FROM user_historical_stats
-        WHERE avg_score < 50
+        WHERE avg_score < 50 and avg_score > 0
     ) as users_requiring_attention,
     
     -- KPI 2: Top Performer del mes actual
@@ -811,7 +812,7 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
                     COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (c.end_timestamp - c.start_timestamp))) / 3600.0, 1), 0.0) AS total_learning_hours
                 FROM conversaapp.conversations c
                 JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-                WHERE c.user_id = $1::uuid and (sbc.general_score is not null or sbc.general_score > 0) and c.status = 'FINISHED'
+                WHERE c.user_id = $1::uuid and sbc.general_score > 0 and c.status = 'FINISHED'
             ),
             stats_courses AS (
                 SELECT 
