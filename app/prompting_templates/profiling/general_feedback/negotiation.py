@@ -1,4 +1,4 @@
-def general_feedback_negociation(individual_feedbacks: list) -> str:
+def general_feedback_negotiation(individual_feedbacks: list) -> str:
 
   prompt = f"""
 # CONTEXTO

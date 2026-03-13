@@ -14,7 +14,7 @@ from openai import OpenAI
 from app.prompting_templates.profiling.evaluate_prospection import evaluate_prospection
 from app.prompting_templates.profiling.evaluate_empathy import evaluate_empathy
 from app.prompting_templates.profiling.evaluate_technical_domain import evaluate_technical_domain
-from app.prompting_templates.profiling.evaluate_negociation import evaluate_negociation
+from app.prompting_templates.profiling.evaluate_negotiation import evaluate_negotiation
 from app.prompting_templates.profiling.evaluate_resilience import evaluate_resilience
 from app.utils.call_gpt import call_gpt
 from app.utils.openai_client import get_openai_client
@@ -95,10 +95,10 @@ async def get_conver_skills(
             "technical_domain",
             model=model,
         )
-        negociation_data = _call_and_parse_json(
+        negotiation_data = _call_and_parse_json(
             resolved_client,
-            evaluate_negociation(transcript),
-            "negociation",
+            evaluate_negotiation(transcript),
+            "negotiation",
             model=model,
         )
         resilience_data = _call_and_parse_json(
@@ -118,7 +118,7 @@ async def get_conver_skills(
             "prospection": _truncate(prospection_data),
             "empathy": _truncate(empathy_data),
             "technical_domain": _truncate(technical_domain_data),
-            "negociation": _truncate(negociation_data),
+            "negotiation": _truncate(negotiation_data),
             "resilience": _truncate(resilience_data),
         }
     else:
@@ -126,7 +126,7 @@ async def get_conver_skills(
             "prospection": { "score": 1, "justification": "No se alcanzó el mínimo de palabras para evaluar"}, 
             "empathy":  { "score": 1, "justification": "No se alcanzó el mínimo de palabras para evaluar"}, 
             "technical_domain":  { "score": 1, "justification": "No se alcanzó el mínimo de palabras para evaluar"}, 
-            "negociation":  { "score": 1, "justification": "No se alcanzó el mínimo de palabras para evaluar"}, 
+            "negotiation":  { "score": 1, "justification": "No se alcanzó el mínimo de palabras para evaluar"}, 
             "resilience":  { "score": 1, "justification": "No se alcanzó el mínimo de palabras para evaluar"}
         }
 

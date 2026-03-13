@@ -64,6 +64,72 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
     results = await execute_query(query, user_id)
     return [dict(row) for row in results]
 
+
+
+async def get_user_profiling_by_conversations(user_id: UUID) -> List[Dict]:
+    """Get last 10 conversations for a user, ordered by start time (newest first)"""
+    query = """
+    SELECT 
+        pbc.empathy_scoring, 
+        pbc.prospection_scoring, 
+        pbc.resilience_scoring, 
+        pbc.technical_domain_scoring,
+        pbc.negotiation_scoring, 
+        pbc.empathy_feedback, 
+        pbc.prospection_feedback, 
+        pbc.resilience_feedback, 
+        pbc.technical_domain_feedback, 
+        pbc.negotiation_feedback
+    FROM conversaApp.conversations c
+    left join conversaconfig.master_courses mc 
+    on c.course_id = mc.course_id 
+    LEFT JOIN (
+        SELECT conversation_id, COUNT(*) AS message_count
+        FROM conversaapp.messages
+        GROUP BY conversation_id
+    ) m ON c.conversation_id = m.conversation_id
+    LEFT JOIN conversaapp.profiling_by_conversation pbc ON c.conversation_id = pbc.conversation_id
+    WHERE user_id = $1
+    and pbc.prospection_scoring IS NOT NULL
+    and pbc.empathy_scoring IS NOT NULL
+    and pbc.resilience_scoring IS NOT NULL
+    and pbc.technical_domain_scoring IS NOT NULL
+    and pbc.negotiation_scoring IS NOT NULL
+    and pbc.prospection_feedback IS NOT NULL
+    and pbc.empathy_feedback IS NOT NULL
+    and pbc.resilience_feedback IS NOT NULL
+    and pbc.technical_domain_feedback IS NOT NULL
+    and pbc.negotiation_feedback IS NOT NULL
+    ORDER BY start_timestamp DESC
+    LIMIT 10
+    """
+    try:
+        results = await execute_query(query, user_id)
+
+        if not results:
+            return {}
+
+        # initialize dictionary with empty lists
+        output = {key: [] for key in results[0].keys()}
+
+        # fill lists
+        for row in results:
+            for key, value in row.items():
+                output[key].append(value)
+
+        return output
+
+    except Exception as e:
+        print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
+        return {}
+    # try:
+    #     results = await execute_query(query, user_id)
+    #     return dict(results) if len(results) > 0 else None
+    # except Exception as e:
+    #     print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
+    #     return None
+
+
 async def get_voice_agent(stage_id: UUID) -> Optional[Dict]:
     """Get voice and agent from the stage of the course"""
     query = """
@@ -160,12 +226,12 @@ async def set_conversation_profiling(
     prospection_scoring: int, 
     empathy_scoring: int, 
     technical_domain_scoring: int, 
-    negociation_scoring: int, 
+    negotiation_scoring: int, 
     resilience_scoring: int, 
     prospection_feedback: str, 
     empathy_feedback: str, 
     technical_domain_feedback: str, 
-    negociation_feedback: str, 
+    negotiation_feedback: str, 
     resilience_feedback: str, 
     conv_id: UUID) -> Optional[str]:
     print('Setting conversation profiling')
@@ -181,15 +247,63 @@ async def set_conversation_profiling(
         prospection_scoring,
         empathy_scoring,
         technical_domain_scoring,
-        negociation_scoring,
+        negotiation_scoring,
         resilience_scoring,
         prospection_feedback,
         empathy_feedback,
         technical_domain_feedback,
-        negociation_feedback,
+        negotiation_feedback,
         resilience_feedback,
         conv_id,  # UUID ok
     )
+
+async def set_general_profiling(
+    prospection_scoring: int, 
+    empathy_scoring: int, 
+    technical_domain_scoring: int, 
+    negotiation_scoring: int, 
+    resilience_scoring: int, 
+    prospection_feedback: str, 
+    empathy_feedback: str, 
+    technical_domain_feedback: str, 
+    negotiation_feedback: str, 
+    resilience_feedback: str, 
+    user_id: UUID) -> Optional[str]:
+    print('Setting general profiling')
+    query = """
+    INSERT INTO conversascoring.user_profile
+    (prospection_score, empathy_score, technical_domain_score, negotiation_score, resilience_score, prospection_feedback, empathy_feedback, technical_domain_feedback, negotiation_feedback, resilience_feedback, user_id, event_timestamp)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+    ON CONFLICT (user_id) 
+    DO UPDATE SET
+        event_timestamp = NOW(),
+        prospection_score = EXCLUDED.prospection_score,
+        empathy_score = EXCLUDED.empathy_score,
+        technical_domain_score = EXCLUDED.technical_domain_score,
+        negotiation_score = EXCLUDED.negotiation_score,
+        resilience_score = EXCLUDED.resilience_score,
+        prospection_feedback = EXCLUDED.prospection_feedback,
+        empathy_feedback = EXCLUDED.empathy_feedback,
+        technical_domain_feedback = EXCLUDED.technical_domain_feedback,
+        negotiation_feedback = EXCLUDED.negotiation_feedback,
+        resilience_feedback = EXCLUDED.resilience_feedback;
+    """
+    print("setting general profiling for user_id:", user_id)
+    row = await execute_query_one(
+        query,
+        prospection_scoring,
+        empathy_scoring,
+        technical_domain_scoring,
+        negotiation_scoring,
+        resilience_scoring,
+        prospection_feedback,
+        empathy_feedback,
+        technical_domain_feedback,
+        negotiation_feedback,
+        resilience_feedback,
+        user_id,  # UUID ok
+    )
+    print("general profiling was set successfully for user_id:", user_id)
 
 async def set_user_profile(
     user_id: UUID, 

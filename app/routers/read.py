@@ -161,7 +161,7 @@ async def get_user_profiling_general_feedback(user_id: UUID = Query(..., descrip
         general_feedback = await general_profiling(user_id)
         result = {
             "empathy_feedback": general_feedback.get('general_feedback_empathy') or None,
-            "negotiation_feedback": general_feedback.get('general_feedback_negociation') or None,
+            "negotiation_feedback": general_feedback.get('general_feedback_negotiation') or None,
             "prospection_feedback": general_feedback.get('general_feedback_prospection') or None,
             "resilience_feedback": general_feedback.get('general_feedback_resilience') or None,
             "technical_domain_feedback": general_feedback.get('general_feedback_technical_domain') or None,

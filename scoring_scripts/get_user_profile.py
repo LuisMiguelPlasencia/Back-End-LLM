@@ -4,16 +4,16 @@ from app.services.messages_service import get_user_profiling
 # 1. Definimos los profilees base con sus "notas numéricas"
 # (usamos escala: Bajo=1, Medio-Bajo=2, Medio=3, Medio-Alto=4, Alto=5)
 profiles = {
-    "Conector": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negociation": 3, "resilience": 5},
-    "Especialista": {"prospection": 1, "empathy": 1, "technical_domain": 5, "negociation": 3, "resilience": 3},
-    "Cazador": {"prospection": 5, "empathy": 1, "technical_domain": 1, "negociation": 5, "resilience": 5},
-    "Negociador": {"prospection": 3, "empathy": 3, "technical_domain": 4, "negociation": 5, "resilience": 3},
-    "Vendedor Integral": {"prospection": 5, "empathy": 5, "technical_domain": 5, "negociation": 5, "resilience": 5},
-    "Asistente": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negociation": 1, "resilience": 2},
-    "Consultor": {"prospection": 3, "empathy": 5, "technical_domain": 4, "negociation": 5, "resilience": 3},
-    "Vendedor Persuasivo": {"prospection": 3, "empathy": 1, "technical_domain": 3, "negociation": 5, "resilience": 5},
-    "Constructor de Relaciones": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negociation": 1, "resilience": 3},
-    "Emprendedor": {"prospection": 5, "empathy": 3, "technical_domain": 2, "negociation": 3, "resilience": 3}
+    "Conector": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negotiation": 3, "resilience": 5},
+    "Especialista": {"prospection": 1, "empathy": 1, "technical_domain": 5, "negotiation": 3, "resilience": 3},
+    "Cazador": {"prospection": 5, "empathy": 1, "technical_domain": 1, "negotiation": 5, "resilience": 5},
+    "Negociador": {"prospection": 3, "empathy": 3, "technical_domain": 4, "negotiation": 5, "resilience": 3},
+    "Vendedor Integral": {"prospection": 5, "empathy": 5, "technical_domain": 5, "negotiation": 5, "resilience": 5},
+    "Asistente": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negotiation": 1, "resilience": 2},
+    "Consultor": {"prospection": 3, "empathy": 5, "technical_domain": 4, "negotiation": 5, "resilience": 3},
+    "Vendedor Persuasivo": {"prospection": 3, "empathy": 1, "technical_domain": 3, "negotiation": 5, "resilience": 5},
+    "Constructor de Relaciones": {"prospection": 2, "empathy": 5, "technical_domain": 1, "negotiation": 1, "resilience": 3},
+    "Emprendedor": {"prospection": 5, "empathy": 3, "technical_domain": 2, "negotiation": 3, "resilience": 3}
 }
 
 async def user_clasiffier(user_id):
@@ -24,7 +24,7 @@ async def user_clasiffier(user_id):
             "prospection": profiling.get('prospection_scoring') or None,
             "empathy": profiling.get('empathy_scoring') or None,
             "technical_domain": profiling.get('technical_domain_scoring') or None,
-            "negociation": profiling.get('negotiation_scoring') or None,
+            "negotiation": profiling.get('negotiation_scoring') or None,
             "resilience": profiling.get('resilience_scoring') or None,
         }
     # Obtenemos los valores numéricos del vector

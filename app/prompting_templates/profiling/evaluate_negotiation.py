@@ -1,4 +1,4 @@
-def evaluate_negociation(transcript) -> str:
+def evaluate_negotiation(transcript) -> str:
   
     prompt = f"""
 Analiza la siguiente transcripción y evalúa la NEGOCIACIÓN del vendedor:
