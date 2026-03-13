@@ -313,11 +313,12 @@ async def update_stage(
     return result[0]['stage_id'] if result else None
 
 
-async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
+async def user_course_progress(user_id: str, course_id: str, journey_id: str) -> Optional[Dict]:
     """
     Get user course progress. If it doesn't exist, create it.
     """
 
+    # 1. Intentamos buscar si ya existe
     select_query = """
         SELECT *
         FROM conversaconfig.user_course_progress
@@ -329,10 +330,20 @@ async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
     if result:
         return result[0]
 
+    select_query = """
+        SELECT user_journey_id
+        FROM conversaconfig.user_journeys_assigments
+        WHERE user_id = $1 AND journey_id = $2
+    """
+
+    result_journey = await execute_query(select_query, user_id, journey_id)
+
+    # 2. Si no existe, lo creamos (ahora incluyendo user_journey_id)
     insert_query = """
         INSERT INTO conversaconfig.user_course_progress (
             user_id,
             course_id,
+            user_journey_id,
             completed_modules,
             status,
             started_at,
@@ -342,6 +353,7 @@ async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
         VALUES (
             $1,
             $2,
+            $3,
             0,
             'locked',
             NOW(),
@@ -353,6 +365,7 @@ async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
         RETURNING *
     """
 
-    result = await execute_query(insert_query, user_id, course_id)
+    # Asegúrate de pasar los 3 parámetros a execute_query
+    result = await execute_query(insert_query, user_id, course_id, result_journey[0]['user_journey_id'])
 
     return result[0] if result else None
