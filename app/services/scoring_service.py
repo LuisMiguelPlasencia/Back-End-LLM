@@ -64,6 +64,8 @@ async def scoring(conv_id, course_id, stage_id):
         conv_id
     )
 
+    return objetivo
+
 
 if __name__ == "__main__":
     import sys

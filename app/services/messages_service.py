@@ -82,7 +82,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             FROM conversaconfig.user_info ui
             JOIN conversaapp.conversations c ON ui.user_id = c.user_id
             JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-            WHERE ui.company_id = $1 and (sbc.general_score is not null or sbc.general_score > 0) and c.status = 'FINISHED'
+            WHERE ui.company_id = $1 and sbc.general_score > 0 and c.status = 'FINISHED'
             GROUP BY ui.user_id, ui.name, ui.avatar
         ),
         UserCompletedCourses AS (
@@ -157,6 +157,7 @@ async def get_all_user_conversation_scoring_by_company(company_id: str) -> List[
             LEFT JOIN conversaapp.scoring_by_conversation sbc 
                 ON c.conversation_id = sbc.conversation_id
                 AND c.status = 'FINISHED'
+                AND sbc.general_score > 0
             WHERE ui.company_id = $1
                 AND ui.is_active = true
             GROUP BY ui.user_id;
@@ -414,6 +415,31 @@ async def get_user_profiling(user_id: str) -> Dict:
         print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
         return []
 
+
+async def get_user_profiling_feedbacks(user_id: str) -> Dict | None:
+    """Get all profiling feedbacks for a given user"""
+    try:
+        query = """
+            SELECT
+                up.empathy_feedback,
+                up.negotiation_feedback,
+                up.prospection_feedback,
+                up.resilience_feedback,
+                up.technical_domain_feedback
+            FROM conversaconfig.user_info ui
+            LEFT JOIN conversascoring.user_profile up
+                ON ui.user_id = up.user_id
+            WHERE ui.user_id = $1
+        """
+
+        results = await execute_query(query, user_id)
+        print(results)
+        return dict(results) if len(results) > 0 else None
+    except Exception as e:
+        print(f"Error fetching user profiling scores for user id {user_id}: {str(e)}")
+        return None
+
+
 import json
 from typing import List, Dict, Any
 
@@ -454,7 +480,7 @@ user_historical_stats AS (
     FROM conversaapp.conversations c
     JOIN company_users u ON c.user_id = u.user_id
     JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-    WHERE c.status = 'FINISHED'
+    WHERE c.status = 'FINISHED' and sbc.general_score > 0
     GROUP BY c.user_id
 ),
 current_month_stats AS (
@@ -466,7 +492,7 @@ current_month_stats AS (
     JOIN company_users u ON c.user_id = u.user_id
     JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
     WHERE c.created_at >= date_trunc('month', CURRENT_DATE) 
-      AND c.status = 'FINISHED'
+      AND c.status = 'FINISHED' and sbc.general_score > 0
     GROUP BY c.user_id
 )
 SELECT 
@@ -483,7 +509,7 @@ SELECT
     (
         SELECT COUNT(*)
         FROM user_historical_stats
-        WHERE avg_score < 50
+        WHERE avg_score < 50 and avg_score > 0
     ) as users_requiring_attention,
     
     -- KPI 2: Top Performer del mes actual
@@ -625,9 +651,9 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
         # 2. UPSERT: Insertar progreso si es el módulo 1, o sumar +1 si ya existe.
         upsert_query = """
             INSERT INTO conversaconfig.user_course_progress 
-                (user_journey_id, course_id, completed_modules, status, started_at)
+                (user_journey_id, course_id, completed_modules, status, started_at, user_id)
             VALUES 
-                ($1::uuid, $2::uuid, 1, 'in_progress', CURRENT_TIMESTAMP)
+                ($1::uuid, $2::uuid, 1, 'in_progress', CURRENT_TIMESTAMP, $4::uuid)
             ON CONFLICT (user_journey_id, course_id) 
             DO UPDATE SET 
                 completed_modules = LEAST(conversaconfig.user_course_progress.completed_modules + 1, $3::int),
@@ -642,7 +668,7 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
                 updated_at = CURRENT_TIMESTAMP
             RETURNING completed_modules, status;
         """
-        progress_result = await execute_query(upsert_query, user_journey_id, course_id, total_modules)
+        progress_result = await execute_query(upsert_query, user_journey_id, course_id, total_modules, user_id)
         current_course_status = progress_result[0]['status']
 
         # 3. Verificamos si quedan cursos obligatorios sin terminar
@@ -725,6 +751,39 @@ async def update_user_course_progress(user_id: str, course_id: str) -> Dict[str,
         return {"success": False, "error": str(e)}
 
 
+
+async def update_user_course_status(user_id: str, course_id: str) -> Dict[str, Any]:
+    try:
+        # Updates the status based on current completed_modules vs total course_steps
+        query = """
+            UPDATE conversaconfig.user_course_progress p
+            SET 
+                status = CASE 
+                    WHEN p.completed_modules >= c.course_steps THEN 'completed'
+                    ELSE 'in_progress'
+                END,
+                updated_at = CURRENT_TIMESTAMP
+            FROM conversaconfig.master_courses c
+            WHERE p.user_id = $1::uuid 
+              AND p.course_id = $2::uuid
+              AND c.course_id = p.course_id
+            RETURNING p.completed_modules, p.status;
+        """
+        
+        result = await execute_query(query, user_id, course_id)
+        
+        # If the record was found and updated, return the data cleanly
+        if result:
+            return {
+                "success": True,
+                "data": dict(result[0]) # Easily maps the RETURNING fields into a dictionary
+            }
+            
+        return {"success": False, "error": "Progress record not found."}
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 from typing import Dict, Any
 
 def get_user_level_label(score: int) -> str:
@@ -753,7 +812,7 @@ async def get_dashboard_stats(user_id: str) -> Dict[str, Any]:
                     COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM (c.end_timestamp - c.start_timestamp))) / 3600.0, 1), 0.0) AS total_learning_hours
                 FROM conversaapp.conversations c
                 JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
-                WHERE c.user_id = $1::uuid and (sbc.general_score is not null or sbc.general_score > 0) and c.status = 'FINISHED'
+                WHERE c.user_id = $1::uuid and sbc.general_score > 0 and c.status = 'FINISHED'
             ),
             stats_courses AS (
                 SELECT 

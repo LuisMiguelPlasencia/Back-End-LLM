@@ -29,6 +29,7 @@ from ..services.messages_service import (
     get_user_avg_technical_level, 
     get_user_persona_profile
 )
+from ..services.profiling_service import general_profiling
 from ..utils.responses import error
 from app.services.auth_service import validate_user
 from app.services.payments_service import get_billing_plans, validate_coupon
@@ -151,6 +152,28 @@ async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID 
         # Log the error and return a 500 response
         print(f"API Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling: {str(e)}")
+
+
+@router.get("/userProfilingGeneralFeedback")
+async def get_user_profiling_general_feedback(user_id: UUID = Query(..., description="User ID to get general profiling feedback for")):
+    """Get the user profiling general feedback"""
+    try:
+        general_feedback = await general_profiling(user_id)
+        result = {
+            "empathy_feedback": general_feedback.get('general_feedback_empathy') or None,
+            "negotiation_feedback": general_feedback.get('general_feedback_negotiation') or None,
+            "prospection_feedback": general_feedback.get('general_feedback_prospection') or None,
+            "resilience_feedback": general_feedback.get('general_feedback_resilience') or None,
+            "technical_domain_feedback": general_feedback.get('general_feedback_technical_domain') or None,
+        }
+        return result
+        
+    except Exception as e:
+        # Log the error and return a 500 response
+        print(f"API Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling general feedback: {str(e)}")
+
+
 ## Advanced Routes
 ##-------------------------------------------------------------
 @router.get("/allUserScoreByCompany")

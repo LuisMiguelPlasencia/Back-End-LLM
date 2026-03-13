@@ -1,0 +1,5 @@
+from .empathy import general_feedback_empathy
+from .negotiation import general_feedback_negotiation
+from .prospection import general_feedback_prospection
+from .resilience import general_feedback_resilience
+from .technical_domain import general_feedback_technical_domain

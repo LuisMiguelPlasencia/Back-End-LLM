@@ -5,17 +5,22 @@ import base64
 import numpy as np
 import json
 from app.services.conversations_service import close_conversation, get_conversation_status
+from app.services.messages_service import update_user_course_progress
 from app.services.scoring_service import scoring
-from app.services.profiling_service import profiling
+from app.services.profiling_service import profiling, general_profiling
 from scoring_scripts.get_user_profile import user_clasiffier
 
 async def stop_process(user_id, conversation_id, frontend_ws, course_id, stage_id, conversation_id_elevenlabs, agent_id):
 
     await close_conversation(user_id, conversation_id, conversation_id_elevenlabs, agent_id) 
     ## scoring conversation if conver finished
-    await scoring(conversation_id, course_id, stage_id)
+    objetivo = await scoring(conversation_id, course_id, stage_id)
     await profiling(conversation_id, course_id, stage_id)
+    await general_profiling(user_id)
     await user_clasiffier(user_id)
+
+    if objetivo:
+        await update_user_course_progress(user_id, course_id)
     # notify frontend that conversation is closed and scored
     await frontend_ws.send_text(json.dumps({"type": "conversation.scoring.completed", "conversation_id": str(conversation_id)}))
 
