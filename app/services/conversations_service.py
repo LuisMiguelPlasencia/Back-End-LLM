@@ -46,6 +46,7 @@ async def get_user_conversations(user_id: UUID) -> List[Dict]:
         sbc.keythemes_feedback, 
         sbc.indexofquestions_feedback, 
         sbc.rhythm_feedback,
+        sbc.is_accomplished,
         m.message_count
     FROM conversaApp.conversations c
     left join conversaconfig.master_courses mc 
