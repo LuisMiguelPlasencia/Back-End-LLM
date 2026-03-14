@@ -190,7 +190,7 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
       cc.context_info    AS context_info,
       cs.key_themes,
       cs.stage_objectives,
-      'Ana Martinez'     AS bot_name
+      cc.bot_name     AS bot_name
       FROM conversaconfig.master_courses    mc
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_contents cc ON cc.course_id = mc.course_id AND cc.stage_id = cs.stage_id
