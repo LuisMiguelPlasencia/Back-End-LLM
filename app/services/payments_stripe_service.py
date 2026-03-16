@@ -157,21 +157,6 @@ class StripeCheckoutService:
                 }
             )
 
-            # D. Crear la Suscripción
-            subscription = await stripe.Subscription.create_async(
-                customer=customer_id,
-                items=subscription_items,
-                add_invoice_items=add_invoice_items, 
-                discounts=discounts_config, 
-                payment_behavior="default_incomplete", 
-                payment_settings={"save_default_payment_method": "on_subscription"},
-                expand=["latest_invoice.payment_intent"], # Expandimos datos clave
-                metadata={
-                    "company_id": data.company_id,
-                    "plan_internal_id": data.plan_id
-                }
-            )
-
             # ---------------------------------------------------------
             # 3. PERSISTENCIA BLINDADA (Conversión a Dict)
             # ---------------------------------------------------------
