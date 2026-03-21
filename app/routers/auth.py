@@ -1,92 +1,72 @@
-# Authentication routes
-# Handles user login with email/password validation
-# Example: curl -X POST "http://localhost:8000/auth/login" -H "Content-Type: application/json" -d '{"email":"user@example.com","password":"password123"}'
+# ---------------------------------------------------------------------------
+# Authentication router
+# ---------------------------------------------------------------------------
 
-from fastapi import APIRouter
-from ..schemas.auth import LoginRequest, UserResponse
-from ..services.auth_service import authenticate_user, user_exists, is_token_valid, create_access_token, update_user_token_in_db
-import os
-from datetime import  timedelta
-from fastapi import HTTPException
-from dotenv import load_dotenv
+from __future__ import annotations
 
-load_dotenv(override=True)
-SECRET_KEY_JWT = os.getenv("SECRET_KEY_JWT")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 Hours
+import logging
+from datetime import timedelta
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+from fastapi import APIRouter, HTTPException
 
-@router.post("/login")
+from app.config import settings
+from app.schemas.auth import LoginRequest, LoginResponse, UserResponse
+from app.services.auth_service import (
+    authenticate_user,
+    create_access_token,
+    is_token_valid,
+    update_user_token_in_db,
+    user_exists,
+)
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+@router.post("/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
-    """
-    Authenticate user, manage JWT lifecycle (Reuse vs Renew), and return user profile.
-    
+    """Authenticate user and return a JWT.
+
     Flow:
-    1. Validate credentials.
-    2. Check if user is active.
-    3. Check if existing DB token is still valid.
-    4. Reuse existing token OR generate and save a new one.
+      1. Verify the email exists and account is active.
+      2. Validate credentials.
+      3. Reuse an existing valid token or mint a new one.
     """
-    # 1. Check if user exists
-    # Note: ensure user_exists returns a boolean
+    # 1. Existence check
     if not await user_exists(request.email):
-        # Using 401 for generic error to prevent user enumeration attacks is safer, 
-        # but 404 is acceptable for internal tools.
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # 2. Authenticate user
-    # Returns Dict with user data or None
+
+    # 2. Credential validation
     user_data = await authenticate_user(request.email, request.password)
-    
     if not user_data:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    # 3. Check activity status
+
     if not user_data.get("is_active", False):
         raise HTTPException(status_code=403, detail="Account is inactive")
 
-    # --- JWT LOGIC ---
-    
+    # 3. Token lifecycle
     user_id = str(user_data["user_id"])
-    current_stored_token = user_data.get("api_key")
-    final_token = None
+    current_token = user_data.get("api_key")
+    final_token: str
 
-    # A. Check for reusable valid token
-    if current_stored_token and is_token_valid(current_stored_token):
-        print(f"🔄 Valid token found for user {user_id}. Reusing.")
-        final_token = current_stored_token
-    
-    # B. Generate new token if missing or expired
+    if current_token and is_token_valid(current_token):
+        logger.info("Reusing valid token for user %s", user_id)
+        final_token = current_token
     else:
-        print(f"🆕 Generating new token for user {user_id}...")
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        
-        token_payload = {
-            "sub": user_id, 
+        logger.info("Generating new token for user %s", user_id)
+        payload = {
+            "sub": user_id,
             "email": user_data.get("email"),
-            "role": user_data.get("user_type", "user")
+            "role": user_data.get("user_type", "user"),
         }
-        
         final_token = create_access_token(
-            data=token_payload, 
-            expires_delta=access_token_expires
+            data=payload,
+            expires_delta=timedelta(minutes=settings.jwt_expire_minutes),
         )
-        
-        # Async update to database
         await update_user_token_in_db(user_id, final_token)
-        
-        # Update local dict to ensure consistency in response
         user_data["api_key"] = final_token
 
-
-    # Prepare Response
-    # Assuming UserResponse matches your Pydantic schema
+    # 4. Response
     user_response = UserResponse(**user_data)
-    
-    return {
-        "status": "success",
-        "message": "Login successful",
-        "token": final_token,
-        "user": user_response.dict()
-    }
+    return LoginResponse(token=final_token, user=user_response)

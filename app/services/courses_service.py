@@ -97,7 +97,6 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "estimated_completion_date":row['estimated_completion_date'],
                 "completion_time_minutes": row['completion_time_minutes'],
                 "course_steps": row['course_steps'],
-                "completion_time_minutes": row['completion_time_minutes'],
                 "progress": row['completed_modules'], # Default value, updated below
                 "stages": []
             }
@@ -203,14 +202,27 @@ async def get_courses_details(course_id: UUID, stage_id: UUID) -> List[Dict]:
 
 async def get_company_courses(company_id: str) -> List[Dict]:
     """
-    Get courses by company id
+    Get courses assigned to a company via user_course_assignments.
     """
     query = """
-    SELECT
-      ALL COURSES FOR A COMPANY
-    FROM x
+    SELECT DISTINCT
+      mc.course_id,
+      mc.name,
+      mc.description,
+      mc.image_src,
+      mc.is_active,
+      mc.is_mandatory,
+      mc.completion_time_minutes,
+      mc.course_steps,
+      mc.created_on
+    FROM conversaconfig.master_courses mc
+    JOIN conversaconfig.user_course_assignments uca ON uca.course_id = mc.course_id
+    JOIN conversaapp.users u ON u.user_id = uca.user_id
+    WHERE u.company_id = $1
+      AND mc.is_active = true
+    ORDER BY mc.created_on DESC
     """
-    
+
     results = await execute_query(query, company_id)
     return [dict(row) for row in results]
 

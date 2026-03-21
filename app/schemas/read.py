@@ -1,45 +1,58 @@
-# Pydantic models for read endpoints (GET requests)
-# Handles query parameters and response formatting for data retrieval
+# ---------------------------------------------------------------------------
+# Read / query response schemas
+# ---------------------------------------------------------------------------
 
-from pydantic import BaseModel
-from uuid import UUID
+from __future__ import annotations
+
 from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
-class UserIdQuery(BaseModel):
-    """Query parameter for user_id"""
-    user_id: UUID
+from pydantic import BaseModel
 
-class ConversationIdQuery(BaseModel):
-    """Query parameter for conversation_id"""
-    conversation_id: UUID
 
 class CourseResponse(BaseModel):
-    """Course information response"""
+    """Single course item."""
     course_id: UUID
     name: str
-    description: Optional[str]
-    image_src: Optional[str]
+    description: Optional[str] = None
+    image_src: Optional[str] = None
     created_on: datetime
     is_active: bool
-    event_time: Optional[datetime]
-    metrics: Optional[str]
+    event_time: Optional[datetime] = None
+    metrics: Optional[str] = None
+
 
 class ConversationResponse(BaseModel):
-    """Conversation information response"""
+    """Single conversation item."""
     conversation_id: UUID
     user_id: UUID
     start_timestamp: datetime
-    end_timestamp: Optional[datetime]
+    end_timestamp: Optional[datetime] = None
     status: str
     created_at: datetime
     updated_at: datetime
 
+
 class MessageResponse(BaseModel):
-    """Message information response"""
+    """Single message item."""
     id: UUID
-    user_id: Optional[UUID]
+    user_id: Optional[UUID] = None
     conversation_id: UUID
     role: str
     content: str
     created_at: datetime
+
+
+class HealthResponse(BaseModel):
+    """Liveness / readiness response."""
+    status: str
+    timestamp: datetime
+    version: str = "1.0.0"
+
+
+class ErrorResponse(BaseModel):
+    """Generic error envelope."""
+    error: str
+    detail: Optional[str] = None
+    timestamp: datetime

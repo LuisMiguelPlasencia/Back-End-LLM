@@ -1,155 +1,160 @@
-# Authentication service using pgcrypto for password verification
-# Assumes pgcrypto extension is available in PostgreSQL database
-# Handles user login validation against conversaConfig.user_info table
+# ---------------------------------------------------------------------------
+# Authentication service
+# ---------------------------------------------------------------------------
+# Handles credential verification, JWT lifecycle, and request-level auth.
+# ---------------------------------------------------------------------------
 
-from .db import execute_query_one
-from typing import Optional, Dict
-import bcrypt
-import os
+from __future__ import annotations
+
+import logging
 from datetime import datetime, timedelta
-from typing import Optional, Dict
-from jose import jwt, JWTError
-from dotenv import load_dotenv
-from app.services.db import execute_query
+from typing import Dict, Optional
+
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
+from jose import JWTError, jwt
 
-load_dotenv(override=True)
-SECRET_KEY_JWT = os.getenv("SECRET_KEY_JWT")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 24 * 60
+from app.config import settings
+from app.services.db import execute_query, execute_query_one
 
-async def authenticate_user(email: str, password_input: str) -> Optional[Dict]:
-    """
-    Authenticate user with email and password using pgcrypto crypt()
-    Returns user data if authentication successful, None otherwise
-    """
-    query = """
-    SELECT user_id, email, password, name, user_type, is_active, avatar, company_id
-    FROM conversaConfig.user_info
-    WHERE email = $1
-    """
-    
-    results = await execute_query_one(query, email)
-    print(results)
-    if isinstance(results, list):
-        raw_row = results[0]
-    else:
-        raw_row = results
-    user_row = dict(raw_row)
-    stored_hash = user_row.get("password")
+logger = logging.getLogger(__name__)
 
-    if verify_password(password_input, stored_hash):
-        user_row.pop("password", None) 
-        
-        return user_row  
-    else:
-        return None  
-    
+# ---------------------------------------------------------------------------
+# Constants (pulled from centralised settings)
+# ---------------------------------------------------------------------------
+_SECRET = settings.secret_key_jwt
+_ALGORITHM = settings.jwt_algorithm
+_EXPIRE_MINUTES = settings.jwt_expire_minutes
 
-async def user_exists(email: str) -> bool:
-    """Check if user exists by email"""
-    query = "SELECT 1 FROM conversaConfig.user_info WHERE email = $1 AND is_active = TRUE"
-    result = await execute_query_one(query, email)
-    return result is not None
+# ---------------------------------------------------------------------------
+# Password utilities
+# ---------------------------------------------------------------------------
 
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Compara clave plana vs hash de la BD"""
+def _verify_password(plain: str, hashed: str) -> bool:
+    """Compare a plain-text password against a bcrypt hash."""
     try:
-        return bcrypt.checkpw(
-            plain_password.encode('utf-8'), 
-            hashed_password.encode('utf-8')
-        )
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
     except Exception:
         return False
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """
-    Creates a standardized JWT token with an expiration time.
-    """
+
+# ---------------------------------------------------------------------------
+# JWT utilities
+# ---------------------------------------------------------------------------
+
+def create_access_token(
+    data: dict,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """Create a signed JWT with an expiration claim."""
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        # Fallback default expiration
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY_JWT, algorithm=ALGORITHM)
-    return encoded_jwt
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=_EXPIRE_MINUTES))
+    to_encode["exp"] = expire
+    return jwt.encode(to_encode, _SECRET, algorithm=_ALGORITHM)
+
 
 def is_token_valid(token: str) -> bool:
-    """
-    Checks if the provided token is structurally valid and has not expired.
-    Returns True if reusable, False if a new one is needed.
-    """
+    """Return ``True`` if *token* is structurally valid and not expired."""
     if not token:
         return False
     try:
-        # Attempt to decode. The library automatically checks signature and 'exp' claim.
-        jwt.decode(token, SECRET_KEY_JWT, algorithms=[ALGORITHM])
+        jwt.decode(token, _SECRET, algorithms=[_ALGORITHM])
         return True
     except JWTError:
-        # Token is expired, tampered with, or invalid
         return False
 
-# --- HELPER 3: Database Persistence ---
-async def update_user_token_in_db(user_id: str, new_token: str):
-    """
-    Updates the api_key field in the user_info table.
+
+# ---------------------------------------------------------------------------
+# Core authentication
+# ---------------------------------------------------------------------------
+
+async def user_exists(email: str) -> bool:
+    """Check whether an active user with *email* exists."""
+    row = await execute_query_one(
+        "SELECT 1 FROM conversaConfig.user_info WHERE email = $1 AND is_active = TRUE",
+        email,
+    )
+    return row is not None
+
+
+async def authenticate_user(email: str, password_input: str) -> Optional[Dict]:
+    """Validate credentials and return user data (without the password hash).
+
+    Returns ``None`` when credentials are invalid.
     """
     query = """
-        UPDATE conversaconfig.user_info 
-        SET api_key = $1 
-        WHERE user_id = $2
+        SELECT user_id, email, password, name, user_type, is_active, avatar, company_id, api_key
+        FROM conversaConfig.user_info
+        WHERE email = $1
     """
+    row = await execute_query_one(query, email)
+    if row is None:
+        return None
+
+    user = dict(row)
+    stored_hash = user.pop("password", None)
+
+    if not _verify_password(password_input, stored_hash or ""):
+        return None
+
+    return user
+
+
+# ---------------------------------------------------------------------------
+# Token persistence
+# ---------------------------------------------------------------------------
+
+async def update_user_token_in_db(user_id: str, new_token: str) -> None:
+    """Persist the latest JWT in the user row for single-session enforcement."""
     try:
-        await execute_query(query, new_token, user_id)
-    except Exception as e:
-        print(f"Error updating token for user {user_id}: {e}")
+        await execute_query(
+            "UPDATE conversaconfig.user_info SET api_key = $1 WHERE user_id = $2",
+            new_token,
+            user_id,
+        )
+    except Exception:
+        logger.exception("Failed to persist token for user %s", user_id)
 
 
-header_scheme = APIKeyHeader(name="x-api-key", auto_error=True)
+# ---------------------------------------------------------------------------
+# Request-level dependency
+# ---------------------------------------------------------------------------
 
-async def validate_user(token: str = Depends(header_scheme)):
-    """
-    Valida el token recibido en el header 'x-api-key'.
-    """
-    credentials_exception = HTTPException(
+_header_scheme = APIKeyHeader(name="x-api-key", auto_error=True)
+
+
+async def validate_user(token: str = Depends(_header_scheme)) -> Dict:
+    """FastAPI dependency: decode the JWT, verify it against the DB, and return user data."""
+    credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid API Key or Session expired",
+        detail="Invalid API key or session expired",
     )
 
-    # 1. Decodificar JWT
+    # 1. Decode JWT
     try:
-        payload = jwt.decode(token, SECRET_KEY_JWT, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        payload = jwt.decode(token, _SECRET, algorithms=[_ALGORITHM])
+        user_id: Optional[str] = payload.get("sub")
         if user_id is None:
-            raise credentials_exception
+            raise credentials_exc
     except JWTError:
-        raise credentials_exception
+        raise credentials_exc
 
-    # 2. Consultar BD
-    query = """
-        SELECT user_id, api_key, is_active, user_type 
-        FROM conversaconfig.user_info 
-        WHERE user_id = $1
-    """
-    results = await execute_query(query, user_id)
+    # 2. Look up user in DB
+    rows = await execute_query(
+        "SELECT user_id, api_key, is_active, user_type FROM conversaconfig.user_info WHERE user_id = $1",
+        user_id,
+    )
+    if not rows:
+        raise credentials_exc
 
-    if not results:
-        raise credentials_exception
+    user_row = dict(rows[0])
 
-    # Manejo robusto (Lista vs Fila)
-    user_row = dict(results[0]) if isinstance(results, list) else dict(results)
-
-    # 3. Validar coincidencia (Single Session)
-    db_token = user_row.get("api_key")
-    if db_token != token:
-        raise credentials_exception
+    # 3. Single-session check
+    if user_row.get("api_key") != token:
+        raise credentials_exc
 
     if not user_row.get("is_active"):
-        raise HTTPException(status_code=403, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
 
     return user_row
