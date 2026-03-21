@@ -1,16 +1,19 @@
 import json
+import logging
 import os
 import re
-from openai import OpenAI
+
 from fastapi import UploadFile, File
 import shutil
 from pypdf import PdfReader
 
-
+from app.config import settings
 from app.utils.call_gpt import call_gpt
 from app.utils.openai_client import get_openai_client
 
-DEFAULT_MODEL = "gpt-4.1-nano-2025-04-14"
+logger = logging.getLogger(__name__)
+
+DEFAULT_MODEL = settings.openai_default_model
 
 os.makedirs("uploads", exist_ok=True)
 
@@ -69,9 +72,9 @@ def llamar_gpt_hasta_que_este_bien(client: OpenAI, prompt: str, model: str, max_
             return response
         except Exception as e: 
             if attempt < max_retries - 1:
-                print(f"llamando a gpt otra vez porque no daba un JSON bien formado... (intento {attempt + 1}/{max_retries})")
+                logger.warning("GPT returned malformed JSON, retrying (attempt %d/%d)", attempt + 1, max_retries)
             else:
-                print(f"Error después de {max_retries} intentos: {e}")
+                logger.error("GPT failed after %d attempts: %s", max_retries, e)
                 raise
 
 def summarize_chunk(chunk: str) -> dict:
@@ -106,7 +109,7 @@ def summarize_chunk(chunk: str) -> dict:
 
     response = llamar_gpt_hasta_que_este_bien(client, prompt, model=DEFAULT_MODEL)
 
-    print(response)
+    logger.debug("Chunk summary response: %s", response)
 
     try:
         return response

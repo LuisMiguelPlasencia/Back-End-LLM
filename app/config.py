@@ -1,56 +1,84 @@
-# settings_db.py
-from typing import Optional
+# ---------------------------------------------------------------------------
+# Application-wide configuration — loaded once at import time
+# ---------------------------------------------------------------------------
+# Uses pydantic-settings for typed, validated environment variables.
+# All secrets are read from `.env`; never hard-coded.
+# ---------------------------------------------------------------------------
+
+from __future__ import annotations
+
+import os
+from functools import lru_cache
+from typing import List, Optional
+
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
-from pydantic import Field
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine.url import URL
-from sqlalchemy.engine import Engine
 
 
 class Settings(BaseSettings):
-    # Opcional: usar una URL completa (overrides campos individuales si está presente)
-    database_url: Optional[str] = Field(default=None, env="DATABASE_URL")
+    """Centralised, validated application settings."""
 
-    # Campos individuales (se usan si database_url es None)
-    db_driver: str = Field(default="postgresql+psycopg2", env="DB_DRIVER")
-    db_user: str = Field(default="user", env="DB_USER")
-    db_password: str = Field(default="password", env="DB_PASSWORD")
-    db_host: str = Field(default="localhost", env="DB_HOST")
-    db_port: str = Field(default="5432", env="DB_PORT")
-    db_name: str = Field(default="conversa", env="DB_NAME")
+    # -- Environment ----------------------------------------------------------
+    environment: str = Field(default="DEV", alias="ENVIRONMENT")
+    debug: bool = Field(default=False, alias="DEBUG")
 
-    # Otros settings
-    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
-    debug: bool = Field(default=True, env="DEBUG")
-    environment: str = Field(default="development", env="ENVIRONMENT")
+    # -- Database (resolved in db.py via DATABASE_URL_* env vars) -------------
+    database_url_dev: Optional[str] = Field(default=None, alias="DATABASE_URL_DEV")
+    database_url_pro: Optional[str] = Field(default=None, alias="DATABASE_URL_PRO")
+    database_url: Optional[str] = Field(default=None, alias="DATABASE_URL")
 
+    db_pool_min: int = Field(default=5, alias="DB_POOL_MIN")
+    db_pool_max: int = Field(default=20, alias="DB_POOL_MAX")
+
+    # -- OpenAI ---------------------------------------------------------------
+    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    openai_default_model: str = Field(
+        default="gpt-4.1-nano-2025-04-14", alias="OPENAI_DEFAULT_MODEL"
+    )
+
+    # -- Auth / JWT -----------------------------------------------------------
+    secret_key_jwt: str = Field(default="", alias="SECRET_KEY_JWT")
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = Field(default=1440, alias="JWT_EXPIRE_MINUTES")  # 24h
+
+    # -- ElevenLabs -----------------------------------------------------------
+    elevenlabs_agent_id: Optional[str] = Field(default=None, alias="ELEVENLABS_AGENT_ID")
+    elevenlabs_api_key: Optional[str] = Field(default=None, alias="ELEVENLABS_API_KEY")
+
+    # -- Stripe ---------------------------------------------------------------
+    stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
+    stripe_setup_fee_price_id: Optional[str] = Field(
+        default=None, alias="STRIPE_SETUP_FEE_PRICE_ID"
+    )
+
+    # -- CORS -----------------------------------------------------------------
+    cors_origins: List[str] = Field(
+        default=["*"], alias="CORS_ORIGINS"
+    )
+
+    # -- Rate Limiting --------------------------------------------------------
+    rate_limit_per_minute: int = Field(default=120, alias="RATE_LIMIT_PER_MINUTE")
+
+    # -------------------------------------------------------------------------
     class Config:
         env_file = ".env"
         case_sensitive = False
         extra = "ignore"
 
-    # Propiedad que devuelve un objeto URL de SQLAlchemy (ó string si prefieres)
-    @property
-    def sqlalchemy_url(self) -> URL | str:
-        if self.database_url:
-            # Si el usuario proporciona DATABASE_URL completo, úsalo directamente
-            return self.database_url
-        # Construye la URL a partir de campos individuales
-        return URL.create(
-            drivername=self.db_driver,
-            username=self.db_user,
-            password=self.db_password,
-            host=self.db_host,
-            port=self.db_port,
-            database=self.db_name,
-        )
+    # -- Validators -----------------------------------------------------------
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",")]
+        return v
 
-    def create_engine(self, **create_engine_kwargs) -> Engine:
-        # valores por defecto útiles
-        defaults = {"echo": False, "future": True, "pool_pre_ping": True}
-        # merge de kwargs
-        params = {**defaults, **create_engine_kwargs}
-        return create_engine(self.sqlalchemy_url, **params)
-    
-settings = Settings()
 
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    """Return the singleton Settings instance (cached)."""
+    return Settings()
+
+
+# Convenience alias — imported everywhere as `from app.config import settings`
+settings = get_settings()

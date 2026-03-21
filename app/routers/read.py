@@ -1,398 +1,403 @@
-# Read routes for data retrieval
-# Handles GET requests for courses, conversations, and messages
-# Examples:
-# curl "http://localhost:8000/read/courses?user_id=123e4567-e89b-12d3-a456-426614174000"
-# curl "http://localhost:8000/read/conversation?user_id=123e4567-e89b-12d3-a456-426614174000"
-# curl "http://localhost:8000/read/messages?conversation_id=123e4567-e89b-12d3-a456-426614174000"
+# ---------------------------------------------------------------------------
+# Read router — data retrieval endpoints
+# ---------------------------------------------------------------------------
 
-from fastapi import APIRouter, Query, HTTPException, Depends
+from __future__ import annotations
+
 import asyncio
+import logging
 from uuid import UUID
-from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details, user_course_progress
-from ..services.conversations_service import get_conversation_details, get_user_conversations
-from ..services.messages_service import (
-    get_all_user_conversation_average_scoring_by_stage_company, 
-    get_user_cumulative_average_score, 
-    get_all_user_conversation_scoring_by_company, 
-    get_all_user_conversation_scoring_by_stage_company, 
-    get_all_user_profiling_by_company, 
-    get_conversation_messages, 
-    get_all_user_scoring_by_company, 
-    get_user_profiling, 
-    get_company_dashboard_stats, 
-    get_user_journey, 
-    get_dashboard_stats, 
-    get_company_announcements, 
-    get_user_avg_participation, 
-    get_user_avg_rhythm, 
-    get_user_avg_filler_words, 
-    get_user_avg_technical_level, 
-    get_user_persona_profile
-)
-from ..services.profiling_service import general_profiling
-from ..utils.responses import error
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from app.services.auth_service import validate_user
+from app.services.courses_service import (
+    get_all_courses,
+    get_all_stages,
+    get_company_courses,
+    get_courses_details,
+    get_user_courses,
+    get_user_courses_stages,
+    user_course_progress,
+)
+from app.services.conversations_service import (
+    get_conversation_details,
+    get_user_conversations,
+)
+from app.services.messages_service import (
+    get_all_user_conversation_average_scoring_by_stage_company,
+    get_all_user_conversation_scoring_by_company,
+    get_all_user_conversation_scoring_by_stage_company,
+    get_all_user_profiling_by_company,
+    get_all_user_scoring_by_company,
+    get_company_announcements,
+    get_company_dashboard_stats,
+    get_conversation_messages,
+    get_dashboard_stats,
+    get_user_avg_filler_words,
+    get_user_avg_participation,
+    get_user_avg_rhythm,
+    get_user_avg_technical_level,
+    get_user_cumulative_average_score,
+    get_user_journey,
+    get_user_persona_profile,
+    get_user_profiling,
+)
+from app.services.profiling_service import general_profiling
 from app.services.payments_service import get_billing_plans, validate_coupon
+from app.utils.responses import error
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/read", tags=["Read"])
 
 
-router = APIRouter(prefix="/read", tags=["read"])
+# ---------------------------------------------------------------------------
+# Courses
+# ---------------------------------------------------------------------------
 
 @router.get("/all_courses")
-async def get_all_coursesAPI(_: dict = Depends(validate_user)):
-    """Get courses available to user based on their user type"""
+async def get_all_courses_api(_: dict = Depends(validate_user)):
+    """List every course in the system."""
     try:
-        print("Fetching all courses")
-        courses = await get_all_courses()
-        return courses
+        return await get_all_courses()
     except Exception as e:
-        error(500, f"Failed to retrieve courses: {str(e)}")
+        error(500, f"Failed to retrieve courses: {e}")
+
 
 @router.get("/all_stages")
-async def get_all_stagesAPI(_: dict = Depends(validate_user)):
-    """Get all stages available in the system"""
+async def get_all_stages_api(_: dict = Depends(validate_user)):
+    """List all stages with their content."""
     try:
-        print("Fetching all stages")
-        stages = await get_all_stages()  # Assuming get_all_courses returns stage data
-        return stages
+        return await get_all_stages()
     except Exception as e:
-        error(500, f"Failed to retrieve stages: {str(e)}")
+        error(500, f"Failed to retrieve stages: {e}")
+
 
 @router.get("/courses")
-async def get_courses(user_id: UUID = Query(..., description="User ID to get courses for"), _: dict = Depends(validate_user)):
-    """Get courses available to user based on their user type"""
+async def get_courses(
+    user_id: UUID = Query(..., description="User ID"),
+    _: dict = Depends(validate_user),
+):
+    """Courses assigned to a specific user."""
     try:
-        print("Fetching courses for user:", user_id)
-        courses = await get_user_courses(user_id)
-        return courses
+        return await get_user_courses(user_id)
     except Exception as e:
-        error(500, f"Failed to retrieve courses: {str(e)}")
+        error(500, f"Failed to retrieve courses: {e}")
+
 
 @router.get("/courses_stages")
-async def get_courses_stages(course_id: UUID = Query(..., description="Course ID to get stages for")):
-    """Get stages available for a course"""
+async def get_courses_stages(
+    course_id: UUID = Query(..., description="Course ID"),
+):
+    """Stages within a given course."""
     try:
-        print("Fetching stages for course:", course_id)
-        stages = await get_user_courses_stages(course_id)
-        return stages
+        return await get_user_courses_stages(course_id)
     except Exception as e:
-        error(500, f"Failed to retrieve stages: {str(e)}")
+        error(500, f"Failed to retrieve stages: {e}")
+
 
 @router.get("/courses_details")
-async def get_user_courses_details(course_id: UUID = Query(..., description="Course ID to get details for"), stage_id: UUID = Query(..., description="Stage ID to get details for")):
-    """Get details for a course and stage"""
+async def get_user_courses_details(
+    course_id: UUID = Query(..., description="Course ID"),
+    stage_id: UUID = Query(..., description="Stage ID"),
+):
+    """Full details for a course + stage combination."""
     try:
-        print("Fetching details for course:", course_id, "and stage:", stage_id)
-        details = await get_courses_details(course_id, stage_id)
-        return details
+        return await get_courses_details(course_id, stage_id)
     except Exception as e:
-        error(500, f"Failed to retrieve details: {str(e)}")
-
-@router.get("/conversation")
-async def get_conversation(conversation_id: UUID = Query(..., description="Conversation ID to get conversation details for")):
-    """Get conversation details for a conversation ID"""
-    try:
-        conversation = await get_conversation_details(conversation_id)
-        return conversation
-    except Exception as e:
-        error(500, f"Failed to retrieve conversations: {str(e)}")
-
-@router.get("/conversations")
-async def get_conversations(user_id: UUID = Query(..., description="User ID to get conversations for")):
-    """Get all conversations for a user"""
-    try:
-        conversations = await get_user_conversations(user_id)
-        return conversations
-    except Exception as e:
-        error(500, f"Failed to retrieve conversations: {str(e)}")
-
-@router.get("/messages")
-async def get_messages(conversation_id: UUID = Query(..., description="Conversation ID to get messages for"), _: dict = Depends(validate_user)):
-    """Get all messages for a conversation"""
-    try:
-        messages = await get_conversation_messages(conversation_id)
-        return messages
-    except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
-@router.get("/userProfiling")
-async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID to get profiling for")):
-    """Get the user profiling score"""
-    try:
-        # 1. Get the data. Based on your function:
-        # - Success (found): returns a dict {...}
-        # - Success (not found): returns empty dict {}
-        # - Error (exception): returns empty list []
-        profiling = await get_user_profiling(user_id)
-        
-        # 2. Safety check: Handle the case where the DB function returned a list (the error case)
-        if isinstance(profiling, list):
-            profiling = {}
-        
-        # 3. Now 'profiling' is guaranteed to be a dictionary, so .get() will work
-        result = {
-            "name": profiling.get('name') or None,
-            "user_id": profiling.get('user_id') or user_id, # Fallback to input user_id
-            "general_score": profiling.get('general_score') or None,
-            "profile_type": profiling.get('profile_type') or None,
-            "empathy_scoring": profiling.get('empathy_scoring') or None,
-            "negotiation_scoring": profiling.get('negotiation_scoring') or None,
-            "prospection_scoring": profiling.get('prospection_scoring') or None,
-            "resilience_scoring": profiling.get('resilience_scoring') or None,
-            "technical_domain_scoring": profiling.get('technical_domain_scoring') or None,
-            "empathy_feedback": profiling.get('empathy_feedback') or None,
-            "negotiation_feedback": profiling.get('negotiation_feedback') or None,
-            "prospection_feedback": profiling.get('prospection_feedback') or None,
-            "resilience_feedback": profiling.get('resilience_feedback') or None,
-            "technical_domain_feedback": profiling.get('technical_domain_feedback') or None,
-            "avatar": profiling.get('avatar') or None,
-        }
-        return result
-        
-    except Exception as e:
-        # Log the error and return a 500 response
-        print(f"API Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling: {str(e)}")
-
-
-@router.get("/userProfilingGeneralFeedback")
-async def get_user_profiling_general_feedback(user_id: UUID = Query(..., description="User ID to get general profiling feedback for")):
-    """Get the user profiling general feedback"""
-    try:
-        general_feedback = await general_profiling(user_id)
-        result = {
-            "empathy_feedback": general_feedback.get('general_feedback_empathy') or None,
-            "negotiation_feedback": general_feedback.get('general_feedback_negotiation') or None,
-            "prospection_feedback": general_feedback.get('general_feedback_prospection') or None,
-            "resilience_feedback": general_feedback.get('general_feedback_resilience') or None,
-            "technical_domain_feedback": general_feedback.get('general_feedback_technical_domain') or None,
-        }
-        return result
-        
-    except Exception as e:
-        # Log the error and return a 500 response
-        print(f"API Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling general feedback: {str(e)}")
-
-
-## Advanced Routes
-##-------------------------------------------------------------
-@router.get("/allUserScoreByCompany")
-async def get_all_user_score_by_company(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
-    """Get all user scores for a company"""
-    try:
-        user_scores_list = await get_all_user_scoring_by_company(company_id)
-        return user_scores_list
-    except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
-@router.get("/allUserConversationScoresByCompany")
-async def get_all_user_conversation_scores_by_company(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
-    """Get all user conversation scores for a company"""
-    try:
-        user_scores_list = await get_all_user_conversation_scoring_by_company(company_id)
-        return user_scores_list
-    except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
-@router.get("/allUserConversationScoresByStageCompany")
-async def get_all_user_conversation_scores_by_stage_company(stage_id: str = Query(..., description="Stage ID to get the list of user scores for"), company_id: str = Query(..., description="Company ID to get the list of user scores for")):
-    """Get all user conversation scores for a stage and company"""
-    try:
-        user_scores_list = await get_all_user_conversation_scoring_by_stage_company(stage_id, company_id)
-        return user_scores_list
-    except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
-@router.get("/allUserConversationAverageScoresByStageCompany")
-async def get_all_user_conversation_average_scores_by_stage_company(stage_id: str = Query(..., description="Stage ID to get the list of user scores for"), company_id: str = Query(..., description="Company ID to get the list of user scores for")):
-    """Get all user conversation average scores for a stage and company"""
-    try:
-        user_scores_list = await get_all_user_conversation_average_scoring_by_stage_company(stage_id, company_id)
-        return user_scores_list
-    except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
-
-@router.get("/userScoringTimeSeries")
-async def get_user_scoring_time_series(user_id: str = Query(..., description="User ID to get the scoring time series for"), n_days: int = Query(7, description="Number of days to retrieve")):
-    """Get the scoring time series for a user"""
-    try:
-        user_scores_time_series = await get_user_cumulative_average_score(user_id, n_days)
-        return user_scores_time_series
-    except Exception as e:
-        error(500, f"Failed to retrieve stats: {str(e)}")
-
-
-@router.get("/allUserProfilingByCompany")
-async def get_all_user_profiling_by_companyAPI(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
-    """Get all user profiling scores for a company"""
-    try:
-        user_profiling_list = await get_all_user_profiling_by_company(company_id)
-        return user_profiling_list
-    except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
-
-@router.get("/companyKPIdashboard")
-async def get_company_kpi_stats(company_id: str = Query(..., description="Company ID to get the list of user scores for")):
-    """Get Company KPIs stats for dashboard"""
-    try:
-        company_kpis = await get_company_dashboard_stats(company_id)
-        return company_kpis
-    except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
-
-@router.get("/userJourney")
-async def get_journay_by_user(user_id: UUID = Query(..., description="User ID to get Jouney for")):
-    """Get User Journey"""
-    try:
-        get_user_jouney = await get_user_journey(user_id)
-        return get_user_jouney
-    except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
-
-
-@router.get("/plans")
-async def get_billing_plansAPI():
-    """Return the billing plans for the selectors in the front"""
-    try:
-        billing_plans = await get_billing_plans()
-        return billing_plans
-    except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
-
-@router.get("/check-coupon")
-async def validate_couponAPI(coupon_code: str):
-    """Endpoint to validate the coupon visually in the front"""
-    try:
-        coupon_details = await validate_coupon(coupon_code)
-        return coupon_details
-    except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
-
-
-@router.get("/myAnalytics")
-async def get_my_analytics(user_id: str):
-    """Get my analytics"""
-    try:
-        result = await get_dashboard_stats(user_id)
-        return {
-            "status": "stats retrieved success",
-            "result": result
-        }
-    
-    except Exception as e:
-        error(500, f"Failed to retrieve stats: {str(e)}")
-
-
-@router.get("/companies_news")
-async def get_company_news_route(company_id: str):
-    """
-    Get the latest active announcements (news) for a specific company
-    """
-    try:
-        result = await get_company_announcements(company_id)
-        
-        if result is None:
-            error(500, "Failed to fetch company news")
-            
-        return {
-            "status": "news retrieved success",
-            "result": result
-        }
-    
-    except Exception as e:
-        error(500, f"Failed to retrieve company news: {str(e)}")
-
+        error(500, f"Failed to retrieve details: {e}")
 
 
 @router.get("/company_courses")
-async def get_company_coursesAPI(company_id: str):
+async def get_company_courses_api(company_id: str):
+    """Courses belonging to a company."""
     try:
         result = await get_company_courses(company_id)
-        if result is None: error(404, "Company course not found")
+        if result is None:
+            error(404, "Company course not found")
         return result
     except Exception as e:
-        error(500, f"Failed to retrieve: {str(e)}")
+        error(500, f"Failed to retrieve: {e}")
 
+
+# ---------------------------------------------------------------------------
+# Conversations & Messages
+# ---------------------------------------------------------------------------
+
+@router.get("/conversation")
+async def get_conversation(
+    conversation_id: UUID = Query(..., description="Conversation ID"),
+):
+    """Details (incl. scoring) for a single conversation."""
+    try:
+        return await get_conversation_details(conversation_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve conversation: {e}")
+
+
+@router.get("/conversations")
+async def get_conversations(
+    user_id: UUID = Query(..., description="User ID"),
+):
+    """Most recent conversations for a user."""
+    try:
+        return await get_user_conversations(user_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve conversations: {e}")
+
+
+@router.get("/messages")
+async def get_messages(
+    conversation_id: UUID = Query(..., description="Conversation ID"),
+    _: dict = Depends(validate_user),
+):
+    """All messages within a conversation."""
+    try:
+        return await get_conversation_messages(conversation_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Profiling
+# ---------------------------------------------------------------------------
+
+@router.get("/userProfiling")
+async def get_user_profiling_api(
+    user_id: UUID = Query(..., description="User ID"),
+):
+    """User profiling scores and feedback."""
+    try:
+        profiling = await get_user_profiling(str(user_id))
+        if isinstance(profiling, list):
+            profiling = {}
+
+        keys = [
+            "name", "user_id", "general_score", "profile_type",
+            "empathy_scoring", "negotiation_scoring", "prospection_scoring",
+            "resilience_scoring", "technical_domain_scoring",
+            "empathy_feedback", "negotiation_feedback", "prospection_feedback",
+            "resilience_feedback", "technical_domain_feedback", "avatar",
+        ]
+        result = {k: profiling.get(k) for k in keys}
+        result.setdefault("user_id", user_id)
+        return result
+    except Exception as e:
+        logger.exception("Error in userProfiling endpoint")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling: {e}")
+
+
+@router.get("/userProfilingGeneralFeedback")
+async def get_user_profiling_general_feedback(
+    user_id: UUID = Query(..., description="User ID"),
+):
+    """Trigger and return the general profiling feedback for a user."""
+    try:
+        gf = await general_profiling(user_id)
+        return {
+            "empathy_feedback": (gf or {}).get("general_feedback_empathy"),
+            "negotiation_feedback": (gf or {}).get("general_feedback_negotiation"),
+            "prospection_feedback": (gf or {}).get("general_feedback_prospection"),
+            "resilience_feedback": (gf or {}).get("general_feedback_resilience"),
+            "technical_domain_feedback": (gf or {}).get("general_feedback_technical_domain"),
+        }
+    except Exception as e:
+        logger.exception("Error in userProfilingGeneralFeedback endpoint")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve profiling feedback: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Company-level analytics
+# ---------------------------------------------------------------------------
+
+@router.get("/allUserScoreByCompany")
+async def get_all_user_score_by_company(
+    company_id: str = Query(..., description="Company ID"),
+):
+    """Top-5 leaderboard for a company."""
+    try:
+        return await get_all_user_scoring_by_company(company_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve scores: {e}")
+
+
+@router.get("/allUserConversationScoresByCompany")
+async def get_all_user_conversation_scores_by_company(
+    company_id: str = Query(..., description="Company ID"),
+):
+    """Aggregated per-user scoring for a company."""
+    try:
+        return await get_all_user_conversation_scoring_by_company(company_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve scores: {e}")
+
+
+@router.get("/allUserConversationScoresByStageCompany")
+async def get_all_user_conversation_scores_by_stage_company(
+    stage_id: str = Query(..., description="Stage ID"),
+    company_id: str = Query(..., description="Company ID"),
+):
+    """Per-user scoring for a specific stage in a company."""
+    try:
+        return await get_all_user_conversation_scoring_by_stage_company(stage_id, company_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve scores: {e}")
+
+
+@router.get("/allUserConversationAverageScoresByStageCompany")
+async def get_all_user_conversation_avg_scores_by_stage_company(
+    stage_id: str = Query(..., description="Stage ID"),
+    company_id: str = Query(..., description="Company ID"),
+):
+    """Average per-user scoring for a stage in a company."""
+    try:
+        return await get_all_user_conversation_average_scoring_by_stage_company(stage_id, company_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve scores: {e}")
+
+
+@router.get("/userScoringTimeSeries")
+async def get_user_scoring_time_series(
+    user_id: str = Query(..., description="User ID"),
+    n_days: int = Query(7, ge=1, le=365, description="Number of days"),
+):
+    """Cumulative average score per day."""
+    try:
+        return await get_user_cumulative_average_score(user_id, n_days)
+    except Exception as e:
+        error(500, f"Failed to retrieve time series: {e}")
+
+
+@router.get("/allUserProfilingByCompany")
+async def get_all_user_profiling_by_company_api(
+    company_id: str = Query(..., description="Company ID"),
+):
+    """Profiling scores for every user in a company."""
+    try:
+        return await get_all_user_profiling_by_company(company_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve profiling: {e}")
+
+
+@router.get("/companyKPIdashboard")
+async def get_company_kpi_stats(
+    company_id: str = Query(..., description="Company ID"),
+):
+    """Consolidated company KPI dashboard."""
+    try:
+        return await get_company_dashboard_stats(company_id)
+    except Exception as e:
+        error(500, f"Failed to retrieve KPIs: {e}")
+
+
+# ---------------------------------------------------------------------------
+# User Journey & Progress
+# ---------------------------------------------------------------------------
+
+@router.get("/userJourney")
+async def get_journey_by_user(
+    user_id: UUID = Query(..., description="User ID"),
+):
+    """User's assigned journeys with course progress."""
+    try:
+        return await get_user_journey(str(user_id))
+    except Exception as e:
+        error(500, f"Failed to retrieve journey: {e}")
+
+
+@router.get("/user_course_progress")
+async def user_course_progress_api(user_id: str, course_id: str):
+    """Current progress for a user within a course."""
+    try:
+        result = await user_course_progress(user_id, course_id)
+        if result is None:
+            error(404, "User course progress not found")
+        return {"status": "success", "result": result}
+    except Exception as e:
+        error(500, f"Error fetching user course progress: {e}")
+
+
+# ---------------------------------------------------------------------------
+# My Analytics
+# ---------------------------------------------------------------------------
+
+@router.get("/myAnalytics")
+async def get_my_analytics(user_id: str):
+    """Individual user dashboard stats."""
+    try:
+        result = await get_dashboard_stats(user_id)
+        return {"status": "stats retrieved success", "result": result}
+    except Exception as e:
+        error(500, f"Failed to retrieve stats: {e}")
 
 
 @router.get("/myAnalytics-ScoringTab")
 async def get_my_analytics_scoring_tab(user_id: str):
-    """
-    Retrieves all aggregated metrics for the user for the Scoring tab in 'My Analytics' in a single concurrent request.
-    """
+    """Aggregated scoring-tab metrics (4 queries in parallel)."""
     try:
-        # Launch the 4 tasks in parallel for maximum speed
-        participation_task = get_user_avg_participation(user_id)
-        rhythm_task = get_user_avg_rhythm(user_id)
-        filler_words_task = get_user_avg_filler_words(user_id)
-        technical_level_task = get_user_avg_technical_level(user_id)
-
-        # Wait for all to complete simultaneously
         participation, rhythm, filler_words, technical_level = await asyncio.gather(
-            participation_task,
-            rhythm_task,
-            filler_words_task,
-            technical_level_task
+            get_user_avg_participation(user_id),
+            get_user_avg_rhythm(user_id),
+            get_user_avg_filler_words(user_id),
+            get_user_avg_technical_level(user_id),
         )
-
         return {
             "status": "success",
             "result": {
                 "participation": participation,
                 "rhythm": rhythm,
                 "filler_words": filler_words,
-                "technical_level": technical_level
-            }
+                "technical_level": technical_level,
+            },
         }
-
     except Exception as e:
-        error(500, f"Failed to retrieve analytics scoring tab: {str(e)}")
+        error(500, f"Failed to retrieve analytics scoring tab: {e}")
+
 
 @router.get("/myAnalytics-PersonalityTab")
 async def get_my_analytics_personality_tab(user_id: str):
-    """
-    Retrieves the descriptive card of the conversational profile of the user 
-    (e.g: The Hunter) with its strengths and areas for improvement.
-    """
+    """User's conversational persona card."""
     try:
         result = await get_user_persona_profile(user_id)
-        
         if result is None:
             error(404, "User profile not found")
-            return {
-                "status": "not_found",
-                "message": "El usuario aún no tiene un perfil asignado."
-            }
-            
-        return {
-            "status": "success",
-            "result": result
-        }
+        return {"status": "success", "result": result}
     except Exception as e:
-        # Usa tu manejador de errores habitual
-        error(500, f"Error fetching user persona profile: {str(e)}")
+        error(500, f"Error fetching persona profile: {e}")
 
-@router.get("/user_course_progress")
-async def user_course_progressAPI(user_id: str, course_id: str):
-    """
-    Retrieves the descriptive card of the conversational profile of the user 
-    (e.g: The Hunter) with its strengths and areas for improvement.
-    """
+
+# ---------------------------------------------------------------------------
+# Billing / Coupons
+# ---------------------------------------------------------------------------
+
+@router.get("/plans")
+async def get_billing_plans_api():
+    """Active billing plans."""
     try:
-        result = await user_course_progress(user_id, course_id)
-        
-        if result is None:
-            error(404, "User profile not found")
-            return {
-                "status": "not_found",
-                "message": "El usuario aún no tiene este curso asignado"
-            }
-            
-        return {
-            "status": "success",
-            "result": result
-        }
+        return await get_billing_plans()
     except Exception as e:
-        # Usa tu manejador de errores habitual
-        error(500, f"Error fetching user persona profile: {str(e)}")
+        error(500, f"Failed to retrieve plans: {e}")
+
+
+@router.get("/check-coupon")
+async def validate_coupon_api(coupon_code: str):
+    """Validate a coupon code for the checkout UI."""
+    try:
+        return await validate_coupon(coupon_code)
+    except Exception as e:
+        error(500, f"Failed to validate coupon: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Company News
+# ---------------------------------------------------------------------------
+
+@router.get("/companies_news")
+async def get_company_news_route(company_id: str):
+    """Active announcements for a company."""
+    try:
+        result = await get_company_announcements(company_id)
+        return {"status": "news retrieved success", "result": result}
+    except Exception as e:
+        error(500, f"Failed to retrieve company news: {e}")
