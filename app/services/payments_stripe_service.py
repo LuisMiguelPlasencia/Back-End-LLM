@@ -1,5 +1,5 @@
-import os
 import json
+import logging
 import stripe
 from datetime import datetime
 from uuid import uuid4
@@ -7,11 +7,13 @@ from decimal import Decimal
 from typing import Optional, Dict, List
 from pydantic import BaseModel
 from fastapi import HTTPException
-from .db import execute_query, execute_query_one 
+from .db import execute_query, execute_query_one
+from app.config import settings
 
+logger = logging.getLogger(__name__)
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_SETUP_FEE_PRICE_ID = os.getenv("STRIPE_SETUP_FEE_PRICE_ID") 
+stripe.api_key = settings.stripe_secret_key
+STRIPE_SETUP_FEE_PRICE_ID = settings.stripe_setup_fee_price_id
 
 class CheckoutRequest(BaseModel):
     company_id: str          # ID de la empresa en tu sistema (company_info)
@@ -91,7 +93,7 @@ class StripeCheckoutService:
             pm_to_attach = data.payment_method_id
 
             if data.payment_method_id.startswith("tok_"):
-                print(f"🔄 Convirtiendo Token {data.payment_method_id} a PaymentMethod...")
+                logger.info("Converting token %s to PaymentMethod", data.payment_method_id)
                 pm_object = await stripe.PaymentMethod.create_async(
                     type="card",
                     card={"token": data.payment_method_id}
@@ -107,7 +109,7 @@ class StripeCheckoutService:
             
             # Actualizamos nuestra variable con el ID FINAL Y REAL que está en Stripe
             final_real_pm_id = attached_pm.id 
-            print(f"✅ PaymentMethod adjuntado correctamente: {final_real_pm_id}")
+            logger.info("PaymentMethod attached: %s", final_real_pm_id)
 
             # Paso 3: Establecer como default usando el ID REAL
             await stripe.Customer.modify_async(
@@ -138,16 +140,12 @@ class StripeCheckoutService:
             if stripe_coupon_id:
                 discounts_config.append({"coupon": stripe_coupon_id})
 
-            # D. Crear la Suscripción (CORREGIDO)
+            # D. Crear la Suscripción
             subscription = await stripe.Subscription.create_async(
                 customer=customer_id,
                 items=subscription_items,
-                add_invoice_items=add_invoice_items, 
-                
-                # CAMBIO AQUÍ: Usamos 'discounts' en lugar de 'coupon'
-                discounts=discounts_config, 
-                
-                #payment_behavior="default_incomplete", 
+                add_invoice_items=add_invoice_items,
+                discounts=discounts_config,
                 payment_behavior="error_if_incomplete",
                 payment_settings={"save_default_payment_method": "on_subscription"},
                 expand=["latest_invoice.payment_intent"],
@@ -205,7 +203,7 @@ class StripeCheckoutService:
                     pi_obj = await stripe.PaymentIntent.retrieve_async(pi_id)
                     client_secret = pi_obj.client_secret
                 except Exception as e:
-                    print(f"⚠️ No se pudo recuperar el PaymentIntent {pi_id}: {e}")
+                    logger.warning("Could not retrieve PaymentIntent %s: %s", pi_id, e)
                     client_secret = None
             
             # CASO 3: Es None (Aún no se ha generado)
@@ -309,5 +307,5 @@ class StripeCheckoutService:
         except Exception as e:
             # Error de nuestra base de datos o lógica
             # Aquí deberías tener un log crítico
-            print(f"CRITICAL ERROR IN CHECKOUT: {str(e)}")
+            logger.exception("Critical error in checkout")
             raise HTTPException(status_code=500, detail="Error interno procesando la suscripción")

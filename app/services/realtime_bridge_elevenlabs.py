@@ -1,25 +1,20 @@
 import asyncio
 import json
-import os
-import websockets
+import logging
 import time
-import base64
-import numpy as np
 
-from dotenv import load_dotenv
+import websockets
 
-# Services imports
+from app.config import settings
 from app.services.conversations_service import get_voice_agent, create_conversation
 from app.services.messages_service import send_message, update_user_course_status
 from app.services.prompting_service import master_prompt_generator
 from app.services.realtime_service import stop_process, user_msg_processed, is_non_silent
 
-load_dotenv(override=True)
+logger = logging.getLogger(__name__)
 
-# CONFIGURACIÓN ELEVENLABS
-# Asegúrate de tener estas variables en tu .env
-ELEVENLABS_AGENT_ID = os.getenv("ELEVENLABS_AGENT_ID") 
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") 
+ELEVENLABS_AGENT_ID = settings.elevenlabs_agent_id
+ELEVENLABS_API_KEY = settings.elevenlabs_api_key
 
 # URL de conexión al WebSocket de Conversational AI
 WS_URL = f"wss://api.elevenlabs.io/v1/convai/conversation?agent_id={ELEVENLABS_AGENT_ID}"
@@ -61,10 +56,10 @@ class RealtimeBridge:
                 extra_headers["xi-api-key"] = ELEVENLABS_API_KEY
 
             self.eleven_ws = await websockets.connect(WS_URL, extra_headers=extra_headers)
-            print(f"✅ Connected to ElevenLabs Agent: {ELEVENLABS_AGENT_ID}")
+            logger.info("Connected to ElevenLabs Agent: %s", ELEVENLABS_AGENT_ID)
 
         except Exception as e:
-            print(f"❌ Error connecting to ElevenLabs: {e}")
+            logger.error("Error connecting to ElevenLabs: %s", e)
             await self.stop()
 
     async def forward_frontend_to_elevenlabs(self):
@@ -81,12 +76,12 @@ class RealtimeBridge:
 
                 # --- 1. INICIO DE SESIÓN ---
                 if msg_type == "input_audio_session.start":
-                    print("🔵 New session started")
+                    logger.info("New session started")
                     self.user_id = parsed.get("user_id")
                     self.course_id = parsed.get("course_id")
                     self.stage_id = parsed.get("stage_id")
 
-                    print(f"Stage: {self.stage_id} ")
+                    logger.debug("Stage: %s", self.stage_id)
                     # Crear conversación en DB
                     conversation_details = await create_conversation(self.user_id, self.course_id, self.stage_id)
                     _ = await update_user_course_status(self.user_id, self.course_id)
@@ -98,10 +93,10 @@ class RealtimeBridge:
                         self.voice_id = record['voice_id'] or self.voice_id
                         self.agent_id = record['agent_id'] or self.agent_id
 
-                    print(f"Voice: {self.voice_id} | Agent: {self.agent_id}")
-                    
+                    logger.debug("Voice: %s | Agent: %s", self.voice_id, self.agent_id)
+
                     self.conversation_id = conversation_details.get("conversation_id")
-                    print(f"User: {self.user_id} | Conv: {self.conversation_id} | Course: {self.course_id}")
+                    logger.info("User: %s | Conv: %s | Course: %s", self.user_id, self.conversation_id, self.course_id)
                     
                     # Generar Prompt dinámico para el curso específico
                     master_prompt = await master_prompt_generator(self.course_id, self.stage_id)
@@ -128,7 +123,7 @@ class RealtimeBridge:
                     
                 # --- 2. FIN DE SESIÓN ---
                 elif msg_type == "input_audio_session.end":
-                    print("🔴 Session ended by user")
+                    logger.info("Session ended by user")
                     await self.stop()
                     return
 
@@ -142,7 +137,7 @@ class RealtimeBridge:
 
                         if self.user_turn_start_ts is None and is_non_silent(audio_b64):
                             self.user_turn_start_ts = now
-                            print("🎤 User turn START")
+                            logger.debug("User turn START")
 
                         self.last_user_audio_ts = now
 
@@ -154,7 +149,7 @@ class RealtimeBridge:
                     pass
 
         except Exception as e:
-            print(f"⚠️ WebSocket information Front to Elevenlabs: {e}")
+            logger.warning("WebSocket error Front->ElevenLabs: %s", e)
             await self.stop()
 
     async def forward_elevenlabs_to_frontend(self):
@@ -183,7 +178,7 @@ class RealtimeBridge:
                 # --- B. TRANSCRIPCIÓN USUARIO ---
                 elif el_type == "user_transcript":
                     text = data["user_transcription_event"]["user_transcript"]
-                    print(f"🎤 [User]: {text}")
+                    logger.debug("[User]: %s", text)
 
                     now = time.time()
                     self.user_turn_end_ts = now
@@ -191,7 +186,7 @@ class RealtimeBridge:
 
                     if self.user_turn_start_ts:
                         duration = self.user_turn_end_ts - self.user_turn_start_ts
-                        print(f"🎤 User turn END | duration={duration:.2f}s")
+                        logger.debug("User turn END | duration=%.2fs", duration)
 
                     # reset
                     self.user_turn_start_ts = None
@@ -210,7 +205,7 @@ class RealtimeBridge:
                 # --- C. TRANSCRIPCIÓN AGENTE ---
                 elif el_type == "agent_response":
                     text = data["agent_response_event"]["agent_response"]
-                    print(f"🤖 [AI]: {text}")
+                    logger.debug("[AI]: %s", text)
                     duration = None
                     # Guardar en DB
                     await send_message(self.user_id, self.conversation_id, text, "assistant", duration)
@@ -225,18 +220,18 @@ class RealtimeBridge:
                 # ElevenLabs manda "interruption" cuando el usuario interrumpe
                 elif el_type == "interruption":
                     # Enviamos señal equivalente al frontend para limpiar buffer
-                    print("🛑 [Interruption]: Usuario interrumpió, limpiando buffer...")
+                    logger.info("Interruption: user interrupted, clearing buffer")
                     await self.frontend_ws.send_text(json.dumps({"type": "response.audio.clear"}))
 
 
-            print("📞 [End Call]: La conexión fue cerrada por ElevenLabs (Agent Hangup).")
+            logger.info("Call ended: connection closed by ElevenLabs (Agent Hangup)")
             # Avisar al frontend que la llamada terminó
             await self.frontend_ws.send_text(json.dumps({"type": "call.end"}))
             
             await self.stop()
         
         except Exception as e:
-            print(f"⚠️ WebSocket information Elevenlabs to Front: {e}")
+            logger.warning("WebSocket error ElevenLabs->Front: %s", e)
             await self.stop()
 
     async def run(self):
@@ -256,7 +251,7 @@ class RealtimeBridge:
             return
         
         self.stop_event.set()
-        print(f"🛑 Stopping ElevenLabs bridge for conversation {self.conversation_id}")
+        logger.info("Stopping ElevenLabs bridge for conversation %s", self.conversation_id)
         
         # Guardar estado final en DB
         if self.conversation_id:
@@ -271,4 +266,4 @@ class RealtimeBridge:
                 await self.frontend_ws.close()
 
         except Exception as e:
-            print(f"Error closing sockets: {e}")
+            logger.error("Error closing sockets: %s", e)
