@@ -76,6 +76,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             SELECT
                 ui.user_id,
                 ui.name,
+                ui.last_name,
                 ui.avatar,
                 -- Fórmula maestra de Puntuación
                 COALESCE(ROUND(AVG(sbc.general_score))::int, 0) AS puntaje
@@ -103,6 +104,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
             RANK() OVER (ORDER BY us.puntaje desc, ucc.total_courses desc, us."name" asc) as rank,
             us.user_id,
             us.name as Usuario,
+            us.last_name,
             us.avatar,
             us.puntaje as Puntuacion,
             COALESCE(ucc.total_courses, 0) AS Cursos
@@ -123,6 +125,7 @@ async def get_all_user_scoring_by_company(company_id: str) -> List[Dict]:
                 "rank": int(row['rank']),
                 "user_id": str(row['user_id']),
                 "Usuario": row['usuario'],        # Alias de tu SQL
+                "last_name": row['last_name'],
                 "avatar": row['avatar'],
                 "Puntuacion": int(row['puntuacion']), # Alias de tu SQL
                 "Cursos": int(row['cursos'])          # Alias de tu SQL

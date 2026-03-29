@@ -15,6 +15,7 @@ class UserResponse(BaseModel):
     user_id: UUID
     email: str
     name: str
+    last_name: str
     user_type: str
     is_active: bool
     avatar: str | None

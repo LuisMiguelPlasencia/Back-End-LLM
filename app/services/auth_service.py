@@ -25,7 +25,7 @@ async def authenticate_user(email: str, password_input: str) -> Optional[Dict]:
     Returns user data if authentication successful, None otherwise
     """
     query = """
-    SELECT user_id, email, password, name, user_type, is_active, avatar, company_id
+    SELECT user_id, email, password, name, last_name, user_type, is_active, avatar, company_id
     FROM conversaConfig.user_info
     WHERE email = $1
     """

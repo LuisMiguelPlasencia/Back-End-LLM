@@ -205,9 +205,16 @@ async def get_company_courses(company_id: str) -> List[Dict]:
     Get courses by company id
     """
     query = """
-    SELECT
-      ALL COURSES FOR A COMPANY
-    FROM x
+        select 
+            distinct uca.course_id, mc.name
+        from 
+            conversaconfig.user_info ui 
+            left join conversaconfig.user_course_assignments uca 
+                on ui.user_id = uca.user_id 
+            left join conversaconfig.master_courses mc
+                on uca.course_id = mc.course_id
+        where 
+            ui.company_id = $1
     """
     
     results = await execute_query(query, company_id)
@@ -342,3 +349,40 @@ async def user_course_progress(user_id: str, course_id: str) -> Optional[Dict]:
         "completed_at": None,
         "updated_at": None
     }
+    
+
+async def companyAllUserScoringByCourse(course_id: str, company_id: str) -> Optional[Dict]:
+    """
+    Get user course progress. If it doesn't exist, return a default progress dictionary.
+    """
+
+    # 1. Intentamos buscar si ya existe
+    select_query = """
+        select 
+            ui.user_id, ui."name", ui.avatar, ui.user_type, uca.course_id, ucp.status, 
+            ROUND(AVG(sbc.general_score), 2) AS general_score,
+            ROUND(AVG(sbc.fillerwords_scoring), 2) AS fillerwords_scoring,
+            ROUND(AVG(sbc.clarity_scoring), 2) AS clarity_scoring,
+            ROUND(AVG(sbc.keythemes_scoring), 2) AS keythemes_scoring,
+            ROUND(AVG(sbc.participation_scoring), 2) AS participation_scoring,
+            ROUND(AVG(sbc.rhythm_scoring), 2) AS rhythm_scoring
+        from conversaconfig.user_info ui 
+            left join conversaconfig.user_course_assignments uca 
+                on ui.user_id = uca.user_id 
+            left join conversaconfig.user_course_progress ucp 
+                on ui.user_id = ucp.user_id and uca.course_id = ucp.course_id
+            left join conversaapp.conversations c 
+                on ui.user_id = c.user_id 
+            left join conversaapp.scoring_by_conversation sbc
+                on c.conversation_id = sbc.conversation_id
+        where ui.company_id = $1 and 
+            uca.course_id = $2 and
+            c.status = 'FINISHED' and sbc.general_score is not null
+        group by (ui.user_id, ui."name", ui.avatar, ui.user_type, uca.course_id, ucp.status)
+    """
+
+    result = await execute_query(select_query, company_id, course_id)
+
+    return result
+    
+    

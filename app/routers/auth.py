@@ -83,7 +83,7 @@ async def login(request: LoginRequest):
     # Prepare Response
     # Assuming UserResponse matches your Pydantic schema
     user_response = UserResponse(**user_data)
-    
+        
     return {
         "status": "success",
         "message": "Login successful",

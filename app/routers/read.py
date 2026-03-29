@@ -8,7 +8,7 @@
 from fastapi import APIRouter, Query, HTTPException, Depends
 import asyncio
 from uuid import UUID
-from ..services.courses_service import get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details, user_course_progress
+from ..services.courses_service import companyAllUserScoringByCourse, get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details, user_course_progress
 from ..services.conversations_service import get_conversation_details, get_user_conversations
 from ..services.messages_service import (
     get_all_user_conversation_average_scoring_by_stage_company, 
@@ -396,3 +396,13 @@ async def user_course_progressAPI(user_id: str, course_id: str):
     except Exception as e:
         # Usa tu manejador de errores habitual
         error(500, f"Error fetching user persona profile: {str(e)}")
+        
+@router.get("/companyAllUserScoringByCourse")
+async def companyAllUserScoringByCourseAPI(course_id: str, company_id: str = Query(..., description="Company ID to get the list of user scores for")):
+    """Get all user scores for a company"""
+    try:
+        user_scores_list = await companyAllUserScoringByCourse(course_id, company_id)
+        return user_scores_list
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")
+        
