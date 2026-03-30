@@ -406,3 +406,11 @@ async def companyAllUserScoringByCourseAPI(course_id: str, company_id: str = Que
     except Exception as e:
         error(500, f"Failed to retrieve messages: {str(e)}")
         
+@router.get("/courseModule")
+async def courseModuleAPI(course_id: str, company_id: str = Query(..., description="Company ID to get the list of user scores for")):
+    """Get all user scores for a company"""
+    try:
+        module = await companyAllUserScoringByCourse(course_id, company_id)
+        return module
+    except Exception as e:
+        error(500, f"Failed to retrieve messages: {str(e)}")
