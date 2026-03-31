@@ -384,5 +384,22 @@ async def companyAllUserScoringByCourse(course_id: str, company_id: str) -> Opti
     result = await execute_query(select_query, company_id, course_id)
 
     return result
-    
+
+async def courseModuleExtraction(course_id) -> Optional[Dict]:
+    """
+    Get user course modules json. If it doesn't exist, return a default progress dictionary.
+    """
+
+    # 1. Get module json and module template
+    select_query = """
+    select 
+        module_json
+    from conversaconfig.master_courses
+    where course_id = $1
+
+    """
+
+    result = await execute_query(select_query, course_id)
+
+    return result    
     

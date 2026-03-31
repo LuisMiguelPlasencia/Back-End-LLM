@@ -7,8 +7,9 @@
 
 from fastapi import APIRouter, Query, HTTPException, Depends
 import asyncio
+import json
 from uuid import UUID
-from ..services.courses_service import companyAllUserScoringByCourse, get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details, user_course_progress
+from ..services.courses_service import companyAllUserScoringByCourse, get_all_courses, get_all_stages, get_company_courses, get_user_courses, get_user_courses_stages, get_courses_details, user_course_progress, courseModuleExtraction
 from ..services.conversations_service import get_conversation_details, get_user_conversations
 from ..services.messages_service import (
     get_all_user_conversation_average_scoring_by_stage_company, 
@@ -410,7 +411,8 @@ async def companyAllUserScoringByCourseAPI(course_id: str, company_id: str = Que
 async def courseModuleAPI(course_id: str):
     """Get all user scores for a company"""
     try:
-        module = await companyAllUserScoringByCourse(course_id)
-        return module
+        module = await courseModuleExtraction(course_id)
+        json_module = json.loads(module[0]['module_json'])
+        return json_module
     except Exception as e:
-        error(500, f"Failed to retrieve messages: {str(e)}")
+        error(500, f"Failed to load modules: {str(e)}")
