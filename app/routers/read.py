@@ -412,7 +412,6 @@ async def courseModuleAPI(course_id: str):
     """Get all user scores for a company"""
     try:
         module = await courseModuleExtraction(course_id)
-        json_module = json.loads(module[0]['module_json'])
-        return json_module
+        return module
     except Exception as e:
         error(500, f"Failed to load modules: {str(e)}")

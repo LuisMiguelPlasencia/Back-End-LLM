@@ -4,6 +4,7 @@
 
 from .db import execute_query
 from uuid import UUID
+import json
 from typing import List, Dict, Optional
 
 async def get_user_courses(user_id: UUID) -> List[Dict]:
@@ -391,7 +392,7 @@ async def courseModuleExtraction(course_id) -> Optional[Dict]:
     """
 
     # 1. Get module json and module template
-    select_query = """
+    module_query = """
     select 
         module_json
     from conversaconfig.master_courses
@@ -399,7 +400,31 @@ async def courseModuleExtraction(course_id) -> Optional[Dict]:
 
     """
 
-    result = await execute_query(select_query, course_id)
+    stages_query = """
+    select 
+        stage_id
+    from conversaconfig.course_stages
+    where course_id = $1
+    """
 
-    return result    
+    module = await execute_query(module_query, course_id)
+    json_module = json.loads(module[0]['module_json'])
+
+    stages = await execute_query(stages_query, course_id)
+
+    last_id = max(m["id"] for m in json_module["modules"])
+    last_order = max(m["orderId"] for m in json_module["modules"])
+
+    for i, stage in enumerate(stages, start=1):
+        json_module["modules"].append({
+            "id": last_id + i,
+            "type": 2,
+            "orderId": last_order + i,
+            "title": f"Prueba Final {i}",
+            "duration": "10 Minutos",
+            "course_id": str(course_id),
+            "stage_id": str(stage["stage_id"])
+        })
+
+    return json_module
     
