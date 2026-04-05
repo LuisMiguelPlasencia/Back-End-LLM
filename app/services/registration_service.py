@@ -17,8 +17,8 @@ from .db import execute_query, execute_query_one
 
 load_dotenv(override=True)
 
-# Email configuration (SMTP)
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+# Email configuration (SMTP — Office 365)
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.office365.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
