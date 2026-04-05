@@ -20,8 +20,8 @@ class ValidateCodeResponse(BaseModel):
 
 class EmployeeInput(BaseModel):
     """Single employee data for bulk registration"""
-    name: str
-    last_name: str = Field(alias="lastName")
+    name: str = Field(alias="first_name")
+    last_name: str
     email: EmailStr
     role: str = "employee"
 
