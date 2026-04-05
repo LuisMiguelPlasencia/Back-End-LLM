@@ -49,17 +49,15 @@ async def validate_company_code(code: str) -> Optional[Dict]:
     """
     query = """
         SELECT 
-            cc.code_id,
-            cc.company_id,
-            cc.max_uses,
-            cc.current_uses,
-            ci.company_name
-        FROM conversaaccesses.company_codes cc
-        LEFT JOIN conversaaccesses.company_info ci ON cc.company_id = ci.company_id
-        WHERE cc.code = $1
-          AND cc.is_active = TRUE
-          AND cc.current_uses < cc.max_uses
-          AND (cc.expires_at IS NULL OR cc.expires_at > NOW())
+            code_id,
+            company_id,
+            max_uses,
+            current_uses
+        FROM conversaaccesses.company_codes
+        WHERE code = $1
+          AND is_active = TRUE
+          AND current_uses < max_uses
+          AND (expires_at IS NULL OR expires_at > NOW())
     """
     result = await execute_query_one(query, code)
     if not result:
@@ -69,7 +67,7 @@ async def validate_company_code(code: str) -> Optional[Dict]:
     return {
         "code_id": str(row["code_id"]),
         "company_id": str(row["company_id"]),
-        "company_name": row.get("company_name", ""),
+        "company_name": str(row["company_id"]),
         "remaining_uses": row["max_uses"] - row["current_uses"],
         "max_uses": row["max_uses"],
     }
@@ -124,7 +122,7 @@ async def register_employee(
 async def increment_code_usage(code: str, count: int = 1):
     """Increment the current_uses counter on a company code after successful registrations"""
     query = """
-        UPDATE conversaconfig.company_codes 
+        UPDATE conversaaccesses.company_codes 
         SET current_uses = current_uses + $1 
         WHERE code = $2
     """

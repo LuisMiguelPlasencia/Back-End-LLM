@@ -1,7 +1,7 @@
 # Pydantic models for bulk user registration via company codes
 # Validates input for code verification and employee profile creation
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 
 
@@ -21,9 +21,11 @@ class ValidateCodeResponse(BaseModel):
 class EmployeeInput(BaseModel):
     """Single employee data for bulk registration"""
     name: str
-    last_name: str
+    last_name: str = Field(alias="lastName")
     email: EmailStr
     role: str = "employee"
+
+    model_config = {"populate_by_name": True}
 
 
 class BulkRegisterRequest(BaseModel):
