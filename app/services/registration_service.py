@@ -4,11 +4,14 @@
 # and conversaconfig.user_info table for user creation
 
 import os
+import base64
 import secrets
 import string
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
+from pathlib import Path
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
 import bcrypt
@@ -132,48 +135,119 @@ async def increment_code_usage(code: str, count: int = 1):
 def send_welcome_email(to_email: str, name: str, temp_password: str, company_name: str):
     """
     Send a welcome email to a newly registered employee with their temp credentials.
-    Uses SMTP (e.g. Gmail with App Password).
+    Uses SMTP (Office 365). Logo is embedded inline from logo_new.png.
     Fails silently (logs error) so a mail failure doesn't block user creation.
     """
     if not SMTP_USER or not SMTP_PASSWORD:
         print(f"⚠️ SMTP not configured — skipping email to {to_email}")
         return
 
-    subject = f"Bienvenido a Conversa — {company_name}"
+    subject = f"Bienvenido a Conversa — Tu acceso a la plataforma"
+
     html_body = f"""
     <html>
-    <body style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto;">
-        <div style="background: #2563EB; padding: 24px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="color: white; margin: 0;">Conversa</h1>
-        </div>
-        <div style="padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
-            <p>Hola <strong>{name}</strong>,</p>
-            <p>Tu empresa <strong>{company_name}</strong> te ha dado acceso a <strong>Conversa</strong>, 
-               la plataforma de entrenamiento de ventas con IA conversacional.</p>
-            <p>Tus credenciales de acceso:</p>
-            <div style="background: #f3f4f6; padding: 16px; border-radius: 6px; margin: 16px 0;">
-                <p style="margin: 4px 0;"><strong>Email:</strong> {to_email}</p>
-                <p style="margin: 4px 0;"><strong>Contraseña temporal:</strong> {temp_password}</p>
-            </div>
-            <p>Te recomendamos cambiar tu contraseña tras el primer inicio de sesión.</p>
-            <a href="https://app.conversa.com/login" 
-               style="display: inline-block; background: #2563EB; color: white; padding: 12px 24px; 
-                      text-decoration: none; border-radius: 6px; margin-top: 12px;">
-                Iniciar sesión
-            </a>
-            <p style="margin-top: 24px; font-size: 12px; color: #9ca3af;">
-                Si no esperabas este correo, puedes ignorarlo.
-            </p>
-        </div>
+    <body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 0;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+
+              <!-- HEADER -->
+              <tr>
+                <td style="background-color:#ffffff;padding:32px 40px;text-align:center;border-bottom:3px solid #242b5d;">
+                  <img src="cid:logo_conversa" alt="Conversa" style="height:90px;display:block;margin:0 auto;" />
+                </td>
+              </tr>
+
+              <!-- HERO -->
+              <tr>
+                <td style="background-color:#447aa8;padding:24px 40px;text-align:center;">
+                  <p style="margin:0;color:#ffffff;font-size:18px;font-weight:600;letter-spacing:0.3px;">
+                    Bienvenido/a a la plataforma de entrenamiento con IA
+                  </p>
+                </td>
+              </tr>
+
+              <!-- BODY -->
+              <tr>
+                <td style="padding:40px;">
+                  <p style="margin:0 0 16px;font-size:16px;color:#1a1a2e;">
+                    Hola <strong>{name}</strong>,
+                  </p>
+                  <p style="margin:0 0 24px;font-size:15px;color:#444;line-height:1.6;">
+                    <strong>{company_name}</strong> te ha dado acceso a <strong>Conversa</strong>.
+                    A continuación encontrarás tus credenciales de acceso provisionales.
+                  </p>
+
+                  <!-- CREDENTIALS BOX -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-left:4px solid #447aa8;border-radius:6px;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:20px 24px;">
+                        <p style="margin:0 0 8px;font-size:13px;color:#888;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">Tus credenciales</p>
+                        <p style="margin:0 0 6px;font-size:15px;color:#1a1a2e;">
+                          <span style="color:#888;">Email:</span>&nbsp;&nbsp;<strong>{to_email}</strong>
+                        </p>
+                        <p style="margin:0;font-size:15px;color:#1a1a2e;">
+                          <span style="color:#888;">Contraseña temporal:</span>&nbsp;&nbsp;
+                          <strong style="font-family:monospace;background:#fff;padding:3px 8px;border-radius:4px;border:1px solid #d1d5db;">{temp_password}</strong>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin:0 0 28px;font-size:14px;color:#666;line-height:1.6;">
+                    Por seguridad, te recomendamos cambiar tu contraseña tras el primer inicio de sesión.
+                  </p>
+
+                  <!-- CTA BUTTON -->
+                  <table cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="background-color:#242b5d;border-radius:8px;">
+                        <a href="https://app.conversa.com/login"
+                           style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:0.3px;">
+                          Iniciar sesión →
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- FOOTER -->
+              <tr>
+                <td style="background-color:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+                  <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
+                    Este correo ha sido enviado automáticamente por Conversa.<br/>
+                    Si no esperabas este mensaje, puedes ignorarlo con seguridad.
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
     """
 
-    msg = MIMEMultipart("alternative")
+    msg = MIMEMultipart("related")
     msg["Subject"] = subject
     msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
     msg["To"] = to_email
-    msg.attach(MIMEText(html_body, "html"))
+
+    msg_alt = MIMEMultipart("alternative")
+    msg.attach(msg_alt)
+    msg_alt.attach(MIMEText(html_body, "html"))
+
+    # Embed logo inline
+    logo_path = Path(__file__).parent.parent.parent / "logo_new.png"
+    if logo_path.exists():
+        with open(logo_path, "rb") as f:
+            logo = MIMEImage(f.read())
+            logo.add_header("Content-ID", "<logo_conversa>")
+            logo.add_header("Content-Disposition", "inline", filename="logo_new.png")
+            msg.attach(logo)
 
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
