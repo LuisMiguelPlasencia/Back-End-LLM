@@ -34,9 +34,26 @@ def generate_temp_password(length: int = 12) -> str:
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
-def hash_password(plain: str) -> str:
-    """Hash a password with bcrypt, matching the auth_service pattern"""
-    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+#def hash_password(plain: str) -> str:
+#    """Hash a password with bcrypt, matching the auth_service pattern"""
+#    return bcrypt.hashpw(plain.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def hash_password(password: str) -> str:
+    """
+    Toma una contraseña en texto plano y devuelve el hash seguro (string) 
+    para guardar en la base de datos.
+    """
+    # 1. Convertimos la contraseña a bytes
+    pwd_bytes = password.encode('utf-8')
+    
+    # 2. Generamos el salt (aleatoriedad)
+    salt = bcrypt.gensalt()
+    
+    # 3. Hasheamos
+    hashed_bytes = bcrypt.hashpw(pwd_bytes, salt)
+    
+    # 4. Devolvemos como string para que Postgres lo entienda bien (VARCHAR)
+    return hashed_bytes.decode('utf-8')
 
 
 async def validate_company_code(code: str) -> Optional[Dict]:
