@@ -712,28 +712,38 @@ async def update_module_progress(user_id: str, journey_id: str, course_id: str) 
         print(f"Error updating progress for user {user_id}, course {course_id}: {str(e)}")
         return {"success": False, "error": str(e)}
 
+
+
 async def update_user_course_progress(user_id: str, course_id: str) -> Dict[str, Any]:
     try:
-        # Incrementa completed_modules en 1 directamente en la BD
-        # y evalúa si el usuario ha completado el curso.
+        # Usamos INSERT ... ON CONFLICT (Upsert) para crear el registro si no existe
+        # o actualizarlo incrementando los módulos si ya existe.
         query = """
-            UPDATE conversaconfig.user_course_progress
-            SET 
-                completed_modules = completed_modules + 1,
+            INSERT INTO conversaconfig.user_course_progress 
+                (user_id, course_id, completed_modules, status, updated_at)
+            VALUES (
+                $1::uuid, 
+                $2::uuid, 
+                1, -- Si es nuevo, empieza con 1 módulo completado
+                CASE 
+                    WHEN 1 >= (SELECT course_steps FROM conversaconfig.master_courses WHERE course_id = $2::uuid) THEN 'completed'::varchar
+                    ELSE 'in_progress'::varchar
+                END,
+                CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (user_id, course_id) 
+            DO UPDATE SET 
+                completed_modules = user_course_progress.completed_modules + 1,
                 status = CASE 
-                    WHEN (completed_modules + 1) >= (SELECT course_steps FROM conversaconfig.master_courses WHERE course_id = $2::uuid) THEN 'completed'::varchar
+                    WHEN (user_course_progress.completed_modules + 1) >= (SELECT course_steps FROM conversaconfig.master_courses WHERE course_id = $2::uuid) THEN 'completed'::varchar
                     ELSE 'in_progress'::varchar
                 END,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = $1::uuid AND course_id = $2::uuid
             RETURNING completed_modules, status;
         """
         
-        # Ya solo pasamos $1 (user_id) y $2 (course_id)
         result = await execute_query(query, user_id, course_id)
         
-        # Extraemos los datos devueltos por el RETURNING (asumiendo que execute_query devuelve una lista de registros)
-        # Ajusta esta parte si tu función execute_query devuelve el resultado en otro formato.
         updated_modules = None
         new_status = None
         
@@ -748,10 +758,13 @@ async def update_user_course_progress(user_id: str, course_id: str) -> Dict[str,
                 "status": new_status
             }
         }
-
+        
     except Exception as e:
-        print(f"Error updating progress for user {user_id}, course {course_id}: {str(e)}")
-        return {"success": False, "error": str(e)}
+        # Es recomendable manejar la excepción para no romper el flujo si falla el Upsert
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 
