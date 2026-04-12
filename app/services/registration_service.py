@@ -220,7 +220,7 @@ def send_welcome_email(to_email: str, name: str, temp_password: str, company_nam
                   <table cellpadding="0" cellspacing="0">
                     <tr>
                       <td style="background-color:#242b5d;border-radius:8px;">
-                        <a href="https://app.conversa.com/login"
+                        <a href="https://conversa-app.es/login"
                            style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:0.3px;">
                           Iniciar sesión →
                         </a>
