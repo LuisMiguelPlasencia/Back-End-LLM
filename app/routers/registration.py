@@ -79,6 +79,7 @@ async def bulk_register(request: BulkRegisterRequest):
             last_name=emp.last_name,
             email=emp.email,
             role=emp.role,
+            journey_id=code_info.get("journey_id")  # Pass journey_id if available
         )
 
         if reg["success"]:
