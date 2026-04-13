@@ -72,7 +72,8 @@ async def validate_company_code(code: str) -> Optional[Dict]:
             code_id,
             company_id,
             max_uses,
-            current_uses
+            current_uses,
+            journey_id
         FROM conversaaccesses.company_codes
         WHERE code = $1
           AND is_active = TRUE
@@ -90,11 +91,59 @@ async def validate_company_code(code: str) -> Optional[Dict]:
         "company_name": str(row["company_id"]),
         "remaining_uses": row["max_uses"] - row["current_uses"],
         "max_uses": row["max_uses"],
+        "journey_id": row["journey_id"],
     }
 
 
+async def assign_courses_to_user(user_id: str, journey_id: str):
+    '''
+    - insert new record into user_journeys_assigments with user_id and journey_id
+    - find all courses linked to the journey_id in journey_courses
+    - for each course, insert into user_course_assignments with user_id, course_id
+    '''
+    assign_journey_query = """
+        INSERT INTO conversaconfig.user_journeys_assigments 
+            (user_journey_id, user_id, journey_id, status, progress, assigned_at, completed_at, updated_at)
+        VALUES 
+            (gen_random_uuid(), $1, $2, $3, $4, CURRENT_TIMESTAMP, NULL, CURRENT_TIMESTAMP)
+    """
+    try:
+        await execute_query(
+          assign_journey_query, user_id, journey_id, "not_started", 0
+        )
+    except Exception as e:
+        print(f"Error asignando journey al usuario {user_id}: {e}")
+        return
+    
+    read_journey_courses_query = """
+        SELECT course_id, is_mandatory FROM conversaconfig.journey_courses WHERE journey_id = $1
+    """
+    try:
+        courses = await execute_query(
+            read_journey_courses_query, journey_id
+        )
+    except Exception as e:
+        print(f"Error leyendo cursos de la journey {journey_id}: {e}")
+        return
+
+    for course in courses:
+        assign_course_query = """
+            INSERT INTO conversaconfig.user_course_assignments 
+                (assignment_id, user_id, course_id, assigned_at, estimated_duration_days, is_mandatory)
+            VALUES 
+                (gen_random_uuid(), $1, $2, CURRENT_TIMESTAMP, 30, $3)
+        """
+        try:
+            await execute_query(assign_course_query, user_id, course["course_id"], course["is_mandatory"])
+        except Exception as e:
+            print(f"Error asignando curso al usuario {user_id}: {e}")
+            return
+    return True
+
+
+
 async def register_employee(
-    company_id: str, name: str, last_name: str, email: str, role: str
+    company_id: str, name: str, last_name: str, email: str, role: str, journey_id: Optional[str] = None
 ) -> Dict:
     """
     Create a single user in conversaconfig.user_info.
@@ -128,6 +177,8 @@ async def register_employee(
             insert_query, email, hashed, name, last_name, role, company_id
         )
         if result:
+            if journey_id:
+                _ = await assign_courses_to_user(str(result["user_id"]), journey_id)
             return {
                 "success": True,
                 "message": "Usuario creado correctamente",
