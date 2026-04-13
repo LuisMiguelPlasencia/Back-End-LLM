@@ -8,9 +8,10 @@ from fastapi import APIRouter, Depends
 
 from app.services.auth_service import validate_user
 from app.services.courses_service import create_new_course, create_new_stage, update_course, update_stage, update_stage
-from ..schemas.insert import NewCourseRequest, NewStageRequest, StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateCourseRequest, UpdateProgressRequest, UpdateStageRequest, UpdateUserCourseProgressRequest
+from ..schemas.insert import NewCourseRequest, NewStageRequest, StartConversationRequest, SendMessageRequest, CloseConversationRequest, UpdateCourseRequest, UpdateProgressRequest, UpdateStageRequest, UpdateUserCourseProgressRequest, CreateUserAssignmentRequest, CreateJourneyAssignmentRequest, DeleteJourneyAssignmentRequest, CreateJourneyCourseRequest, DeleteJourneyCourseRequest
 from ..services.conversations_service import create_conversation, close_conversation
 from ..services.messages_service import send_message, update_module_progress, update_user_course_progress
+from ..services.usermanagement_service import create_user_assignments, delete_user_assignments, create_journey_assignments_bulk, delete_journey_assignments_bulk, create_journey_courses_bulk, delete_journey_courses_bulk  
 from ..services.payments_service import simulate_investment, InvestmentSimulation
 from ..utils.responses import error
 
@@ -302,3 +303,152 @@ async def update_stageAPI(request: UpdateStageRequest, _: dict = Depends(validat
     
     except Exception as e:
         error(500, f"Failed to create stage: {str(e)}")
+
+
+@router.post("/create_user_assignments")
+async def create_user_assignments_API(request: CreateUserAssignmentRequest, _: dict = Depends(validate_user)):
+    """
+    Create new user assignments in the system (Bulk). 
+    This endpoint adds multiple users to multiple courses.
+    """
+    try:
+        # Validar que las listas no vengan vacías
+        if not request.user_ids:
+            error(400, "user_ids list cannot be empty")
+        if not request.course_ids:
+            error(400, "course_ids list cannot be empty")
+            
+        assignment_ids = await create_user_assignments(
+            user_ids=request.user_ids,
+            course_ids=request.course_ids
+        )
+        
+        if not assignment_ids:
+            error(500, "Failed to create user assignments")
+            
+        return {
+            "status": "user assignments created",
+            "user_assignment_ids": assignment_ids,
+            "total_created": len(assignment_ids)
+        }
+    except Exception as e:
+        error(500, f"Failed to create user assignments: {str(e)}")
+
+
+@router.delete("/delete_user_assignments")
+async def delete_user_assignments_API(request: CreateUserAssignmentRequest, _: dict = Depends(validate_user)):
+    """
+    Elimina múltiples asignaciones de usuario a cursos de forma masiva.
+    """
+    try:
+        if not request.user_ids or not request.course_ids:
+            error(400, "Las listas de IDs no pueden estar vacías")
+            
+        deleted_count = await delete_user_assignments(
+            user_ids=request.user_ids,
+            course_ids=request.course_ids
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Se han eliminado {deleted_count} asignaciones",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        error(500, f"Error al eliminar asignaciones: {str(e)}")
+
+
+@router.post("/create_journey_assignments")
+async def create_journey_assignments_API(request: CreateJourneyAssignmentRequest, _: dict = Depends(validate_user)):
+    """
+    Asigna múltiples usuarios a múltiples journeys de aprendizaje.
+    Ignora automáticamente las asignaciones que ya existen.
+    """
+    try:
+        if not request.user_ids or not request.journey_ids:
+            error(400, "Las listas de usuarios y journeys no pueden estar vacías")
+            
+        new_assignment_ids = await create_journey_assignments_bulk(
+            user_ids=request.user_ids,
+            journey_ids=request.journey_ids
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Se han creado {len(new_assignment_ids)} nuevas asignaciones.",
+            "user_journey_ids": new_assignment_ids
+        }
+    except Exception as e:
+        error(500, f"Error al crear asignaciones de journeys: {str(e)}")
+
+
+@router.delete("/delete_journey_assignments")
+async def delete_journey_assignments_API(request: DeleteJourneyAssignmentRequest, _: dict = Depends(validate_user)):
+    """
+    Elimina múltiples asignaciones de usuarios a journeys.
+    """
+    try:
+        if not request.user_ids or not request.journey_ids:
+            error(400, "Las listas de usuarios y journeys no pueden estar vacías")
+            
+        deleted_count = await delete_journey_assignments_bulk(
+            user_ids=request.user_ids,
+            journey_ids=request.journey_ids
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Se han eliminado {deleted_count} asignaciones.",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        error(500, f"Error al eliminar asignaciones de journeys: {str(e)}")
+
+
+@router.post("/create_journey_courses")
+async def create_journey_courses_API(request: CreateJourneyCourseRequest, _: dict = Depends(validate_user)):
+    """
+    Asigna múltiples cursos a múltiples journeys.
+    El orden de los cursos en el array 'course_ids' determinará su 'display_order'.
+    """
+    try:
+        if not request.journey_ids or not request.course_ids:
+            error(400, "Las listas de journeys y cursos no pueden estar vacías")
+            
+        new_assignment_ids = await create_journey_courses_bulk(
+            journey_ids=request.journey_ids,
+            course_ids=request.course_ids,
+            is_mandatory=request.is_mandatory,
+            milestone_id=request.milestone_id
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Se han asignado {len(new_assignment_ids)} cursos nuevos a los journeys.",
+            "journey_course_ids": new_assignment_ids
+        }
+    except Exception as e:
+        error(500, f"Error al asignar cursos a journeys: {str(e)}")
+
+
+@router.delete("/delete_journey_courses")
+async def delete_journey_courses_API(request: DeleteJourneyCourseRequest, _: dict = Depends(validate_user)):
+    """
+    Elimina múltiples asignaciones de cursos a journeys.
+    """
+    try:
+        if not request.journey_ids or not request.course_ids:
+            error(400, "Las listas de journeys y cursos no pueden estar vacías")
+            
+        deleted_count = await delete_journey_courses_bulk(
+            journey_ids=request.journey_ids,
+            course_ids=request.course_ids
+        )
+        
+        return {
+            "status": "success",
+            "message": f"Se han eliminado {deleted_count} asignaciones de cursos.",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        error(500, f"Error al eliminar cursos de journeys: {str(e)}")

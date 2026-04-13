@@ -3,7 +3,7 @@
 
 from pydantic import BaseModel
 from uuid import UUID
-from typing import Optional
+from typing import List, Optional
 
 class StartConversationRequest(BaseModel):
     """Start conversation request payload"""
@@ -106,3 +106,32 @@ class UpdateStageRequest(BaseModel):
     chatbot_image_src: str
 
 
+
+class CreateUserAssignmentRequest(BaseModel):
+    """Create user assignment request payload for N users and M courses"""
+    user_ids: List[UUID]
+    course_ids: List[UUID]
+
+
+class CreateJourneyAssignmentRequest(BaseModel):
+    """Payload para asignar múltiples usuarios a múltiples journeys"""
+    user_ids: List[UUID]
+    journey_ids: List[UUID]
+
+class DeleteJourneyAssignmentRequest(BaseModel):
+    """Payload para eliminar múltiples asignaciones de journeys"""
+    user_ids: List[UUID]
+    journey_ids: List[UUID]
+
+
+class CreateJourneyCourseRequest(BaseModel):
+    """Payload para asignar cursos a journeys"""
+    journey_ids: List[UUID]
+    course_ids: List[UUID]
+    is_mandatory: Optional[bool] = True
+    milestone_id: Optional[UUID] = None
+
+class DeleteJourneyCourseRequest(BaseModel):
+    """Payload para eliminar cursos de journeys"""
+    journey_ids: List[UUID]
+    course_ids: List[UUID]
