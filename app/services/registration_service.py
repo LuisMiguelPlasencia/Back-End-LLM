@@ -129,9 +129,9 @@ async def assign_courses_to_user(user_id: str, journey_id: str):
     for course in courses:
         assign_course_query = """
             INSERT INTO conversaconfig.user_course_assignments 
-                (assignment_id, user_id, course_id, assigned_at, estimated_duration_days, estimated_completion_date, is_mandatory)
+                (assignment_id, user_id, course_id, assigned_at, estimated_duration_days, is_mandatory)
             VALUES 
-                (gen_random_uuid(), $1, $2, CURRENT_TIMESTAMP, 30, CURRENT_DATE + INTERVAL '30 days', $3)
+                (gen_random_uuid(), $1, $2, CURRENT_TIMESTAMP, 30, $3)
         """
         try:
             await execute_query(assign_course_query, user_id, course["course_id"], course["is_mandatory"])
