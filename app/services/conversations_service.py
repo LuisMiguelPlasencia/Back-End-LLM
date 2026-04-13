@@ -11,18 +11,27 @@ async def get_conversation_details(conversation_id: UUID) -> Optional[Dict]:
     """Get conversation details for a conversation ID"""
     query = """
     SELECT c.conversation_id, c.start_timestamp, c.end_timestamp, c.status, c.created_at
-    , c.updated_at, c.course_id, sbc.general_score, sbc.fillerwords_scoring, sbc.clarity_scoring
+    , c.updated_at, c.course_id, c.stage_id, sbc.general_score, sbc.fillerwords_scoring, sbc.clarity_scoring
     , sbc.participation_scoring, sbc.keythemes_scoring, sbc.indexofquestions_scoring
     , sbc.rhythm_scoring, sbc.fillerwords_feedback, sbc.clarity_feedback, sbc.participation_feedback
     , sbc.keythemes_feedback, sbc.indexofquestions_feedback, sbc.rhythm_feedback, sbc.is_accomplished
+    , cs.stage_objectives
     FROM conversaApp.conversations c
     LEFT JOIN conversaapp.scoring_by_conversation sbc ON c.conversation_id = sbc.conversation_id
+    LEFT JOIN conversaconfig.course_stages cs ON c.stage_id = cs.stage_id
     WHERE c.conversation_id = $1
     ORDER BY start_timestamp DESC
     """
-    
+    weights = { # TO DO: import this from a constants file to make sure these weights are in sync with the ones used in the scoring model
+        "fillerwords_weight": 0.05,
+        "clarity_weight": 0.10,
+        "participation_weight": 0.10,
+        "keythemes_weight": 0.20,
+        "rhythm_weight": 0.05,
+        "objective_weight": 0.5,
+    }
     results = await execute_query(query, conversation_id)
-    return [dict(row) for row in results]
+    return [dict(row)|weights for row in results]
 
 
 async def get_user_conversations(user_id: UUID) -> List[Dict]:

@@ -464,12 +464,12 @@ async def get_conver_scores(
 ):
     # Factores de ponderación (preguntas desactivada: su 0.075 pasó a objetivo)
     pesos = {
-        "muletillas_pausas": 0.075,
-        "claridad": 0.075,
-        "participacion": 0.1375,
-        "cobertura": 0.1375,
+        "muletillas_pausas": 0.05,
+        "claridad": 0.10,
+        "participacion": 0.10,
+        "cobertura": 0.20,
         "preguntas": 0.0,  # Métrica desactivada temporalmente
-        "ppm": 0.075,
+        "ppm": 0.05,
         "objetivo": 0.5,
     }
 
