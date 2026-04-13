@@ -132,6 +132,7 @@ async def get_user_profilingAPI(user_id: UUID = Query(..., description="User ID 
         # 3. Now 'profiling' is guaranteed to be a dictionary, so .get() will work
         result = {
             "name": profiling.get('name') or None,
+            "last_name": profiling.get('last_name') or None,
             "user_id": profiling.get('user_id') or user_id, # Fallback to input user_id
             "general_score": profiling.get('general_score') or None,
             "profile_type": profiling.get('profile_type') or None,

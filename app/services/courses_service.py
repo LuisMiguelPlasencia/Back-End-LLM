@@ -43,6 +43,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
             cs.stage_description,
             cs.stage_order,
             cs.stage_objectives,
+            cc.level,
             mc.course_steps,
             mc.completion_time_minutes,
             CASE 
@@ -54,6 +55,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
         FROM conversaconfig.user_course_assignments uca 
         JOIN conversaconfig.master_courses mc ON uca.course_id = mc.course_id
         LEFT JOIN conversaconfig.course_stages cs ON cs.course_id = mc.course_id
+        LEFT JOIN conversaconfig.course_contents cc ON cc.stage_id = cs.stage_id
         LEFT JOIN conversaconfig.user_course_progress ucp on ucp.user_id = $1 and mc.course_id = ucp.course_id
         LEFT JOIN (
             SELECT 
@@ -114,6 +116,7 @@ async def get_user_courses(user_id: UUID) -> List[Dict]:
                 "stage_name": row['stage_name'],
                 "stage_description": row['stage_description'],
                 "stage_order": row['stage_order'],
+                "stage_level": row['level']
             })
 
     return list(courses_map.values())
@@ -364,7 +367,7 @@ async def companyAllUserScoringByCourse(course_id: str, company_id: str) -> Opti
     # 1. Intentamos buscar si ya existe
     select_query = """
         select 
-            ui.user_id, ui."name", ui.avatar, ui.user_type, uca.course_id, ucp.status, 
+            ui.user_id, ui."name", ui.last_name, ui.avatar, ui.user_type, uca.course_id, ucp.status, 
             ROUND(AVG(sbc.general_score), 2) AS general_score,
             ROUND(AVG(sbc.fillerwords_scoring), 2) AS fillerwords_scoring,
             ROUND(AVG(sbc.clarity_scoring), 2) AS clarity_scoring,
@@ -383,7 +386,7 @@ async def companyAllUserScoringByCourse(course_id: str, company_id: str) -> Opti
         where ui.company_id = $1 and 
             uca.course_id = $2 and
             c.status = 'FINISHED' and sbc.general_score is not null
-        group by (ui.user_id, ui."name", ui.avatar, ui.user_type, uca.course_id, ucp.status)
+        group by (ui.user_id, ui."name", ui.last_name, ui.avatar, ui.user_type, uca.course_id, ucp.status)
     """
 
     result = await execute_query(select_query, company_id, course_id)

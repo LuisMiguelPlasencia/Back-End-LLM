@@ -144,6 +144,7 @@ async def get_all_user_conversation_scoring_by_company(company_id: str) -> List[
             SELECT DISTINCT ON (ui.user_id)
                 ui.user_id,
                 ui.name,
+                ui.last_name,
                 ui.company_id,
                 ui.user_type,
                 ui.avatar,
@@ -293,8 +294,8 @@ async def get_user_cumulative_average_score(user_id: str, days_back: int = 7) ->
                 COALESCE(ROUND(avg_score, 2), 0) AS average_score
             FROM cumulative
            /* WHERE day >= CURRENT_DATE - ($2::int * INTERVAL '1 day')*/
-            ORDER BY day DESC
-            LIMIT $2    ;
+            ORDER BY day ASC
+            LIMIT $2;
         """
         # query = """
         #     WITH all_scores AS (
@@ -367,8 +368,10 @@ async def get_all_user_profiling_by_company(company_id: str) -> List[Dict]:
         query = """
             SELECT
                 ui."name",
+                ui.last_name,
                 ui.user_id,
                 ui.avatar,
+                ui.user_type,
                 up.empathy_score          AS empathy_scoring,
                 up.negotiation_score      AS negotiation_scoring,
                 up.prospection_score      AS prospection_scoring,
@@ -393,6 +396,7 @@ async def get_user_profiling(user_id: str) -> Dict:
             SELECT
                 ui."name",
                 ui.user_id,
+                ui.last_name,
                 ui.avatar,
                 up.general_score,
                 up.profile_type,
@@ -577,10 +581,15 @@ async def get_user_journey(user_id: str) -> List[Dict[str, Any]]:
                 jc.is_mandatory,
                 jc.display_order AS course_order,
                 mc.name AS course_name,
+                mc.has_modules,
+                mc.module_template,
                 mc.course_steps AS total_modules,  
                 COALESCE(ucp.completed_modules, 0) AS completed_modules,
                 COALESCE(ucp.status, 'locked') AS course_status,   
-                uaj.status AS journey_status
+                uaj.status AS journey_status,
+                cs.stage_id,
+                cs.stage_name,
+                cs.stage_order
             FROM conversaconfig.user_journeys_assigments uaj
             JOIN conversaconfig.journey_courses jc ON uaj.journey_id = jc.journey_id
             JOIN conversaconfig.master_journeys mj ON uaj.journey_id = mj.journey_id
@@ -588,8 +597,9 @@ async def get_user_journey(user_id: str) -> List[Dict[str, Any]]:
             LEFT JOIN conversaconfig.user_course_progress ucp 
                 ON uaj.user_id = ucp.user_id 
                 AND jc.course_id = ucp.course_id
+            LEFT JOIN conversaconfig.course_stages cs ON mc.course_id = cs.course_id
             WHERE uaj.user_id = $1  AND mj.is_active 
-            ORDER BY jc.display_order;
+            ORDER BY jc.display_order, cs.stage_order;
         """
 
         results = await execute_query(query, user_id)
@@ -601,6 +611,7 @@ async def get_user_journey(user_id: str) -> List[Dict[str, Any]]:
 
         for row in results:
             j_id = str(row['journey_id'])
+            c_id = str(row['course_id'])
             
             # 1. Inicializamos el journey si es la primera vez que iteramos sobre él
             if j_id not in journeys_map:
@@ -609,17 +620,35 @@ async def get_user_journey(user_id: str) -> List[Dict[str, Any]]:
                     "journey_status": row['journey_status'],
                     "courses": []
                 }
-            
-            # 2. Añadimos el curso actual a la lista de cursos del journey
-            journeys_map[j_id]["courses"].append({
-                "course_id": str(row['course_id']),
-                "course_name": row['course_name'],
-                "is_mandatory": row['is_mandatory'],
-                "course_order": row['course_order'],
-                "total_modules": row['total_modules'],
-                "completed_modules": row['completed_modules'],
-                "course_status": row['course_status']
+                
+            # 2. Find course inside journey
+            courses = journeys_map[j_id]["courses"]
+            course = next((c for c in courses if c["course_id"] == c_id), None)
+
+            # 3. If course doesn't exist → create it
+            if not course:
+                course = {
+                    "course_id": c_id,
+                    "course_name": row['course_name'],
+                    "is_mandatory": row['is_mandatory'],
+                    "course_order": row['course_order'],
+                    "has_modules": row['has_modules'],
+                    "module_template": row['module_template'],
+                    "total_modules": row['total_modules'],
+                    "completed_modules": row['completed_modules'],
+                    "course_status": row['course_status'],
+                    "course_stages": []
+                }
+                courses.append(course)
+
+            # 4. Append stage to the correct course
+            course["course_stages"].append({
+                "stage_id": row.get("stage_id"),
+                "stage_name": row.get("stage_name"),
+                "stage_order": row.get("stage_order")
             })
+            
+            
 
         # 3. Retornamos solo los valores (la lista de journeys ya agrupada)
         return list(journeys_map.values())
